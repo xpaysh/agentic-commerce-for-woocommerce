@@ -39,8 +39,8 @@ class Xpay_Robots {
 		add_filter( 'robots_txt', array( $this, 'append_agent_allows' ), 20, 2 );
 	}
 
-	public function append_agent_allows( $output, $public ) {
-		if ( ! $public ) {
+	public function append_agent_allows( $output, $is_public ) {
+		if ( ! $is_public ) {
 			// Site is set to "Discourage search engines" — don't override that intent.
 			return $output;
 		}
@@ -49,7 +49,7 @@ class Xpay_Robots {
 
 		$blocks = array();
 		foreach ( self::AGENT_UAS as $ua ) {
-			$needle = "user-agent: " . strtolower( $ua );
+			$needle = 'user-agent: ' . strtolower( $ua );
 			if ( false !== strpos( $existing, $needle ) ) {
 				// Already mentioned (allow or disallow) — leave it alone so we don't
 				// fight a merchant's deliberate config.

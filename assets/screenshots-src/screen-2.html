@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Eight audit checks, all green</title><link rel="stylesheet" href="wp-admin.css"></head>
+<body>
+<div class="wp-bar">WP-Admin · yourstore.com</div>
+<div class="wp-shell">
+  <aside class="wp-sidebar">
+    <div class="logo">YourStore</div>
+    <nav>
+      <a href="#">Dashboard</a><a href="#">Products</a><a href="#">Orders</a>
+      <a href="#">WooCommerce</a><a href="#">Appearance</a><a href="#">Plugins</a>
+      <a href="#" class="active">Settings &nbsp;›&nbsp; xpay</a>
+    </nav>
+  </aside>
+  <main class="wp-content">
+    <h1>xpay for WooCommerce</h1>
+
+    <div class="card">
+      <h2>Connected</h2>
+      <table class="form-table"><tbody>
+        <tr><th>Merchant slug</th><td><code>yourstore-com</code></td></tr>
+        <tr><th>Catalog feed</th><td><a href="#">agent-feed.xpay.sh/catalog/yourstore-com.json</a></td></tr>
+        <tr><th>Last sync</th><td>2 minutes ago</td></tr>
+        <tr><th>Last audit score</th><td><strong>96/100</strong></td></tr>
+      </tbody></table>
+      <p>
+        <a class="button button-primary" href="#">Re-run my audit</a>
+        <a class="button" href="#">Disconnect</a>
+      </p>
+    </div>
+
+    <h2 style="margin-top:32px;">Audit readiness</h2>
+    <table class="widefat"><thead><tr><th>Check</th><th>Status</th><th>Detail</th></tr></thead><tbody>
+      <tr><td>AI can read your full catalogue</td><td><span class="ok">✓ Ready</span></td><td>Hosted feed live at agent-feed.xpay.sh/catalog/yourstore-com.json</td></tr>
+      <tr><td>Live prices visible to AI</td><td><span class="ok">✓ Ready</span></td><td>JSON-LD Product / Offer schema injected on product pages.</td></tr>
+      <tr><td>Plain-text guide for AI assistants</td><td><span class="ok">✓ Ready</span></td><td>Served at /llms.txt.</td></tr>
+      <tr><td>AI assistants know where to send a buyer</td><td><span class="ok">✓ Ready</span></td><td>Served at /.well-known/agentic-commerce.json.</td></tr>
+      <tr><td>AI shoppers are allowed in</td><td><span class="ok">✓ Ready</span></td><td>GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot allowed in robots.txt.</td></tr>
+      <tr><td>Direct buy link signals</td><td><span class="ok">✓ Ready</span></td><td>BuyAction emitted on every product page.</td></tr>
+      <tr><td>AI shoppers can buy without leaving the chat</td><td><span class="ok">✓ Ready</span></td><td>Cart deeplink handler active.</td></tr>
+      <tr><td>Stock & price kept current</td><td><span class="ok">✓ Ready</span></td><td>Webhook resync on product/stock change.</td></tr>
+    </tbody></table>
+  </main>
+</div></body></html>

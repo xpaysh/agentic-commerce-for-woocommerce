@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>AI chat → your existing checkout</title><link rel="stylesheet" href="wp-admin.css">
+<style>
+  body { background: linear-gradient(180deg, #f8fafc 0%, #e0e7ef 100%); padding: 32px; min-height: 1000px; }
+  .frame { max-width: 1500px; margin: 0 auto; }
+  h1.hero { font-size: 32px; font-weight: 600; margin: 0 0 6px; color: #0f172a; }
+  .sub { color: #475569; font-size: 16px; margin-bottom: 28px; }
+  .arrow { font-size: 36px; color: #94a3b8; text-align: center; align-self: center; }
+  .split { display: grid; grid-template-columns: 1fr 60px 1fr; gap: 0; align-items: stretch; }
+  .panel { background: #fff; border-radius: 12px; padding: 24px 28px; box-shadow: 0 4px 16px rgba(15,23,42,.08); border: 1px solid #e2e8f0; }
+  .panel h3 { margin: 0 0 12px; font-size: 14px; color: #64748b; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  .bubble-user { background: #f1f5f9; padding: 12px 16px; border-radius: 16px 16px 4px 16px; margin: 0 0 16px auto; max-width: 80%; font-size: 15px; }
+  .bubble-ai { background: #fff; border: 1px solid #e2e8f0; padding: 14px 18px; border-radius: 16px 16px 16px 4px; max-width: 95%; font-size: 15px; }
+  .product-card { display: flex; gap: 14px; align-items: center; margin-top: 12px; padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; }
+  .pimg { width: 64px; height: 64px; border-radius: 8px; background: linear-gradient(135deg, #c7a36e 0%, #8b6f3e 100%); flex-shrink: 0; }
+  .pinfo { flex: 1; }
+  .pname { font-weight: 600; font-size: 14px; color: #0f172a; }
+  .pprice { color: #475569; font-size: 13px; margin-top: 2px; }
+  .pbtn { background: #2271b1; color: #fff; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; text-decoration: none; }
+
+  .checkout-header { font-size: 22px; font-weight: 600; color: #0f172a; margin: 0 0 4px; }
+  .checkout-sub { color: #64748b; font-size: 13px; margin-bottom: 18px; }
+  .ck-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+  .ck-row .l { color: #334155; }
+  .ck-row .r { color: #0f172a; font-weight: 500; }
+  .ck-total { display: flex; justify-content: space-between; padding: 14px 0 8px; font-size: 18px; font-weight: 700; color: #0f172a; }
+  .pay { background: #6772e5; color: #fff; padding: 13px 16px; border-radius: 6px; text-align: center; font-weight: 600; margin-top: 14px; font-size: 15px; }
+  .gw-note { color: #64748b; font-size: 12px; text-align: center; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <h1 class="hero">AI chat → your existing checkout</h1>
+  <p class="sub">Buyer asks ChatGPT. Lands on your cart. Pays through your existing gateway. Same payout, new channel.</p>
+  <div class="split">
+    <div class="panel">
+      <h3>ChatGPT — Shopping</h3>
+      <div class="bubble-user">Find me a calming lavender candle under $30, in stock today.</div>
+      <div class="bubble-ai">
+        I found this from <strong>YourStore</strong> — matches your budget and ships within 2 days:
+        <div class="product-card">
+          <div class="pimg"></div>
+          <div class="pinfo">
+            <div class="pname">Hand-poured lavender candle, 240g</div>
+            <div class="pprice">$24.00 · In stock · 2-day ship</div>
+          </div>
+          <a class="pbtn" href="#">Buy →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="panel">
+      <h3>Yourstore.com — Checkout</h3>
+      <div class="checkout-header">Your order</div>
+      <div class="checkout-sub">Pre-filled via xpay deeplink · powered by WooCommerce</div>
+      <div class="ck-row"><span class="l">Hand-poured lavender candle, 240g × 1</span><span class="r">$24.00</span></div>
+      <div class="ck-row"><span class="l">Shipping (USPS Priority)</span><span class="r">$5.95</span></div>
+      <div class="ck-row"><span class="l">Sales tax</span><span class="r">$2.16</span></div>
+      <div class="ck-total"><span>Total</span><span>$32.11</span></div>
+      <div class="pay">Pay with Stripe →</div>
+      <div class="gw-note">Your existing payment gateway. xpay never touches the card.</div>
+    </div>
+  </div>
+</div>
+</body></html>

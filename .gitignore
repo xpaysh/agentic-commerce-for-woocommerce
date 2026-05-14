@@ -1,3 +1,5 @@
 .DS_Store
 node_modules/
 *.zip
+assets/screenshots-src/node_modules/
+assets/screenshots-src/package-lock.json

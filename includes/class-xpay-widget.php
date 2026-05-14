@@ -30,7 +30,10 @@ class Xpay_Widget {
 		if ( ! get_option( 'xpay_wc_widget_enabled', 0 ) ) {
 			return '';
 		}
-		$product_id = (int) $atts['product_id'] ?: (int) get_the_ID();
+		$product_id = (int) $atts['product_id'];
+		if ( ! $product_id ) {
+			$product_id = (int) get_the_ID();
+		}
 		return $this->render( $product_id );
 	}
 
@@ -43,7 +46,10 @@ class Xpay_Widget {
 			array(
 				'render_callback' => array( $this, 'render_block' ),
 				'attributes'      => array(
-					'productId' => array( 'type' => 'number', 'default' => 0 ),
+					'productId' => array(
+						'type'    => 'number',
+						'default' => 0,
+					),
 				),
 			)
 		);

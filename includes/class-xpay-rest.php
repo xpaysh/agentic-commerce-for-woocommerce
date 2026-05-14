@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
 class Xpay_REST {
 
 	private static $instance = null;
-	private const QUERY_VAR = 'xpay_route';
+	private const QUERY_VAR  = 'xpay_route';
 
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -48,7 +48,7 @@ class Xpay_REST {
 		if ( ! $route ) {
 			// Plain-permalinks fallback: also match against REQUEST_URI directly so
 			// /llms.txt and /.well-known/agentic-commerce.json work without rewrites.
-			$path = isset( $_SERVER['REQUEST_URI'] ) ? strtok( $_SERVER['REQUEST_URI'], '?' ) : '';
+			$path = isset( $_SERVER['REQUEST_URI'] ) ? strtok( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ), '?' ) : '';
 			if ( '/llms.txt' === $path ) {
 				$route = 'llms';
 			} elseif ( '/.well-known/agentic-commerce.json' === $path ) {
@@ -72,7 +72,7 @@ class Xpay_REST {
 		$site_url  = home_url( '/' );
 		$slug      = Xpay_Plugin::merchant_slug();
 
-		$lines = array();
+		$lines   = array();
 		$lines[] = '# ' . $site_name;
 		if ( $site_desc ) {
 			$lines[] = '';
@@ -104,17 +104,17 @@ class Xpay_REST {
 		nocache_headers();
 		header( 'Content-Type: text/plain; charset=utf-8' );
 		header( 'X-Robots-Tag: noindex' );
-		echo implode( "\n", $lines ) . "\n";
+		echo esc_html( implode( "\n", $lines ) ) . "\n";
 	}
 
 	private function serve_acp_json() {
-		$slug = Xpay_Plugin::merchant_slug();
+		$slug    = Xpay_Plugin::merchant_slug();
 		$payload = array(
 			'version'      => '1.0',
 			'merchant'     => array(
 				'name' => get_bloginfo( 'name' ),
 				'url'  => home_url( '/' ),
-				'slug' => $slug ?: null,
+				'slug' => $slug ? $slug : null,
 			),
 			'platform'     => array(
 				'kind'    => 'woocommerce',

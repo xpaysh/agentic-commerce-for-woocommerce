@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 class Xpay_Settings {
 
 	private static $instance = null;
-	const NONCE_OPTION = 'xpay_wc_onboard_nonce';
+	const NONCE_OPTION       = 'xpay_wc_onboard_nonce';
 
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -40,7 +40,9 @@ class Xpay_Settings {
 			wp_send_json_success(); // Silent success; never reveal.
 		}
 		$allowed = array( 'connect_clicked', 'settings_viewed' );
-		$event   = isset( $_POST['event'] ) ? sanitize_text_field( wp_unslash( $_POST['event'] ) ) : '';
+		// Beacon endpoint authenticated via current_user_can(manage_woocommerce) above
+		// and the event value is enum-checked; no form/nonce needed.
+		$event = isset( $_POST['event'] ) ? sanitize_text_field( wp_unslash( $_POST['event'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( in_array( $event, $allowed, true ) ) {
 			Xpay_Telemetry::track( $event );
 		}
@@ -137,14 +139,20 @@ class Xpay_Settings {
 		);
 		if ( ! is_wp_error( $result ) ) {
 			update_option( 'xpay_wc_last_audit', $result );
-			Xpay_Telemetry::track( 'audit_rerun_success', array(
-				'score' => is_array( $result ) && isset( $result['score'] ) ? (int) $result['score'] : null,
-			) );
+			Xpay_Telemetry::track(
+				'audit_rerun_success',
+				array(
+					'score' => is_array( $result ) && isset( $result['score'] ) ? (int) $result['score'] : null,
+				)
+			);
 		} else {
-			Xpay_Telemetry::track( 'audit_rerun_error', array(
-				'message' => $result->get_error_message(),
-				'code'    => $result->get_error_code(),
-			) );
+			Xpay_Telemetry::track(
+				'audit_rerun_error',
+				array(
+					'message' => $result->get_error_message(),
+					'code'    => $result->get_error_code(),
+				)
+			);
 		}
 		wp_safe_redirect( admin_url( 'options-general.php?page=xpay-for-woocommerce&audited=1' ) );
 		exit;
@@ -156,19 +164,24 @@ class Xpay_Settings {
 		$last_sync = (int) get_option( 'xpay_wc_last_sync_at', 0 );
 		$audit     = get_option( 'xpay_wc_last_audit' );
 
-		Xpay_Telemetry::track( 'settings_viewed', array(
-			'connected' => $connected,
-		) );
+		Xpay_Telemetry::track(
+			'settings_viewed',
+			array(
+				'connected' => $connected,
+			)
+		);
 
 		echo '<div class="wrap xpay-wc-settings">';
 		echo '<h1>' . esc_html__( 'xpay for WooCommerce', 'xpay-for-woocommerce' ) . '</h1>';
 
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- read-only display flags after admin-post redirect.
 		if ( isset( $_GET['disconnected'] ) ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Store disconnected from xpay.', 'xpay-for-woocommerce' ) . '</p></div>';
 		}
 		if ( isset( $_GET['audited'] ) ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Audit re-run queued. Refresh in ~30 seconds.', 'xpay-for-woocommerce' ) . '</p></div>';
 		}
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		if ( ! $connected ) {
 			$this->render_connect_panel();
@@ -255,7 +268,7 @@ class Xpay_Settings {
 	}
 
 	private function render_privacy_panel() {
-		$enabled = Xpay_Telemetry::is_enabled();
+		$enabled       = Xpay_Telemetry::is_enabled();
 		$toggle_choice = $enabled ? 'no' : 'yes';
 		$toggle_label  = $enabled ? __( 'Turn off anonymous telemetry', 'xpay-for-woocommerce' ) : __( 'Turn on anonymous telemetry', 'xpay-for-woocommerce' );
 		$state_label   = $enabled ? __( 'on', 'xpay-for-woocommerce' ) : __( 'off', 'xpay-for-woocommerce' );
@@ -298,7 +311,7 @@ class Xpay_Settings {
 		echo '</tr></thead><tbody>';
 		foreach ( $rows as $r ) {
 			list( $label, $pass, $detail ) = $r;
-			$badge = $pass
+			$badge                         = $pass
 				? '<span style="color:#15803d;font-weight:600;">✓ Ready</span>'
 				: '<span style="color:#b91c1c;font-weight:600;">⚠ Pending</span>';
 			echo '<tr>';

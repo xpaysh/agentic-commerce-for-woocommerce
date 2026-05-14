@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Connect store</title><link rel="stylesheet" href="wp-admin.css"></head>
+<body>
+<div class="wp-bar">WP-Admin · yourstore.com</div>
+<div class="wp-shell">
+  <aside class="wp-sidebar">
+    <div class="logo">YourStore</div>
+    <nav>
+      <a href="#">Dashboard</a><a href="#">Products</a><a href="#">Orders</a>
+      <a href="#">WooCommerce</a><a href="#">Appearance</a><a href="#">Plugins</a>
+      <a href="#" class="active">Settings &nbsp;›&nbsp; xpay</a>
+    </nav>
+  </aside>
+  <main class="wp-content">
+    <h1>xpay for WooCommerce</h1>
+
+    <div class="notice notice-info">
+      <p><strong>xpay for WooCommerce — help us improve onboarding</strong></p>
+      <p>May we send anonymous lifecycle events (plugin activated, store connected, audit re-run, sync errors) to help us catch broken onboarding flows? No PII or customer data is ever sent.</p>
+      <p>
+        <a class="button button-primary" href="#">Enable anonymous telemetry</a>
+        <a class="button" href="#">No thanks</a>
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Connect your store</h2>
+      <p>Connect this WooCommerce store to xpay. We'll provision a public agent-readable catalog feed, publish your <code>/llms.txt</code> and <code>/.well-known/agentic-commerce.json</code>, and enable cart deeplinks from ChatGPT, Claude, Gemini, and Perplexity.</p>
+      <p><a class="button button-primary button-hero" href="#">Connect store →</a></p>
+      <p class="muted">No payment processor change. Payouts continue through your existing WooCommerce gateway.</p>
+    </div>
+
+    <h2 style="margin-top:32px;">Audit readiness</h2>
+    <table class="widefat"><thead><tr><th>Check</th><th>Status</th><th>Detail</th></tr></thead><tbody>
+      <tr><td>AI can read your full catalogue</td><td><span class="pend">⚠ Pending</span></td><td>Connect store to enable.</td></tr>
+      <tr><td>Live prices visible to AI</td><td><span class="ok">✓ Ready</span></td><td>JSON-LD Product / Offer schema injected on product pages.</td></tr>
+      <tr><td>Plain-text guide for AI assistants</td><td><span class="ok">✓ Ready</span></td><td>Served at /llms.txt.</td></tr>
+      <tr><td>AI assistants know where to send a buyer</td><td><span class="pend">⚠ Pending</span></td><td>Connect store to populate endpoints.</td></tr>
+      <tr><td>AI shoppers are allowed in</td><td><span class="ok">✓ Ready</span></td><td>GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot allowed in robots.txt.</td></tr>
+      <tr><td>Direct buy link signals</td><td><span class="ok">✓ Ready</span></td><td>BuyAction emitted on every product page.</td></tr>
+      <tr><td>AI shoppers can buy without leaving the chat</td><td><span class="pend">⚠ Pending</span></td><td>Connect store to enable.</td></tr>
+      <tr><td>Stock & price kept current</td><td><span class="pend">⚠ Pending</span></td><td>Connect store to enable.</td></tr>
+    </tbody></table>
+  </main>
+</div></body></html>

@@ -64,7 +64,8 @@ SLUG=xpay-for-woocommerce
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 rsync -a --exclude='.git' --exclude='node_modules' --exclude='.DS_Store' \
-  --exclude='scripts' --exclude='.serverless' \
+  --exclude='scripts' --exclude='.serverless' --exclude='assets' \
+  --exclude='phpcs.xml.dist' --exclude='.gitignore' \
   "$PLUGIN_DIR/" "$STAGE/$SLUG/"
 
 ZIP=/tmp/${SLUG}-${VERSION}.zip

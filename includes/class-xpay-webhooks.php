@@ -12,7 +12,7 @@ defined( 'ABSPATH' ) || exit;
 class Xpay_Webhooks {
 
 	private static $instance = null;
-	const RESYNC_HOOK = 'xpay_wc_resync_catalog';
+	const RESYNC_HOOK        = 'xpay_wc_resync_catalog';
 
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -51,16 +51,24 @@ class Xpay_Webhooks {
 			)
 		);
 		if ( is_wp_error( $result ) ) {
-			error_log( '[xpay] resync failed: ' . $result->get_error_message() );
-			Xpay_Telemetry::track( 'resync_error', array(
-				'message' => $result->get_error_message(),
-				'code'    => $result->get_error_code(),
-			) );
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( '[xpay] resync failed: ' . $result->get_error_message() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			}
+			Xpay_Telemetry::track(
+				'resync_error',
+				array(
+					'message' => $result->get_error_message(),
+					'code'    => $result->get_error_code(),
+				)
+			);
 			return;
 		}
 		update_option( 'xpay_wc_last_sync_at', time() );
-		Xpay_Telemetry::track( 'resync_success', array(
-			'product_count' => is_array( $result ) && isset( $result['count'] ) ? (int) $result['count'] : null,
-		) );
+		Xpay_Telemetry::track(
+			'resync_success',
+			array(
+				'product_count' => is_array( $result ) && isset( $result['count'] ) ? (int) $result['count'] : null,
+			)
+		);
 	}
 }

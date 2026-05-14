@@ -1,0 +1,59 @@
+/* WP admin look-alike — matches what the merchant sees in their browser. */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  line-height: 1.4em;
+  color: #1d2327;
+  background: #f0f0f1;
+}
+.wp-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 1000px; }
+.wp-sidebar {
+  background: #1d2327; color: #f0f0f1; padding: 0;
+}
+.wp-sidebar .logo { padding: 18px 16px; font-weight: 700; font-size: 18px; background: #101113; }
+.wp-sidebar nav a { display: block; padding: 10px 16px; color: #c3c4c7; text-decoration: none; }
+.wp-sidebar nav a.active { background: #2271b1; color: #fff; font-weight: 600; }
+.wp-sidebar nav a:hover:not(.active) { background: #2c3338; color: #fff; }
+.wp-bar { background: #1d2327; color: #f0f0f1; padding: 8px 20px; height: 32px; display: flex; align-items: center; font-size: 13px; }
+.wp-content { padding: 20px 36px; max-width: 1100px; }
+h1 { font-size: 23px; font-weight: 400; margin: 0 0 12px; padding: 9px 0; line-height: 1.3; color: #1d2327; }
+h2 { font-size: 16px; font-weight: 600; margin: 24px 0 12px; color: #1d2327; }
+p { margin: 1em 0; font-size: 14px; }
+a { color: #2271b1; }
+code { background: #f6f7f7; padding: 2px 6px; border-radius: 3px; font: 12px/1.5 SF Mono, Menlo, Consolas, monospace; }
+
+.card { background: #fff; border: 1px solid #c3c4c7; box-shadow: 0 1px 1px rgba(0,0,0,.04); padding: 20px; margin-bottom: 16px; max-width: 680px; }
+.button { display: inline-block; padding: 6px 14px; border: 1px solid #2271b1; background: #f6f7f7; color: #2271b1; text-decoration: none; border-radius: 3px; font-size: 13px; margin-right: 6px; cursor: pointer; }
+.button-primary { background: #2271b1; color: #fff; }
+.button-hero { padding: 12px 28px; font-size: 14px; font-weight: 600; }
+.notice { background: #fff; border-left: 4px solid #72aee6; padding: 12px 14px; margin: 12px 0; max-width: 880px; }
+.notice-info { border-left-color: #0ea5e9; }
+.notice-success { border-left-color: #00a32a; }
+.notice-warning { border-left-color: #dba617; }
+
+table.form-table { width: 100%; max-width: 100%; }
+table.form-table th { width: 200px; text-align: left; padding: 12px 10px 12px 0; font-weight: 600; }
+table.form-table td { padding: 12px 10px; }
+
+table.widefat { width: 100%; max-width: 880px; border-collapse: collapse; background: #fff; border: 1px solid #c3c4c7; }
+table.widefat th, table.widefat td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #c3c4c7; font-size: 13px; }
+table.widefat thead th { background: #f6f7f7; font-weight: 600; }
+table.widefat tbody tr:nth-child(even) { background: #fafafa; }
+.ok { color: #15803d; font-weight: 600; }
+.pend { color: #b91c1c; font-weight: 600; }
+.muted { color: #646970; font-size: 13px; }
+
+pre.code { background: #1d2327; color: #f0f0f1; padding: 18px 20px; border-radius: 4px; overflow: auto; font: 12px/1.55 SF Mono, Menlo, Consolas, monospace; }
+.json-key { color: #88c0d0; }
+.json-str { color: #a3be8c; }
+.json-num { color: #d08770; }
+.highlight { background: rgba(255, 215, 0, 0.18); padding: 1px 0; }
+
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.chat-card { background: #fff; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.08); border: 1px solid #e5e7eb; }
+.chat-card h3 { margin: 0 0 8px; font-size: 14px; color: #6b7280; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+.bubble-user { background: #f3f4f6; padding: 10px 14px; border-radius: 16px 16px 4px 16px; display: inline-block; font-size: 14px; margin-bottom: 12px; max-width: 90%; }
+.bubble-ai { background: #2271b1; color: #fff; padding: 10px 14px; border-radius: 16px 16px 16px 4px; display: inline-block; font-size: 14px; max-width: 95%; }
+.bubble-ai .pill { background: rgba(255,255,255,.18); color: #fff; padding: 2px 8px; border-radius: 999px; font-size: 12px; margin-right: 6px; }

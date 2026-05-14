@@ -25,10 +25,10 @@ class Xpay_Client {
 			'method'  => $method,
 			'timeout' => $timeout,
 			'headers' => array(
-				'Accept'         => 'application/json',
-				'Content-Type'   => 'application/json',
-				'User-Agent'     => 'xpay-for-woocommerce/' . XPAY_WC_VERSION . '; ' . home_url( '/' ),
-				'X-Xpay-Site'    => home_url( '/' ),
+				'Accept'       => 'application/json',
+				'Content-Type' => 'application/json',
+				'User-Agent'   => 'xpay-for-woocommerce/' . XPAY_WC_VERSION . '; ' . home_url( '/' ),
+				'X-Xpay-Site'  => home_url( '/' ),
 			),
 		);
 
@@ -57,7 +57,10 @@ class Xpay_Client {
 		return new WP_Error(
 			'xpay_http_' . $code,
 			isset( $json['error'] ) ? $json['error'] : 'xpay backend error',
-			array( 'status' => $code, 'body' => $json )
+			array(
+				'status' => $code,
+				'body'   => $json,
+			)
 		);
 	}
 
@@ -75,7 +78,7 @@ class Xpay_Client {
 		// Backend signs with sha256(api_key); plugin derives the same secret here.
 		// Documented in backend/wc-plugin-setup/README.md → v0.1 limitations.
 		$secret = hash( 'sha256', $raw_key );
-		$parts = explode( '.', $jwt );
+		$parts  = explode( '.', $jwt );
 		if ( 3 !== count( $parts ) ) {
 			return false;
 		}
@@ -99,7 +102,7 @@ class Xpay_Client {
 		if ( isset( $payload['exp'] ) && time() >= (int) $payload['exp'] ) {
 			return false;
 		}
-		if ( isset( $payload['merchant'] ) && $payload['merchant'] !== Xpay_Plugin::merchant_slug() ) {
+		if ( isset( $payload['merchant'] ) && Xpay_Plugin::merchant_slug() !== $payload['merchant'] ) {
 			return false;
 		}
 		return $payload;
@@ -110,6 +113,7 @@ class Xpay_Client {
 		if ( $pad ) {
 			$s .= str_repeat( '=', 4 - $pad );
 		}
-		return base64_decode( strtr( $s, '-_', '+/' ) );
+		// JWT payload decode — base64 is the protocol, not obfuscation. phpcs false positive.
+		return base64_decode( strtr( $s, '-_', '+/' ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 	}
 }

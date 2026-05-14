@@ -17,8 +17,8 @@ defined( 'ABSPATH' ) || exit;
 class Xpay_Cart {
 
 	private static $instance = null;
-	const TOKEN_PARAM = 'xpay_cart';
-	const SESSION_KEY = '_xpay_attribution';
+	const TOKEN_PARAM        = 'xpay_cart';
+	const SESSION_KEY        = '_xpay_attribution';
 
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -34,6 +34,8 @@ class Xpay_Cart {
 	}
 
 	public function maybe_handle() {
+		// Cart deeplink is authenticated by the signed JWT in the URL, not a WP nonce.
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if ( empty( $_GET[ self::TOKEN_PARAM ] ) ) {
 			return;
 		}
@@ -62,9 +64,9 @@ class Xpay_Cart {
 
 		$added = 0;
 		foreach ( $payload['items'] as $line ) {
-			$sku        = isset( $line['sku'] ) ? sanitize_text_field( $line['sku'] ) : '';
-			$qty        = isset( $line['qty'] ) ? max( 1, (int) $line['qty'] ) : 1;
-			$variation  = isset( $line['variation_id'] ) ? (int) $line['variation_id'] : 0;
+			$sku       = isset( $line['sku'] ) ? sanitize_text_field( $line['sku'] ) : '';
+			$qty       = isset( $line['qty'] ) ? max( 1, (int) $line['qty'] ) : 1;
+			$variation = isset( $line['variation_id'] ) ? (int) $line['variation_id'] : 0;
 
 			$product_id = wc_get_product_id_by_sku( $sku );
 			if ( ! $product_id && ctype_digit( $sku ) ) {
@@ -76,7 +78,7 @@ class Xpay_Cart {
 
 			$result = WC()->cart->add_to_cart( $product_id, $qty, $variation );
 			if ( $result ) {
-				$added++;
+				++$added;
 			}
 		}
 
@@ -91,15 +93,16 @@ class Xpay_Cart {
 		WC()->session->set(
 			self::SESSION_KEY,
 			array(
-				'cart_id'     => isset( $payload['cart_id'] ) ? sanitize_text_field( $payload['cart_id'] ) : '',
-				'agent'       => isset( $payload['agent'] ) ? sanitize_text_field( $payload['agent'] ) : '',
-				'surface'     => isset( $payload['surface'] ) ? sanitize_text_field( $payload['surface'] ) : '',
-				'created_at'  => time(),
+				'cart_id'    => isset( $payload['cart_id'] ) ? sanitize_text_field( $payload['cart_id'] ) : '',
+				'agent'      => isset( $payload['agent'] ) ? sanitize_text_field( $payload['agent'] ) : '',
+				'surface'    => isset( $payload['surface'] ) ? sanitize_text_field( $payload['surface'] ) : '',
+				'created_at' => time(),
 			)
 		);
 
 		wp_safe_redirect( wc_get_checkout_url() );
 		exit;
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}
 
 	public function tag_order( $order ) {

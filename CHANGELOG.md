@@ -11,6 +11,25 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-05-14
+
+### Changed (WordPress.org submission — Tier 1 & 2 polish)
+
+- **PHPCS clean**: WordPress coding-standard pass — 0 errors, 1 cosmetic warning (down from 143 errors / 71 warnings).
+  - Real fixes: `$_SERVER['REQUEST_URI']` unslashed + sanitized; `/llms.txt` output escaped; short ternaries (`?:`) expanded; Yoda conditions; reserved-keyword param renamed (`$public` → `$is_public`); conditional `error_log` guarded by `WP_DEBUG`.
+  - Targeted suppressions with justification comments: cart deeplink (authenticated via signed JWT, not nonce); ajax-beacon endpoint (authenticated via `current_user_can`); JWT `base64_decode` (protocol, not obfuscation); JSON-LD `print_raw` (pre-encoded, double-escaping would break schema).
+- Added `phpcs.xml.dist` ruleset pinned to WP standard, with `manage_woocommerce` registered as a known capability and text-domain pinned to `xpay-for-woocommerce`.
+
+### Added
+
+- `languages/xpay-for-woocommerce.pot` — translation template generated via `wp i18n make-pot`. Required for the WP.org "Translation ready" badge.
+- WP.org listing assets in `assets/`:
+  - `banner-772x250.png` + `banner-1544x500.png` (retina) — listing banner
+  - `icon-128x128.png` + `icon-256x256.png` (retina) — plugin icon
+  - `screenshot-1.png` through `screenshot-5.png` — 1600×1000, captioned in readme.txt
+- `assets/screenshots-src/` — source HTML + Playwright capture script so screenshots are reproducible. Excluded from the plugin zip.
+- Release script now also excludes `assets/`, `phpcs.xml.dist`, `.gitignore` from the zip (these live in the repo / SVN-assets directory, not the installable plugin).
+
 ## [0.1.2] — 2026-05-14
 
 ### Changed (WordPress.org submission compliance — Tier 0)

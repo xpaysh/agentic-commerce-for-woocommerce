@@ -73,9 +73,12 @@ class Xpay_Plugin {
 		update_option( 'xpay_wc_flush_rewrites', 1 );
 
 		if ( class_exists( 'Xpay_Telemetry' ) ) {
-			Xpay_Telemetry::track( 'plugin_activated', array(
-				'first_time' => ! (bool) get_option( 'xpay_wc_first_activated_at' ),
-			) );
+			Xpay_Telemetry::track(
+				'plugin_activated',
+				array(
+					'first_time' => ! (bool) get_option( 'xpay_wc_first_activated_at' ),
+				)
+			);
 			if ( ! get_option( 'xpay_wc_first_activated_at' ) ) {
 				update_option( 'xpay_wc_first_activated_at', time() );
 			}
@@ -85,9 +88,12 @@ class Xpay_Plugin {
 	public static function on_deactivate() {
 		flush_rewrite_rules();
 		if ( class_exists( 'Xpay_Telemetry' ) ) {
-			Xpay_Telemetry::track( 'plugin_deactivated', array(
-				'was_connected' => self::is_connected(),
-			) );
+			Xpay_Telemetry::track(
+				'plugin_deactivated',
+				array(
+					'was_connected' => self::is_connected(),
+				)
+			);
 		}
 	}
 

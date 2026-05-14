@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Catalog feed live</title><link rel="stylesheet" href="wp-admin.css">
+<style>
+  body { background: #1d2327; color: #f0f0f1; padding: 0; }
+  .browser { background: #fff; color: #1d2327; max-width: 1200px; margin: 36px auto; border-radius: 8px; overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,.4); }
+  .url-bar { background: #f0f0f1; padding: 10px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #c3c4c7; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+  .url { background: #fff; border: 1px solid #c3c4c7; border-radius: 16px; padding: 6px 14px; flex: 1; font: 13px SF Mono, monospace; color: #1d2327; }
+  pre.code { margin: 0; border-radius: 0; padding: 28px; max-height: 720px; font-size: 13px; }
+  .pad { padding: 22px 36px 28px; background: #f6f7f7; border-bottom: 1px solid #c3c4c7; }
+  .pad h3 { margin: 0 0 6px; font-size: 18px; }
+  .pad p { margin: 0; color: #50575e; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="browser">
+  <div class="url-bar"><div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div><div class="url">https://agent-feed.xpay.sh/catalog/yourstore-com.json</div></div>
+  <div class="pad">
+    <h3>Your catalog, live on xpay's CDN</h3>
+    <p>Real prices · real stock · refreshed within 30 seconds of any product change</p>
+  </div>
+<pre class="code">{
+  <span class="json-key">"version"</span>: <span class="json-str">"1.0"</span>,
+  <span class="json-key">"shape"</span>: <span class="json-str">"acp-v1"</span>,
+  <span class="json-key">"merchant"</span>: {
+    <span class="json-key">"slug"</span>: <span class="json-str">"yourstore-com"</span>,
+    <span class="json-key">"name"</span>: <span class="json-str">"YourStore"</span>,
+    <span class="json-key">"url"</span>: <span class="json-str">"https://yourstore.com"</span>
+  },
+  <span class="json-key">"generated_at"</span>: <span class="json-str">"2026-05-14T09:42:11Z"</span>,
+  <span class="json-key">"product_count"</span>: <span class="json-num">142</span>,
+  <span class="json-key">"products"</span>: [
+    {
+      <span class="json-key">"sku"</span>: <span class="json-str">"YS-CANDLE-LAV"</span>,
+      <span class="json-key">"name"</span>: <span class="json-str">"Hand-poured lavender candle, 240g"</span>,
+      <span class="json-key">"price"</span>: <span class="json-str">"24.00"</span>,
+      <span class="json-key">"currency"</span>: <span class="json-str">"USD"</span>,
+      <span class="json-key">"availability"</span>: <span class="json-str">"InStock"</span>,
+      <span class="json-key">"url"</span>: <span class="json-str">"https://yourstore.com/product/lavender-candle/"</span>,
+      <span class="json-key">"image"</span>: <span class="json-str">"https://yourstore.com/wp-content/uploads/lavender-candle.jpg"</span>,
+      <span class="json-key">"buy_action"</span>: <span class="json-str">"https://yourstore.com/?xpay_cart=…"</span>
+    },
+    {
+      <span class="json-key">"sku"</span>: <span class="json-str">"YS-MUG-CER-BLK"</span>,
+      <span class="json-key">"name"</span>: <span class="json-str">"Ceramic mug, matte black"</span>,
+      <span class="json-key">"price"</span>: <span class="json-str">"18.50"</span>,
+      <span class="json-key">"currency"</span>: <span class="json-str">"USD"</span>,
+      <span class="json-key">"availability"</span>: <span class="json-str">"InStock"</span>,
+      <span class="json-key">"url"</span>: <span class="json-str">"https://yourstore.com/product/black-mug/"</span>
+    }
+    <span style="color:#7a8b99;">// … 140 more products</span>
+  ]
+}</pre>
+</div>
+</body></html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>JSON-LD on every PDP</title><link rel="stylesheet" href="wp-admin.css">
+<style>
+  body { background: #1d2327; color: #f0f0f1; padding: 0; }
+  .browser { background: #fff; color: #1d2327; max-width: 1280px; margin: 30px auto; border-radius: 8px; overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,.4); }
+  .url-bar { background: #f0f0f1; padding: 10px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #c3c4c7; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+  .url { background: #fff; border: 1px solid #c3c4c7; border-radius: 16px; padding: 6px 14px; flex: 1; font: 13px SF Mono, monospace; color: #1d2327; }
+  .pad { padding: 22px 36px 24px; background: #f6f7f7; border-bottom: 1px solid #c3c4c7; }
+  .pad h3 { margin: 0 0 6px; font-size: 18px; }
+  .pad p { margin: 0; color: #50575e; font-size: 14px; }
+  pre.code { margin: 0; padding: 28px 36px; max-height: 740px; font-size: 13px; line-height: 1.6; border-radius: 0; }
+  .tag { color: #ebcb8b; }
+  .attr { color: #88c0d0; }
+  .str { color: #a3be8c; }
+  .key { color: #88c0d0; }
+  .num { color: #d08770; }
+  .com { color: #7a8b99; }
+  .highlight { background: rgba(255,215,0,.16); }
+</style>
+</head>
+<body>
+<div class="browser">
+  <div class="url-bar"><div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div><div class="url">view-source:https://yourstore.com/product/lavender-candle/</div></div>
+  <div class="pad">
+    <h3>JSON-LD on every product page — including BuyAction</h3>
+    <p>Schema.org Product + Offer + BuyAction emitted in &lt;head&gt; · respects Yoast / Rank Math if already present</p>
+  </div>
+<pre class="code"><span class="com">&lt;!-- emitted by xpay-for-woocommerce v0.1.2 --&gt;</span>
+<span class="highlight"><span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"application/ld+json"</span> <span class="attr">data-emitter</span>=<span class="str">"xpay"</span><span class="tag">&gt;</span>
+{
+  <span class="key">"@context"</span>: <span class="str">"https://schema.org/"</span>,
+  <span class="key">"@type"</span>: <span class="str">"Product"</span>,
+  <span class="key">"name"</span>: <span class="str">"Hand-poured lavender candle, 240g"</span>,
+  <span class="key">"sku"</span>: <span class="str">"YS-CANDLE-LAV"</span>,
+  <span class="key">"image"</span>: [
+    <span class="str">"https://yourstore.com/wp-content/uploads/lavender-candle.jpg"</span>
+  ],
+  <span class="key">"description"</span>: <span class="str">"Hand-poured soy candle with French lavender essential oil…"</span>,
+  <span class="key">"offers"</span>: {
+    <span class="key">"@type"</span>: <span class="str">"Offer"</span>,
+    <span class="key">"price"</span>: <span class="str">"24.00"</span>,
+    <span class="key">"priceCurrency"</span>: <span class="str">"USD"</span>,
+    <span class="key">"availability"</span>: <span class="str">"https://schema.org/InStock"</span>,
+    <span class="key">"url"</span>: <span class="str">"https://yourstore.com/product/lavender-candle/"</span>
+  },
+  <span class="highlight"><span class="key">"potentialAction"</span>: {
+    <span class="key">"@type"</span>: <span class="str">"BuyAction"</span>,
+    <span class="key">"target"</span>: <span class="str">"https://yourstore.com/?add-to-cart=4719"</span>,
+    <span class="key">"expectsAcceptanceOf"</span>: {
+      <span class="key">"@type"</span>: <span class="str">"Offer"</span>,
+      <span class="key">"price"</span>: <span class="str">"24.00"</span>,
+      <span class="key">"priceCurrency"</span>: <span class="str">"USD"</span>
+    }
+  }</span>
+}
+<span class="tag">&lt;/script&gt;</span></span></pre>
+</div>
+</body></html>

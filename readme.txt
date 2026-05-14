@@ -4,7 +4,7 @@ Tags: ai, chatgpt, agentic commerce, llms-txt, catalog feed
 Requires at least: 6.2
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 0.1.2
+Stable tag: 0.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -86,6 +86,9 @@ xpay is built non-custodially: we never see your customers, your orders, or any 
 
 == Upgrade Notice ==
 
+= 0.1.3 =
+Code quality pass for WordPress.org submission: PHPCS WordPress-standard clean, translation-ready (.pot), bundled banner / icon / screenshots. No functional changes.
+
 = 0.1.2 =
 Plugin slug renamed to `xpay-for-woocommerce` for WordPress.org submission compliance. Anonymous lifecycle telemetry is now opt-in (was opt-out). Reactivate the plugin after upgrade and choose your preference in the admin notice or under Settings → xpay → Privacy.
 
@@ -93,6 +96,12 @@ Plugin slug renamed to `xpay-for-woocommerce` for WordPress.org submission compl
 
 The full machine-readable changelog lives at <https://install.xpay.sh/woocommerce/CHANGELOG.md>
 (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.1.3 =
+* WordPress-standard PHPCS pass: 0 errors / 1 cosmetic warning (down from 143/71). Real findings fixed: unslash + sanitize on `$_SERVER['REQUEST_URI']`, escape on /llms.txt output, short-ternary removal, Yoda conditions, nonce-verification annotations on the cart-deeplink + ajax beacon paths (both authenticated by signed JWT / capability check respectively).
+* Added `phpcs.xml.dist` ruleset (WordPress standard, custom-cap allowlist for `manage_woocommerce`, text-domain pinned to `xpay-for-woocommerce`).
+* Added `languages/xpay-for-woocommerce.pot` (generated via `wp i18n make-pot`).
+* Added WP.org `assets/`: `banner-772x250.png`, `banner-1544x500.png`, `icon-128x128.png`, `icon-256x256.png`, `screenshot-1.png` through `screenshot-5.png`. Excluded from the plugin zip (live in SVN `assets/` after WP.org approval).
 
 = 0.1.2 =
 * Renamed plugin slug from `xpay-woocommerce` to `xpay-for-woocommerce` to comply with WordPress.org Guideline 17 (trademark — non-WooCommerce vendors cannot have a slug starting with "woocommerce").

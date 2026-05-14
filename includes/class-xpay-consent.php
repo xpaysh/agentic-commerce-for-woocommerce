@@ -12,7 +12,7 @@ defined( 'ABSPATH' ) || exit;
 class Xpay_Consent {
 
 	private static $instance = null;
-	const ACTION = 'xpay_wc_consent';
+	const ACTION             = 'xpay_wc_consent';
 
 	public static function instance() {
 		if ( null === self::$instance ) {

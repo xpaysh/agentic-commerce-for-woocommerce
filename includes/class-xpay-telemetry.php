@@ -50,16 +50,16 @@ class Xpay_Telemetry {
 			}
 
 			$payload = array(
-				'event'           => $event,
-				'site_url'        => home_url( '/' ),
-				'merchant_slug'   => Xpay_Plugin::merchant_slug(),
-				'plugin_version'  => XPAY_WC_VERSION,
-				'wp_version'      => get_bloginfo( 'version' ),
-				'wc_version'      => defined( 'WC_VERSION' ) ? WC_VERSION : null,
-				'php_version'     => PHP_VERSION,
-				'locale'          => get_locale(),
-				'ts'              => time(),
-				'props'           => is_array( $props ) ? $props : array(),
+				'event'          => $event,
+				'site_url'       => home_url( '/' ),
+				'merchant_slug'  => Xpay_Plugin::merchant_slug(),
+				'plugin_version' => XPAY_WC_VERSION,
+				'wp_version'     => get_bloginfo( 'version' ),
+				'wc_version'     => defined( 'WC_VERSION' ) ? WC_VERSION : null,
+				'php_version'    => PHP_VERSION,
+				'locale'         => get_locale(),
+				'ts'             => time(),
+				'props'          => is_array( $props ) ? $props : array(),
 			);
 
 			$url = trailingslashit( XPAY_WC_API_BASE ) . ltrim( self::ENDPOINT_PATH, '/' );
@@ -79,8 +79,8 @@ class Xpay_Telemetry {
 					'body'      => wp_json_encode( $payload ),
 				)
 			);
-		} catch ( \Throwable $e ) {
-			// Telemetry must never break the host site. Swallow.
+		} catch ( \Throwable $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
+			unset( $e ); // Telemetry must never break the host site. Swallow.
 		}
 	}
 }
