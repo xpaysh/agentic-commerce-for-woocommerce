@@ -11,11 +11,19 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.1.9] — 2026-05-15
+
+### Changed
+
+- **Documentation moved** from `docs.xpay.sh/products/woocommerce/*` to `docs.xpay.sh/merchants/woocommerce/*`. Merchants is the audience-level bucket; WooCommerce is one of several future platform integrations (Shopify, BigCommerce, Magento, custom) that will live as siblings under `/merchants/`. Mirrors the existing `/publishers/` IA.
+- Updated 9 backlinks across readme.txt + class-xpay-settings.php Connect-store panel + assets/preview/listing.html to the new path.
+- No plugin functionality changed; URL migration only.
+
 ## [0.1.8] — 2026-05-15
 
 ### Added
 
-- **Documentation site at [docs.xpay.sh/products/woocommerce](https://docs.xpay.sh/products/woocommerce)** — six new pages: Overview, Installing, WooCommerce REST API keys, Connecting your store, Privacy & telemetry, Audit readiness checklist, Troubleshooting. Source lives in `DEVELOPER_DOCS/xpay-docs/src/content/en/products/woocommerce/` (separate repo, deployed via Vercel).
+- **Documentation site at [docs.xpay.sh/merchants/woocommerce](https://docs.xpay.sh/merchants/woocommerce)** — six new pages: Overview, Installing, WooCommerce REST API keys, Connecting your store, Privacy & telemetry, Audit readiness checklist, Troubleshooting. Source lives in `DEVELOPER_DOCS/xpay-docs/src/content/en/products/woocommerce/` (separate repo, deployed via Vercel).
 - readme.txt now backlinks the docs at every relevant moment — install instructions link to the install walkthrough, the connect flow links to the keys page, privacy section links to the plain-English version, etc.
 
 ### Changed

@@ -6,7 +6,7 @@ Tested up to: 6.7
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 9.4
-Stable tag: 0.1.8
+Stable tag: 0.1.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -18,7 +18,7 @@ Put your WooCommerce catalog inside ChatGPT, Claude, Gemini and Perplexity. AI s
 
 **xpay for WooCommerce makes your store visible to ChatGPT, Claude, Gemini and Perplexity** in five minutes flat — no theme changes, no replatforming, no new payment processor. Your existing checkout stays exactly as it is; xpay just makes sure you're the answer the AI gives.
 
-📘 **Full setup guide with screenshots:** [docs.xpay.sh/products/woocommerce](https://docs.xpay.sh/products/woocommerce)
+📘 **Full setup guide with screenshots:** [docs.xpay.sh/merchants/woocommerce](https://docs.xpay.sh/merchants/woocommerce)
 🌐 **Plugin home:** [www.xpay.sh/merchants/woocommerce/](https://www.xpay.sh/merchants/woocommerce/)
 🔓 **Source on GitHub:** [github.com/xpaysh/xpay-for-woocommerce](https://github.com/xpaysh/xpay-for-woocommerce)
 
@@ -40,12 +40,12 @@ Put your WooCommerce catalog inside ChatGPT, Claude, Gemini and Perplexity. AI s
 
 = Five-minute install flow =
 
-1. Install the plugin from this directory or upload the zip. ([detailed walk-through](https://docs.xpay.sh/products/woocommerce/installing))
+1. Install the plugin from this directory or upload the zip. ([detailed walk-through](https://docs.xpay.sh/merchants/woocommerce/installing))
 2. Activate. You'll be taken to **Settings → xpay**.
-3. Click **Connect store**. A new tab opens at app.xpay.sh, where you grant a read-only WooCommerce REST API key. ([how to generate one](https://docs.xpay.sh/products/woocommerce/rest-api-keys))
-4. Your catalog goes live on AI surfaces within about 10 minutes. The plugin's built-in audit-readiness checklist ([what each row means](https://docs.xpay.sh/products/woocommerce/audit-readiness)) turns green as each piece confirms.
+3. Click **Connect store**. A new tab opens at app.xpay.sh, where you grant a read-only WooCommerce REST API key. ([how to generate one](https://docs.xpay.sh/merchants/woocommerce/rest-api-keys))
+4. Your catalog goes live on AI surfaces within about 10 minutes. The plugin's built-in audit-readiness checklist ([what each row means](https://docs.xpay.sh/merchants/woocommerce/audit-readiness)) turns green as each piece confirms.
 
-Stuck on any step? [Troubleshooting guide](https://docs.xpay.sh/products/woocommerce/troubleshooting).
+Stuck on any step? [Troubleshooting guide](https://docs.xpay.sh/merchants/woocommerce/troubleshooting).
 
 = Compatibility =
 
@@ -56,7 +56,7 @@ Stuck on any step? [Troubleshooting guide](https://docs.xpay.sh/products/woocomm
 = Privacy and consent =
 
 * **Anonymous lifecycle telemetry is off by default.** On first activation a single admin notice asks once. Pick "No thanks" and the plugin never contacts our backend for analytics. Pick "Enable" and you can change your mind any time under **Settings → xpay → Privacy**. System-wide opt-out via `define( 'XPAY_WC_TELEMETRY', false );` in `wp-config.php`.
-* **Full data disclosure** at [install.xpay.sh/woocommerce/privacy.html](https://install.xpay.sh/woocommerce/privacy.html) — every byte the plugin sends, when it sends it, how to opt out, how to request deletion. Plain-English version: [docs.xpay.sh/products/woocommerce/privacy-telemetry](https://docs.xpay.sh/products/woocommerce/privacy-telemetry).
+* **Full data disclosure** at [install.xpay.sh/woocommerce/privacy.html](https://install.xpay.sh/woocommerce/privacy.html) — every byte the plugin sends, when it sends it, how to opt out, how to request deletion. Plain-English version: [docs.xpay.sh/merchants/woocommerce/privacy-telemetry](https://docs.xpay.sh/merchants/woocommerce/privacy-telemetry).
 
 = Source code and contributing =
 
@@ -182,8 +182,11 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.1.9 =
+Docs moved from docs.xpay.sh/products/woocommerce → docs.xpay.sh/merchants/woocommerce so the path matches the actual audience (merchants, not products). Future Shopify / BigCommerce integrations will live as siblings under /merchants/. No code changes; URL-only.
+
 = 0.1.8 =
-Pricing link updated. Punchier opening pitch in the Description. Full setup walkthroughs with screenshots published at docs.xpay.sh/products/woocommerce — readme now backlinks them at the right moments (install / REST API keys / connect / audit / troubleshooting / privacy).
+Pricing link updated. Punchier opening pitch in the Description. Full setup walkthroughs with screenshots published at docs.xpay.sh/merchants/woocommerce — readme now backlinks them at the right moments (install / REST API keys / connect / audit / troubleshooting / privacy).
 
 = 0.1.7 =
 Source repo at github.com/xpaysh/xpay-for-woocommerce is now public. Restored repo link references in readme.txt FAQ and source-code section so reviewers and merchants can browse the source directly.
@@ -198,10 +201,14 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
 
+= 0.1.9 =
+* Documentation URLs migrated `docs.xpay.sh/products/woocommerce/*` → `docs.xpay.sh/merchants/woocommerce/*`. Merchants is the bucket; WooCommerce is one (of many future) integrations inside it. Future Shopify / BigCommerce docs will live as siblings.
+* No plugin functionality changed — readme + admin-UI links updated.
+
 = 0.1.8 =
 * Punchier Description hero — leads with the buyer-side framing ("Your next customer is asking ChatGPT, not Google") instead of an abstract claim.
 * Pricing link updated everywhere to `https://www.xpay.sh/pricing/?tab=agentic-commerce`.
-* New documentation site at [docs.xpay.sh/products/woocommerce](https://docs.xpay.sh/products/woocommerce) — multi-page walkthrough covering install, WC REST API key generation, connect flow, privacy & telemetry, audit readiness checklist, and a troubleshooting guide. readme backlinks the docs at the right moments.
+* New documentation site at [docs.xpay.sh/merchants/woocommerce](https://docs.xpay.sh/merchants/woocommerce) — multi-page walkthrough covering install, WC REST API key generation, connect flow, privacy & telemetry, audit readiness checklist, and a troubleshooting guide. readme backlinks the docs at the right moments.
 * GitHub backlinks throughout the readme + FAQ (issue tracker, source browse).
 
 = 0.1.7 =

@@ -230,7 +230,7 @@ class Xpay_Settings {
 		echo '<div class="card" style="padding:20px;max-width:680px;">';
 		echo '<h2>' . esc_html__( 'Connect your store', 'xpay-for-woocommerce' ) . '</h2>';
 		echo '<p>' . esc_html__( 'Connect this WooCommerce store to xpay. We\'ll provision a public agent-readable catalog feed, publish your /llms.txt and /.well-known/agentic-commerce.json, and enable cart deeplinks from ChatGPT, Claude, Gemini, and Perplexity.', 'xpay-for-woocommerce' ) . '</p>';
-		echo '<p style="font-size:13px;"><a href="https://docs.xpay.sh/products/woocommerce/connecting" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Step-by-step guide with screenshots →', 'xpay-for-woocommerce' ) . '</a></p>';
+		echo '<p style="font-size:13px;"><a href="https://docs.xpay.sh/merchants/woocommerce/connecting" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Step-by-step guide with screenshots →', 'xpay-for-woocommerce' ) . '</a></p>';
 		echo '<p><a id="xpay-wc-connect-btn" class="button button-primary button-hero" href="' . esc_url( $onboard_url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Connect store →', 'xpay-for-woocommerce' ) . '</a></p>';
 		echo '<p style="color:#646970;font-size:13px;">' . esc_html__( 'No payment processor change. Payouts continue through your existing WooCommerce gateway.', 'xpay-for-woocommerce' ) . '</p>';
 		echo '</div>';
