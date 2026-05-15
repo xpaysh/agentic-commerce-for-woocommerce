@@ -6,7 +6,7 @@ Tested up to: 6.7
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 9.4
-Stable tag: 0.1.6
+Stable tag: 0.1.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,7 +54,7 @@ Put your WooCommerce catalog inside ChatGPT, Claude, Gemini and Perplexity. AI s
 
 = Source code and contributing =
 
-The plugin source is published under GPLv2-or-later. The plugin zip you install is unminified and human-readable — you can read, fork, modify and redistribute every line under that license. To report a bug or request a feature, email merchants@xpay.sh.
+The plugin source is published under GPLv2-or-later. Public repo and issue tracker: [github.com/xpaysh/xpay-for-woocommerce](https://github.com/xpaysh/xpay-for-woocommerce). You can fork, modify, redistribute, and self-host without paying anything.
 
 == Installation ==
 
@@ -121,7 +121,7 @@ Yes. Each store gets its own merchant slug and its own catalog feed. Pricing app
 
 = Is the source code available? =
 
-Yes. The plugin is GPLv2-or-later and the zip you install is unminified, human-readable source. To request specific files or report an issue, email merchants@xpay.sh.
+Yes. GPLv2-or-later, public repo at [github.com/xpaysh/xpay-for-woocommerce](https://github.com/xpaysh/xpay-for-woocommerce).
 
 = How much does this cost? =
 
@@ -129,11 +129,11 @@ Free until your first AI-attributable sale. After that, pricing starts at 1% of 
 
 = Does xpay work with WooCommerce Subscriptions / WooCommerce Bookings / WooCommerce Memberships? =
 
-The plugin publishes simple, variable, and grouped products in v0.1. Subscriptions, bookings, and memberships are on the roadmap.
+The plugin publishes simple, variable, and grouped products in v0.1. Subscriptions, bookings, and memberships are on the roadmap — track progress in [the GitHub repo](https://github.com/xpaysh/xpay-for-woocommerce).
 
 = I have a question that isn't answered here. =
 
-Email merchants@xpay.sh.
+Email merchants@xpay.sh or open an issue at [github.com/xpaysh/xpay-for-woocommerce/issues](https://github.com/xpaysh/xpay-for-woocommerce/issues).
 
 == External services ==
 
@@ -176,8 +176,11 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.1.7 =
+Source repo at github.com/xpaysh/xpay-for-woocommerce is now public. Restored repo link references in readme.txt FAQ and source-code section so reviewers and merchants can browse the source directly.
+
 = 0.1.6 =
-Removed GitHub link references from readme.txt to avoid a broken-link impression for reviewers (source repo is currently private). Source is still GPLv2-or-later via the unminified plugin zip. Will re-add public repo link in a future release when the repo flips public.
+Removed GitHub link references from readme.txt to avoid a broken-link impression for reviewers (source repo is currently private). Source is still GPLv2-or-later via the unminified plugin zip.
 
 = 0.1.5 =
 Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that intercept /.well-known/. Post-activation redirect now also fires for upgrades where the store hasn't connected yet. WC HPOS compatibility declared. Privacy + terms pages live.
@@ -186,8 +189,11 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
 
+= 0.1.7 =
+* `xpaysh/xpay-for-woocommerce` GitHub repo flipped public. Restored repo link references in readme.txt FAQ and "Source code" section so reviewers and merchants can browse the unminified source directly. GPLv2-or-later unchanged.
+
 = 0.1.6 =
-* Removed GitHub repo link references from readme.txt to avoid a broken-link impression for reviewers (the source repo is currently private). The plugin is still GPLv2-or-later — the zip you install is the canonical, unminified, human-readable source. Will re-add the public repo link in a future release once the repo flips public.
+* Removed GitHub repo link references from readme.txt to avoid a broken-link impression for reviewers (the source repo was private). Plugin is still GPLv2-or-later — the zip is the canonical, unminified source.
 
 = 0.1.5 =
 * Query-arg fallback for the discovery file: hosts that intercept `/.well-known/` (some shared hosts, CDN edges, ACME setups) can now serve the discovery file at `/?xpay_route=acp`. Discoverable via the `Link` header on the home page.
