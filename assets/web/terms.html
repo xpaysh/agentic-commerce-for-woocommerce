@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terms of use — xpay for WooCommerce</title>
+<meta name="description" content="Terms of use for the xpay for WooCommerce WordPress plugin.">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif; color: #0f172a; background: #f8fafc; line-height: 1.55; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 56px 24px 80px; }
+  header { padding-bottom: 24px; border-bottom: 1px solid #e2e8f0; margin-bottom: 32px; }
+  .crumb { font-size: 13px; color: #64748b; } .crumb a { color: #2563eb; text-decoration: none; }
+  h1 { font-size: 32px; line-height: 1.2; margin: 12px 0 8px; letter-spacing: -.02em; }
+  .meta { color: #64748b; font-size: 13px; }
+  h2 { margin-top: 36px; font-size: 20px; }
+  p, li { font-size: 15px; color: #1e293b; }
+  code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font: 13px/1.4 "SF Mono", Menlo, Consolas, monospace; }
+  ul { padding-left: 22px; } li { margin: 6px 0; }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 13px; }
+  footer a, a { color: #2563eb; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="crumb"><a href="https://www.xpay.sh/">xpay</a> · <a href="https://www.xpay.sh/merchants/woocommerce/">xpay for WooCommerce</a> · Terms of use</div>
+    <h1>Terms of use</h1>
+    <p class="meta">Effective 2026-05-15 · Plugin version 0.1.4+</p>
+  </header>
+
+  <p>These terms govern your use of the <strong>xpay for WooCommerce</strong> WordPress plugin and the xpay-operated services it integrates with (<code>agent-feed.xpay.sh</code>, <code>agent-commerce.xpay.sh</code>, <code>app.xpay.sh/onboard/woocommerce</code>, <code>install.xpay.sh</code>). By installing the plugin or connecting your store, you accept these terms.</p>
+
+  <h2>1. The plugin is GPLv2-or-later, free, and self-hostable</h2>
+  <p>Source is published under the GPLv2-or-later license. You can fork, modify, redistribute, and self-host the plugin under that license without paying us anything.</p>
+
+  <h2>2. The xpay services are free until first revenue</h2>
+  <p>Connecting your store to xpay is free. Catalog sync, AI-surface discovery, cart deeplinks, and admin tooling are all free for stores that have not yet made an AI-attributable sale. Pricing for stores that earn AI-attributable revenue is published at <a href="https://www.xpay.sh/pricing/">www.xpay.sh/pricing/</a> and starts at 1% of attributable order value. Pricing changes apply prospectively and require 30 days' written notice via email.</p>
+
+  <h2>3. Non-custodial — payment runs on your existing gateway</h2>
+  <p>xpay is a discovery and agent-handoff service. We do not hold funds, we do not process payments, and we do not see customer payment data. All purchases are completed via your existing WooCommerce gateway (Stripe, WooPayments, PayPal, Square, etc.). Your payout cadence, refund flows, and tax obligations are unchanged.</p>
+
+  <h2>4. Your responsibilities as a merchant</h2>
+  <ul>
+    <li>Maintain a valid WooCommerce REST API key with at least read access while the plugin is connected.</li>
+    <li>Honor orders placed via xpay cart deeplinks the same way you honor orders placed via your shop's own checkout. The buyer is your customer.</li>
+    <li>Comply with applicable law in your jurisdiction, including consumer protection, tax, sales-of-goods, and data-protection law.</li>
+    <li>Don't use the plugin to surface counterfeit, illegal, sanctioned, or trademark-infringing products.</li>
+  </ul>
+
+  <h2>5. Our responsibilities as the operator</h2>
+  <ul>
+    <li>Provide the services described in the plugin's README on a commercially reasonable best-effort basis.</li>
+    <li>Disclose, in <a href="https://install.xpay.sh/woocommerce/privacy.html">Privacy</a>, every byte the plugin sends off your server.</li>
+    <li>Process data-deletion requests sent to <a href="mailto:privacy@xpay.sh">privacy@xpay.sh</a> within 7 business days.</li>
+    <li>Give at least 14 days' notice via the plugin <a href="https://install.xpay.sh/woocommerce/CHANGELOG.md">CHANGELOG</a> before any material change to data handling.</li>
+  </ul>
+
+  <h2>6. No warranty</h2>
+  <p>The plugin and the xpay services are provided <strong>"as is"</strong>, without warranty of any kind, express or implied, including but not limited to merchantability, fitness for a particular purpose, and non-infringement. We do not guarantee uninterrupted availability of the xpay backend or the AI shopping surfaces (ChatGPT, Claude, Gemini, Perplexity) we publish to. AI agent behavior is controlled by their respective operators and may change without notice.</p>
+
+  <h2>7. Limitation of liability</h2>
+  <p>To the maximum extent permitted by law, xpay's aggregate liability arising out of or related to the plugin or services is limited to the greater of (a) the total fees you paid xpay in the 12 months preceding the event giving rise to the claim, or (b) USD 100. We are not liable for indirect, incidental, consequential, or punitive damages, including lost profits or lost data.</p>
+
+  <h2>8. Termination</h2>
+  <p>You may disconnect or uninstall the plugin at any time from <em>Settings → xpay</em> or <em>Plugins → Delete</em>. We may suspend access to the xpay services with notice for breach of these terms (e.g. surfacing prohibited products) or without notice for activity that endangers other merchants or the integrity of the service. Termination doesn't affect rights or obligations that accrued before termination.</p>
+
+  <h2>9. Governing law</h2>
+  <p>These terms are governed by the laws of the State of Delaware, United States, without regard to its conflict-of-laws principles. Any dispute will be resolved exclusively in the state or federal courts located in Wilmington, Delaware, and you and we consent to that jurisdiction.</p>
+
+  <h2>10. Changes</h2>
+  <p>Material changes will be announced in the plugin <a href="https://install.xpay.sh/woocommerce/CHANGELOG.md">CHANGELOG</a> with 14 days' notice. Continued use of the services after the change takes effect constitutes acceptance.</p>
+
+  <h2>11. Contact</h2>
+  <p>Legal &amp; privacy: <a href="mailto:privacy@xpay.sh">privacy@xpay.sh</a>. General support: <a href="https://www.xpay.sh/merchants/woocommerce/">www.xpay.sh/merchants/woocommerce/</a>.</p>
+
+  <footer>
+    <a href="https://install.xpay.sh/woocommerce/privacy.html">Privacy</a> ·
+    <a href="https://install.xpay.sh/woocommerce/CHANGELOG.md">Changelog</a> ·
+    <a href="https://www.xpay.sh/merchants/woocommerce/">Plugin homepage</a> ·
+    <a href="mailto:privacy@xpay.sh">privacy@xpay.sh</a>
+  </footer>
+</div>
+</body>
+</html>

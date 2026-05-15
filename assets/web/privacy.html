@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy — xpay for WooCommerce</title>
+<meta name="description" content="What the xpay for WooCommerce plugin sends, when, and how to opt out.">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    color: #0f172a; background: #f8fafc; line-height: 1.55;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 56px 24px 80px; }
+  header { padding-bottom: 24px; border-bottom: 1px solid #e2e8f0; margin-bottom: 32px; }
+  .crumb { font-size: 13px; color: #64748b; }
+  .crumb a { color: #2563eb; text-decoration: none; }
+  h1 { font-size: 32px; line-height: 1.2; margin: 12px 0 8px; letter-spacing: -.02em; }
+  .meta { color: #64748b; font-size: 13px; }
+  h2 { margin-top: 36px; font-size: 20px; }
+  h3 { margin-top: 24px; font-size: 16px; color: #334155; }
+  p, li { font-size: 15px; color: #1e293b; }
+  code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font: 13px/1.4 "SF Mono", Menlo, Consolas, monospace; }
+  ul { padding-left: 22px; } li { margin: 6px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  th { background: #f1f5f9; font-weight: 600; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px 24px; margin: 24px 0; }
+  .card.ok { border-left: 4px solid #15803d; }
+  .card.warn { border-left: 4px solid #d97706; }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 13px; }
+  footer a { color: #2563eb; text-decoration: none; }
+  a { color: #2563eb; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="crumb"><a href="https://www.xpay.sh/">xpay</a> · <a href="https://www.xpay.sh/merchants/woocommerce/">xpay for WooCommerce</a> · Privacy</div>
+    <h1>What the plugin sends, when, and how to stop it</h1>
+    <p class="meta">Effective 2026-05-15 · Plugin version 0.1.4+</p>
+  </header>
+
+  <p>This page is the canonical privacy disclosure for the <strong>xpay for WooCommerce</strong> WordPress plugin. It documents every byte the plugin sends off your server, when it sends it, and how to turn each path off.</p>
+
+  <div class="card ok">
+    <strong>What we never see, ever:</strong> your customers' names, emails, addresses, IPs, payment cards, order line items, order totals, refunds, tax data, shipping data, login credentials, admin emails outside the onboarding step, or any free-text fields from your customers. Payment is handled end-to-end by your existing WooCommerce gateway (Stripe / WooPayments / PayPal / Square / …). xpay never touches your checkout.
+  </div>
+
+  <h2>The three data paths</h2>
+
+  <h3>1. Catalog sync (required after Connect store)</h3>
+  <p>When you click <strong>Connect store</strong> and complete the handshake, you grant xpay a WooCommerce REST API key. xpay's backend uses it to fetch your <em>public product catalog</em> — the same fields a buyer sees on your shop page — and republish them at <code>agent-feed.xpay.sh/catalog/&lt;your-slug&gt;.json</code> so AI shoppers can read them.</p>
+  <p>Per product: name, description, price, currency, stock state, image URLs, categories, SKU. No customer data. No order data.</p>
+  <p><strong>How to stop it:</strong> click <strong>Disconnect</strong> under <em>Settings → xpay</em>. The catalog feed is removed from xpay's CDN within minutes. You can also revoke the WooCommerce REST API key under <em>WooCommerce → Settings → Advanced → REST API</em>.</p>
+
+  <h3>2. Anonymous lifecycle telemetry (opt-in, off by default)</h3>
+  <p>On first activation we ask once, via a blue admin notice: "May we send anonymous lifecycle events to help us catch broken onboarding flows?" If you click <strong>Enable anonymous telemetry</strong>, the plugin starts sending events. If you click <strong>No thanks</strong>, it sends nothing — ever.</p>
+  <p>Each event payload contains exactly:</p>
+  <table>
+    <thead><tr><th>Field</th><th>Example</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>event</code></td><td><code>plugin_activated</code></td><td>Lifecycle stage</td></tr>
+      <tr><td><code>site_url</code></td><td><code>https://yourstore.com</code></td><td>So we can group your events</td></tr>
+      <tr><td><code>plugin_version</code></td><td><code>0.1.4</code></td><td>Detect bugs by version</td></tr>
+      <tr><td><code>wp_version</code></td><td><code>6.7</code></td><td>Detect WP-version-specific bugs</td></tr>
+      <tr><td><code>wc_version</code></td><td><code>9.4</code></td><td>Detect WC-version-specific bugs</td></tr>
+      <tr><td><code>php_version</code></td><td><code>8.1.27</code></td><td>Detect PHP-version-specific bugs</td></tr>
+      <tr><td><code>locale</code></td><td><code>en_US</code></td><td>Translation prioritisation</td></tr>
+      <tr><td><code>ts</code></td><td>unix timestamp</td><td>Ordering</td></tr>
+      <tr><td><code>props</code></td><td><code>{first_time: true}</code></td><td>Event-specific context (always small, primitives only)</td></tr>
+    </tbody>
+  </table>
+
+  <p>The 14 event names: <code>plugin_activated</code>, <code>plugin_deactivated</code>, <code>settings_viewed</code>, <code>connect_clicked</code>, <code>finalize_received</code>, <code>finalize_success</code>, <code>finalize_error</code>, <code>audit_rerun_clicked</code>, <code>audit_rerun_success</code>, <code>audit_rerun_error</code>, <code>disconnected</code>, <code>resync_success</code>, <code>resync_error</code>, <code>connect_screen_viewed</code>. Any payload with an unknown event name is rejected at the backend.</p>
+  <p><strong>How to stop it:</strong></p>
+  <ul>
+    <li>UI: <em>Settings → xpay → Privacy</em> → click <strong>Turn off</strong>.</li>
+    <li>System-wide hard kill (sysadmins): add <code>define( 'XPAY_WC_TELEMETRY', false );</code> to <code>wp-config.php</code>. This overrides any UI choice.</li>
+  </ul>
+  <p>Retention: 90 days, then auto-deleted by DynamoDB TTL. No copies, no exports.</p>
+
+  <h3>3. Catalog deeplink → your existing checkout (required when an agent links a buyer to you)</h3>
+  <p>When an AI agent (ChatGPT, Claude, Gemini, Perplexity) decides to send a buyer to your store, the xpay backend mints a short-lived signed token containing the items the agent wants to add to the cart. The buyer's browser lands on your store at <code>?xpay_cart=&lt;token&gt;</code>. The plugin verifies the token, populates <code>WC()-&gt;cart</code> with the requested items, and redirects to your existing <code>wc_get_checkout_url()</code>.</p>
+  <p>From here on, your existing checkout is in charge. xpay sees nothing. We never know if the buyer completed the purchase, what they paid, who they are, or whether they refunded.</p>
+  <p><strong>What we briefly hold:</strong> only the items in the signed token, for at most 15 minutes (token expiry). No buyer info.</p>
+
+  <h2>Where data lives</h2>
+  <ul>
+    <li><strong>Catalog feed:</strong> AWS S3 / CloudFront, public, US-East-1. Object key is your store slug.</li>
+    <li><strong>WooCommerce REST credentials:</strong> AWS DynamoDB, encrypted at rest with AWS-managed KMS. v0.2 will additionally wrap them with envelope encryption.</li>
+    <li><strong>Telemetry events:</strong> AWS DynamoDB <code>xpay-wc-events-prod</code>, 90-day TTL.</li>
+    <li><strong>Cart deeplink tokens:</strong> never stored. Verified statelessly via HMAC.</li>
+  </ul>
+
+  <h2>How to request deletion</h2>
+  <p>Email <a href="mailto:privacy@xpay.sh">privacy@xpay.sh</a> from the admin address attached to your merchant slug, with the slug in the subject line. We process deletion within 7 business days and reply with confirmation. Includes: merchant row in DynamoDB, catalog feed in S3, every event row in the telemetry table.</p>
+
+  <h2>How to read this in the source code</h2>
+  <p>Every byte described here corresponds to specific files in the plugin source. Verify yourself:</p>
+  <ul>
+    <li>Catalog payload format: <code>backend/wc-plugin-setup/src/resync.ts</code></li>
+    <li>Telemetry payload + opt-in gate: <code>includes/class-xpay-telemetry.php</code></li>
+    <li>Cart token verify: <code>includes/class-xpay-client.php :: verify_jwt()</code></li>
+    <li>Cart deeplink handler: <code>includes/class-xpay-cart.php</code></li>
+  </ul>
+
+  <h2>Changes to this policy</h2>
+  <p>Material changes will be announced in the plugin <a href="https://install.xpay.sh/woocommerce/CHANGELOG.md">CHANGELOG</a> with at least 14 days' notice before they take effect. The "Effective" date at the top of this page is updated on every change.</p>
+
+  <footer>
+    <a href="https://install.xpay.sh/woocommerce/terms.html">Terms of use</a> ·
+    <a href="https://install.xpay.sh/woocommerce/CHANGELOG.md">Changelog</a> ·
+    <a href="https://www.xpay.sh/merchants/woocommerce/">Plugin homepage</a> ·
+    <a href="mailto:privacy@xpay.sh">privacy@xpay.sh</a>
+  </footer>
+</div>
+</body>
+</html>

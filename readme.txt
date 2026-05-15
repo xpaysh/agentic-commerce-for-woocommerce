@@ -4,7 +4,7 @@ Tags: ai, chatgpt, agentic commerce, llms-txt, catalog feed
 Requires at least: 6.2
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 0.1.3
+Stable tag: 0.1.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -57,12 +57,12 @@ This plugin connects to xpay-operated services to deliver its core function. Eve
 
 3. **app.xpay.sh/onboard/woocommerce** — The merchant-side onboarding screen the **Connect store** button opens in a new tab. You sign in or sign up on xpay and approve the connection there.
 
-4. **install.xpay.sh** — Auto-update channel (manifest + zip) for sites that installed the plugin from `xpay.sh/install/woocommerce` instead of WordPress.org. WordPress.org installs use WP.org's update system and never contact this host.
+4. **install.xpay.sh** — Auto-update channel (manifest + zip) for sites that installed the plugin from `www.xpay.sh/merchants/woocommerce/` instead of WordPress.org. WordPress.org installs use WP.org's update system and never contact this host.
 
 5. **agent-commerce.xpay.sh/v1/events** — Optional anonymous telemetry endpoint. Disabled by default. Only contacted if you explicitly opt in. See **Privacy** below for the exact payload.
 
-Terms of use: https://xpay.sh/terms
-Privacy policy: https://xpay.sh/privacy
+Terms of use: https://install.xpay.sh/woocommerce/terms.html
+Privacy policy: https://install.xpay.sh/woocommerce/privacy.html
 
 == Privacy ==
 
@@ -86,6 +86,9 @@ xpay is built non-custodially: we never see your customers, your orders, or any 
 
 == Upgrade Notice ==
 
+= 0.1.4 =
+First-activation redirect into Settings → xpay (no more wondering "what now?"). Declares compatibility with WooCommerce High-Performance Order Storage (HPOS) + Cart/Checkout Blocks. Privacy + Terms pages live at install.xpay.sh/woocommerce/{privacy,terms}.html. Plugin homepage moved to www.xpay.sh/merchants/woocommerce/.
+
 = 0.1.3 =
 Code quality pass for WordPress.org submission: PHPCS WordPress-standard clean, translation-ready (.pot), bundled banner / icon / screenshots. No functional changes.
 
@@ -96,6 +99,13 @@ Plugin slug renamed to `xpay-for-woocommerce` for WordPress.org submission compl
 
 The full machine-readable changelog lives at <https://install.xpay.sh/woocommerce/CHANGELOG.md>
 (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.1.4 =
+* Activated → Settings: first-activation now redirects merchants straight to Settings → xpay so the next click is "Connect store". Skipped on bulk-activate.
+* HPOS + Cart/Checkout Blocks compatibility declared via `before_woocommerce_init` → `FeaturesUtil::declare_compatibility()`. Silences the WC admin notice "this plugin is incompatible with currently enabled features." We never read or write WC orders directly, so HPOS is inherent.
+* Privacy + Terms pages published at https://install.xpay.sh/woocommerce/privacy.html and https://install.xpay.sh/woocommerce/terms.html — fully documented data paths, opt-out steps, deletion request flow.
+* Plugin URI → https://www.xpay.sh/merchants/woocommerce/. Author URI → https://www.xpay.sh.
+* In-plugin "What gets sent" link now points to the real privacy page (was 404).
 
 = 0.1.3 =
 * WordPress-standard PHPCS pass: 0 errors / 1 cosmetic warning (down from 143/71). Real findings fixed: unslash + sanitize on `$_SERVER['REQUEST_URI']`, escape on /llms.txt output, short-ternary removal, Yoda conditions, nonce-verification annotations on the cart-deeplink + ajax beacon paths (both authenticated by signed JWT / capability check respectively).

@@ -45,6 +45,21 @@ class Xpay_Plugin {
 		}
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
+		add_action( 'admin_init', array( $this, 'maybe_redirect_after_activation' ) );
+	}
+
+	public function maybe_redirect_after_activation() {
+		if ( ! get_transient( 'xpay_wc_post_activation_redirect' ) ) {
+			return;
+		}
+		delete_transient( 'xpay_wc_post_activation_redirect' );
+		// Don't redirect on bulk-activate (multiple plugins activated at once).
+		if ( isset( $_GET['activate-multi'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return;
+		}
+		if ( wp_safe_redirect( admin_url( 'options-general.php?page=xpay-for-woocommerce' ) ) ) {
+			exit;
+		}
 	}
 
 	public function woocommerce_active() {
@@ -72,6 +87,12 @@ class Xpay_Plugin {
 		// Force a rewrite-rule flush after we register routes on next init.
 		update_option( 'xpay_wc_flush_rewrites', 1 );
 
+		// Mark so we redirect to Settings → xpay on the next admin page load.
+		if ( ! get_option( 'xpay_wc_first_activated_at' ) ) {
+			update_option( 'xpay_wc_first_activated_at', time() );
+			set_transient( 'xpay_wc_post_activation_redirect', 1, 60 );
+		}
+
 		if ( class_exists( 'Xpay_Telemetry' ) ) {
 			Xpay_Telemetry::track(
 				'plugin_activated',
@@ -79,9 +100,6 @@ class Xpay_Plugin {
 					'first_time' => ! (bool) get_option( 'xpay_wc_first_activated_at' ),
 				)
 			);
-			if ( ! get_option( 'xpay_wc_first_activated_at' ) ) {
-				update_option( 'xpay_wc_first_activated_at', time() );
-			}
 		}
 	}
 

@@ -11,6 +11,21 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-05-15
+
+### Added
+
+- **Post-activation redirect** into `Settings → xpay` on first activation only (skipped on bulk-activate). Reduces "I activated it, now what?" friction reported during InstaWP smoke test.
+- **HPOS + Cart/Checkout Blocks compatibility declaration** via `before_woocommerce_init` → `FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true )` and `… 'cart_checkout_blocks' …`. Silences the WC admin notice flagged on modern WC installs. The plugin never reads or writes WC orders directly, so HPOS support is inherent.
+- **Privacy and Terms pages** published at `install.xpay.sh/woocommerce/privacy.html` + `terms.html` (hosted on our CDN; HTML source in `assets/web/`). Privacy doc enumerates every byte sent in every code path, opt-out paths, retention, deletion request flow, and links to the source-of-truth file for each path.
+
+### Changed
+
+- Plugin URI: `https://xpay.sh/sellers/woocommerce` → `https://www.xpay.sh/merchants/woocommerce/`.
+- Author URI: `https://xpay.sh` → `https://www.xpay.sh`.
+- Consent admin notice "What gets sent" link now points to `install.xpay.sh/woocommerce/privacy.html` (was a 404 placeholder).
+- readme.txt External services + Privacy sections link to the new privacy + terms URLs.
+
 ## [0.1.3] — 2026-05-14
 
 ### Changed (WordPress.org submission — Tier 1 & 2 polish)

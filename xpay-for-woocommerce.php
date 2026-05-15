@@ -1,15 +1,15 @@
 <?php
 /**
  * Plugin Name:       xpay for WooCommerce
- * Plugin URI:        https://xpay.sh/sellers/woocommerce
+ * Plugin URI:        https://www.xpay.sh/merchants/woocommerce/
  * Description:       Puts your WooCommerce catalog inside ChatGPT, Claude, Gemini, and Perplexity. Live prices, live stock, agent checkout that deep-links into your existing cart. No theme changes, no replatforming, no new payment processor.
- * Version:           0.1.3
+ * Version:           0.1.4
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * WC requires at least: 7.0
  * WC tested up to:   9.4
  * Author:            xpay
- * Author URI:        https://xpay.sh
+ * Author URI:        https://www.xpay.sh
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       xpay-for-woocommerce
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'XPAY_WC_VERSION', '0.1.3' );
+define( 'XPAY_WC_VERSION', '0.1.4' );
 define( 'XPAY_WC_FILE', __FILE__ );
 define( 'XPAY_WC_PATH', plugin_dir_path( __FILE__ ) );
 define( 'XPAY_WC_URL', plugin_dir_url( __FILE__ ) );
@@ -32,3 +32,17 @@ register_activation_hook( __FILE__, array( 'Xpay_Plugin', 'on_activate' ) );
 register_deactivation_hook( __FILE__, array( 'Xpay_Plugin', 'on_deactivate' ) );
 
 add_action( 'plugins_loaded', array( 'Xpay_Plugin', 'instance' ) );
+
+// Declare compatibility with WooCommerce High-Performance Order Storage (HPOS)
+// and Cart/Checkout Blocks. We never read or write WC orders directly — orders
+// are created natively by the merchant's existing checkout — so HPOS support is
+// inherent. This declaration silences the WC "incompatible plugin" admin notice.
+add_action(
+	'before_woocommerce_init',
+	function () {
+		if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
+			\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+			\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'cart_checkout_blocks', __FILE__, true );
+		}
+	}
+);
