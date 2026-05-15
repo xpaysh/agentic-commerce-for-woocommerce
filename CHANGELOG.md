@@ -11,6 +11,12 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.1.6] — 2026-05-15
+
+### Changed
+
+- Removed GitHub repo link references from readme.txt. The source-of-truth Git repo at `xpaysh/xpay-for-woocommerce` is currently private; linking to it from a publicly-rendered WordPress.org listing page produces a 404 for anyone not signed into our org. The plugin remains GPLv2-or-later — the installed zip is the canonical unminified source. Re-add the link in a future release once the repo flips public.
+
 ## [0.1.5] — 2026-05-15
 
 ### Added
