@@ -1,4 +1,4 @@
-=== xpay for WooCommerce ===
+=== Agentic Commerce for WooCommerce ===
 Contributors: xpaysh
 Tags: woocommerce, ai, chatgpt, agentic commerce, llms
 Requires at least: 6.2
@@ -6,7 +6,7 @@ Tested up to: 6.9
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 9.4
-Stable tag: 0.1.11
+Stable tag: 0.1.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,11 +16,11 @@ Put your WooCommerce catalog inside ChatGPT, Claude, Gemini and Perplexity — b
 
 **Your next customer is asking ChatGPT, not Google.** They're shopping by typing "find me a cordless drill under $80 that ships in 2 days" into a chat box — and quietly walking away from any store the AI can't see. Right now, that's most WooCommerce stores.
 
-**xpay for WooCommerce makes your store visible to ChatGPT, Claude, Gemini and Perplexity** in five minutes flat — no theme changes, no replatforming, no new payment processor. Your existing checkout stays exactly as it is; xpay just makes sure you're the answer the AI gives.
+**Agentic Commerce for WooCommerce (by xpay) makes your store visible to ChatGPT, Claude, Gemini and Perplexity** in five minutes flat — no theme changes, no replatforming, no new payment processor. Your existing checkout stays exactly as it is; xpay just makes sure you're the answer the AI gives.
 
 📘 **Full setup guide with screenshots:** [docs.xpay.sh/merchants/woocommerce](https://docs.xpay.sh/merchants/woocommerce)
 🌐 **Plugin home:** [www.xpay.sh/merchants/woocommerce/](https://www.xpay.sh/merchants/woocommerce/)
-🔓 **Source on GitHub:** [github.com/xpaysh/xpay-for-woocommerce](https://github.com/xpaysh/xpay-for-woocommerce)
+🔓 **Source on GitHub:** [github.com/xpaysh/agentic-commerce-for-woocommerce](https://github.com/xpaysh/agentic-commerce-for-woocommerce)
 
 = What it does =
 
@@ -60,14 +60,14 @@ Stuck on any step? [Troubleshooting guide](https://docs.xpay.sh/merchants/woocom
 
 = Source code and contributing =
 
-The plugin source is published under GPLv2-or-later. Public repo and issue tracker: [github.com/xpaysh/xpay-for-woocommerce](https://github.com/xpaysh/xpay-for-woocommerce). You can fork, modify, redistribute, and self-host without paying anything.
+The plugin source is published under GPLv2-or-later. Public repo and issue tracker: [github.com/xpaysh/agentic-commerce-for-woocommerce](https://github.com/xpaysh/agentic-commerce-for-woocommerce). You can fork, modify, redistribute, and self-host without paying anything.
 
 == Installation ==
 
 = From the WordPress.org plugin directory =
 
 1. In your WordPress admin, go to **Plugins → Add New**.
-2. Search for "xpay for WooCommerce".
+2. Search for "Agentic Commerce for WooCommerce".
 3. Click **Install Now**, then **Activate**.
 4. You'll be redirected to **Settings → xpay**. Click **Connect store**.
 5. Approve the WooCommerce REST API permissions in the new tab that opens at app.xpay.sh.
@@ -127,7 +127,7 @@ Yes. Each store gets its own merchant slug and its own catalog feed. Pricing app
 
 = Is the source code available? =
 
-Yes. GPLv2-or-later, public repo at [github.com/xpaysh/xpay-for-woocommerce](https://github.com/xpaysh/xpay-for-woocommerce).
+Yes. GPLv2-or-later, public repo at [github.com/xpaysh/agentic-commerce-for-woocommerce](https://github.com/xpaysh/agentic-commerce-for-woocommerce).
 
 = How much does this cost? =
 
@@ -135,11 +135,11 @@ Free until your first AI-attributable sale. After that, pricing starts at 1% of 
 
 = Does xpay work with WooCommerce Subscriptions / WooCommerce Bookings / WooCommerce Memberships? =
 
-The plugin publishes simple, variable, and grouped products in v0.1. Subscriptions, bookings, and memberships are on the roadmap — track progress in [the GitHub repo](https://github.com/xpaysh/xpay-for-woocommerce).
+The plugin publishes simple, variable, and grouped products in v0.1. Subscriptions, bookings, and memberships are on the roadmap — track progress in [the GitHub repo](https://github.com/xpaysh/agentic-commerce-for-woocommerce).
 
 = I have a question that isn't answered here. =
 
-Email merchants@xpay.sh or open an issue at [github.com/xpaysh/xpay-for-woocommerce/issues](https://github.com/xpaysh/xpay-for-woocommerce/issues).
+Email merchants@xpay.sh or open an issue at [github.com/xpaysh/agentic-commerce-for-woocommerce/issues](https://github.com/xpaysh/agentic-commerce-for-woocommerce/issues).
 
 == External services ==
 
@@ -182,6 +182,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.1.12 =
+Plugin RENAMED to "Agentic Commerce for WooCommerce" (slug `agentic-commerce-for-woocommerce`). The previous name "xpay for WooCommerce" was rejected by WordPress.org as too similar to the long-established "Nexi XPay" payment plugin. New name describes the actual category clearly and avoids any trademark/similarity concern. Same product, same brand owner (xpay), same code. Main plugin file, text domain, admin URLs, .pot file path all updated.
+
 = 0.1.11 =
 Plugin Check (PCP) follow-up: cleared the four remaining PrefixAllGlobals warnings. uninstall.php now runs in a closure (no top-level globals). schema renderer uses a local $xpay_product var without touching WC's template global. WooCommerce-active check uses raw option lookup + class_exists (no apply_filters on a core hook). No functional changes.
 
@@ -195,7 +198,7 @@ Docs moved from docs.xpay.sh/products/woocommerce → docs.xpay.sh/merchants/woo
 Pricing link updated. Punchier opening pitch in the Description. Full setup walkthroughs with screenshots published at docs.xpay.sh/merchants/woocommerce — readme now backlinks them at the right moments (install / REST API keys / connect / audit / troubleshooting / privacy).
 
 = 0.1.7 =
-Source repo at github.com/xpaysh/xpay-for-woocommerce is now public. Restored repo link references in readme.txt FAQ and source-code section so reviewers and merchants can browse the source directly.
+Source repo at github.com/xpaysh/agentic-commerce-for-woocommerce is now public. Restored repo link references in readme.txt FAQ and source-code section so reviewers and merchants can browse the source directly.
 
 = 0.1.6 =
 Removed GitHub link references from readme.txt to avoid a broken-link impression for reviewers (source repo is currently private). Source is still GPLv2-or-later via the unminified plugin zip.
@@ -206,6 +209,12 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.1.12 =
+* **Plugin renamed to "Agentic Commerce for WooCommerce"** (slug `agentic-commerce-for-woocommerce`).
+  * Why: the previous name "xpay for WooCommerce" was rejected at WordPress.org submission as too similar to **Nexi XPay** (an established Italian payment-gateway plugin for WC by Nexi Payments, ~6,000 installs since 2017). WordPress.org's similarity check matches on the brand string regardless of category, and Nexi has prior art.
+  * What changed: Plugin Name header, Text Domain (`agentic-commerce-for-woocommerce`), main file name (`agentic-commerce-for-woocommerce.php`), `/languages/agentic-commerce-for-woocommerce.pot`, admin page slug, plugin folder name inside the zip. User-Agent header for outbound HTTP. Settings page H1.
+  * What didn't change: the product, the architecture, the xpay brand identity (still the author + still in admin nav as "xpay"), backend services (`agent-feed.xpay.sh`, `agent-commerce.xpay.sh`, etc.), or anything else functional.
 
 = 0.1.11 =
 * Cleared 4 PCP `PrefixAllGlobals` warnings:

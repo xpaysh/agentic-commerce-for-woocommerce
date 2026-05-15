@@ -44,8 +44,8 @@ class Xpay_Cart {
 		}
 		if ( ! Xpay_Plugin::is_connected() ) {
 			wp_die(
-				esc_html__( 'This store is not connected to xpay. Ask the site owner to complete xpay setup.', 'xpay-for-woocommerce' ),
-				esc_html__( 'xpay — store not connected', 'xpay-for-woocommerce' ),
+				esc_html__( 'This store is not connected to xpay. Ask the site owner to complete xpay setup.', 'agentic-commerce-for-woocommerce' ),
+				esc_html__( 'xpay — store not connected', 'agentic-commerce-for-woocommerce' ),
 				array( 'response' => 503 )
 			);
 		}
@@ -54,8 +54,8 @@ class Xpay_Cart {
 		$payload = Xpay_Client::verify_jwt( $jwt );
 		if ( ! $payload || empty( $payload['items'] ) || ! is_array( $payload['items'] ) ) {
 			wp_die(
-				esc_html__( 'This shopping link has expired or is invalid. Ask the agent to generate a new one.', 'xpay-for-woocommerce' ),
-				esc_html__( 'xpay — invalid cart link', 'xpay-for-woocommerce' ),
+				esc_html__( 'This shopping link has expired or is invalid. Ask the agent to generate a new one.', 'agentic-commerce-for-woocommerce' ),
+				esc_html__( 'xpay — invalid cart link', 'agentic-commerce-for-woocommerce' ),
 				array( 'response' => 400 )
 			);
 		}
@@ -84,8 +84,8 @@ class Xpay_Cart {
 
 		if ( ! $added ) {
 			wp_die(
-				esc_html__( 'None of the items in this shopping link are available right now.', 'xpay-for-woocommerce' ),
-				esc_html__( 'xpay — items unavailable', 'xpay-for-woocommerce' ),
+				esc_html__( 'None of the items in this shopping link are available right now.', 'agentic-commerce-for-woocommerce' ),
+				esc_html__( 'xpay — items unavailable', 'agentic-commerce-for-woocommerce' ),
 				array( 'response' => 410 )
 			);
 		}

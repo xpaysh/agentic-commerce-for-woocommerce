@@ -11,6 +11,44 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.1.12] — 2026-05-15
+
+### Changed — Plugin RENAMED
+
+**"xpay for WooCommerce" → "Agentic Commerce for WooCommerce"** (slug `agentic-commerce-for-woocommerce`).
+
+WordPress.org rejected the original submission with: *"There is already a plugin with the name xpay for WooCommerce in the directory. You must rename your plugin by changing the Plugin Name: line in your main plugin file and in your readme. Once you have done so, you may upload it again."* The conflict is with [Nexi XPay](https://wordpress.org/plugins/cartasi-x-pay/), an Italian payment-gateway plugin for WooCommerce by Nexi Payments (~6,000 active installs since 2017). WP.org's name-similarity check matches the "XPay" brand string regardless of category, and Nexi holds prior art.
+
+The new name describes the actual category (agentic commerce) and avoids any trademark/similarity overlap. The `xpay` brand is retained via:
+- `Author:` header (still `xpay`)
+- `Contributors:` line (still `xpaysh`)
+- Admin menu label (still `xpay`)
+- Author URI + Plugin URI (still `www.xpay.sh`)
+- All backend services and the product story
+
+#### What changed mechanically
+
+- `xpay-for-woocommerce.php` → `agentic-commerce-for-woocommerce.php` (main file renamed)
+- `Plugin Name:` header → `Agentic Commerce for WooCommerce`
+- `Text Domain:` → `agentic-commerce-for-woocommerce`
+- All `'xpay-for-woocommerce'` text-domain references in PHP files → `'agentic-commerce-for-woocommerce'`
+- `?page=xpay-for-woocommerce` admin URLs → `?page=agentic-commerce-for-woocommerce`
+- `languages/xpay-for-woocommerce.pot` → `languages/agentic-commerce-for-woocommerce.pot`
+- Outbound HTTP User-Agent header → `agentic-commerce-for-woocommerce/{version}`
+- Settings page H1 → "Agentic Commerce for WooCommerce"
+- Plugins page error notice → "Agentic Commerce for WooCommerce requires WooCommerce…"
+- Consent notice title → "Agentic Commerce for WooCommerce — help us improve onboarding"
+- release.sh `SLUG` variable → `agentic-commerce-for-woocommerce` (zip inner folder will be `agentic-commerce-for-woocommerce/`)
+- readme.txt first-line title → `=== Agentic Commerce for WooCommerce ===`
+
+#### What didn't change
+
+- Internal PHP constants (`XPAY_WC_VERSION`, `XPAY_WC_FILE`, etc.) — these are internal namespacing, not user-facing
+- Class prefixes (`Xpay_Plugin`, `Xpay_Settings`, etc.) — internal namespacing
+- Option keys (`xpay_wc_merchant_slug`, `xpay_wc_telemetry_opt_in`, etc.) — renaming these would force every existing tester to reconnect, no benefit for a new submission
+- Backend services and their hostnames (`agent-feed.xpay.sh`, `agent-commerce.xpay.sh`, `app.xpay.sh`, `install.xpay.sh`)
+- Plugin functionality, dependencies, behavior — code is byte-for-byte identical except the rename touchpoints listed above
+
 ## [0.1.11] — 2026-05-15
 
 ### Changed (Plugin Check follow-up — PrefixAllGlobals warnings cleared)

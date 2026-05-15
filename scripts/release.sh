@@ -35,7 +35,8 @@ red()   { printf "\033[31m%s\033[0m\n" "$*" >&2; }
 fail()  { red "✗ $*"; exit 1; }
 
 # 1) Version consistency check
-PHP_FILE="$PLUGIN_DIR/xpay-for-woocommerce.php"
+PHP_FILE="$PLUGIN_DIR/agentic-commerce-for-woocommerce.php"
+[[ -f "$PHP_FILE" ]] || PHP_FILE="$PLUGIN_DIR/xpay-for-woocommerce.php" # fallback for v0.1.2-0.1.11
 [[ -f "$PHP_FILE" ]] || PHP_FILE="$PLUGIN_DIR/xpay-woocommerce.php" # fallback for pre-0.1.2
 PHP_VERSION=$(awk '/^[[:space:]]*\*[[:space:]]*Version:/ { for (i=1;i<=NF;i++) if ($i ~ /^[0-9]+(\.[0-9]+)*$/) { print $i; exit } }' "$PHP_FILE")
 README_VERSION=$(awk '/^[[:space:]]*Stable tag:/ { for (i=1;i<=NF;i++) if ($i ~ /^[0-9]+(\.[0-9]+)*$/) { print $i; exit } }' "$PLUGIN_DIR/readme.txt")
@@ -60,7 +61,7 @@ green "✓ Version $VERSION agrees across php header, readme.txt, CHANGELOG.md"
 # The zip's inner folder name = the WordPress plugin slug. Stage the source
 # into a temp dir named `xpay-for-woocommerce/` regardless of where the local
 # checkout lives.
-SLUG=xpay-for-woocommerce
+SLUG=agentic-commerce-for-woocommerce
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 rsync -a --exclude='.git' --exclude='node_modules' --exclude='.DS_Store' \

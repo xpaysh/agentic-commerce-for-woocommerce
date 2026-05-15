@@ -79,7 +79,7 @@ class Xpay_Widget {
 		);
 
 		$out  = '<div class="xpay-buy-widget" style="margin:16px 0;padding:14px 16px;border:1px solid #e5e7eb;border-radius:10px;background:#f9fafb;">';
-		$out .= '<div style="font-size:13px;color:#374151;font-weight:600;margin-bottom:8px;">' . esc_html__( 'Buy through your AI assistant', 'xpay-for-woocommerce' ) . '</div>';
+		$out .= '<div style="font-size:13px;color:#374151;font-weight:600;margin-bottom:8px;">' . esc_html__( 'Buy through your AI assistant', 'agentic-commerce-for-woocommerce' ) . '</div>';
 		foreach ( $buttons as $label => $href ) {
 			$out .= sprintf(
 				'<a href="%s" rel="nofollow noopener" style="display:inline-block;margin:4px 6px 0 0;padding:6px 12px;border-radius:6px;background:#fff;border:1px solid #d1d5db;font-size:12px;color:#111;text-decoration:none;">%s →</a>',

@@ -41,19 +41,19 @@ class Xpay_Consent {
 		$decline_url = wp_nonce_url( admin_url( 'admin-post.php?action=' . self::ACTION . '&choice=no' ), self::ACTION );
 
 		echo '<div class="notice notice-info" style="border-left-color:#0ea5e9;">';
-		echo '<p><strong>' . esc_html__( 'xpay for WooCommerce — help us improve onboarding', 'xpay-for-woocommerce' ) . '</strong></p>';
-		echo '<p>' . esc_html__( 'May we send anonymous lifecycle events (plugin activated, store connected, audit re-run, sync errors) to help us catch broken onboarding flows? No PII or customer data is ever sent. You can change this any time under Settings → xpay.', 'xpay-for-woocommerce' ) . ' ';
-		echo '<a href="https://install.xpay.sh/woocommerce/privacy.html" target="_blank" rel="noopener noreferrer">' . esc_html__( 'What gets sent', 'xpay-for-woocommerce' ) . '</a>.</p>';
+		echo '<p><strong>' . esc_html__( 'Agentic Commerce for WooCommerce — help us improve onboarding', 'agentic-commerce-for-woocommerce' ) . '</strong></p>';
+		echo '<p>' . esc_html__( 'May we send anonymous lifecycle events (plugin activated, store connected, audit re-run, sync errors) to help us catch broken onboarding flows? No PII or customer data is ever sent. You can change this any time under Settings → xpay.', 'agentic-commerce-for-woocommerce' ) . ' ';
+		echo '<a href="https://install.xpay.sh/woocommerce/privacy.html" target="_blank" rel="noopener noreferrer">' . esc_html__( 'What gets sent', 'agentic-commerce-for-woocommerce' ) . '</a>.</p>';
 		echo '<p>';
-		echo '<a class="button button-primary" href="' . esc_url( $enable_url ) . '">' . esc_html__( 'Enable anonymous telemetry', 'xpay-for-woocommerce' ) . '</a> ';
-		echo '<a class="button" href="' . esc_url( $decline_url ) . '">' . esc_html__( 'No thanks', 'xpay-for-woocommerce' ) . '</a>';
+		echo '<a class="button button-primary" href="' . esc_url( $enable_url ) . '">' . esc_html__( 'Enable anonymous telemetry', 'agentic-commerce-for-woocommerce' ) . '</a> ';
+		echo '<a class="button" href="' . esc_url( $decline_url ) . '">' . esc_html__( 'No thanks', 'agentic-commerce-for-woocommerce' ) . '</a>';
 		echo '</p>';
 		echo '</div>';
 	}
 
 	public function handle_choice() {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Not allowed.', 'xpay-for-woocommerce' ) );
+			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
 		}
 		check_admin_referer( self::ACTION );
 		$choice = isset( $_GET['choice'] ) && 'yes' === $_GET['choice'] ? 'yes' : 'no';

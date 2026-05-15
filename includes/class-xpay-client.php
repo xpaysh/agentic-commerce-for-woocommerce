@@ -27,7 +27,7 @@ class Xpay_Client {
 			'headers' => array(
 				'Accept'       => 'application/json',
 				'Content-Type' => 'application/json',
-				'User-Agent'   => 'xpay-for-woocommerce/' . XPAY_WC_VERSION . '; ' . home_url( '/' ),
+				'User-Agent'   => 'agentic-commerce-for-woocommerce/' . XPAY_WC_VERSION . '; ' . home_url( '/' ),
 				'X-Xpay-Site'  => home_url( '/' ),
 			),
 		);

@@ -56,7 +56,7 @@ class Xpay_Plugin {
 		if ( isset( $_GET['activate-multi'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			return;
 		}
-		if ( wp_safe_redirect( admin_url( 'options-general.php?page=xpay-for-woocommerce' ) ) ) {
+		if ( wp_safe_redirect( admin_url( 'options-general.php?page=agentic-commerce-for-woocommerce' ) ) ) {
 			exit;
 		}
 	}
@@ -74,7 +74,7 @@ class Xpay_Plugin {
 
 	public function woocommerce_missing_notice() {
 		echo '<div class="notice notice-error"><p>';
-		esc_html_e( 'xpay for WooCommerce requires WooCommerce to be installed and active.', 'xpay-for-woocommerce' );
+		esc_html_e( 'Agentic Commerce for WooCommerce requires WooCommerce to be installed and active.', 'agentic-commerce-for-woocommerce' );
 		echo '</p></div>';
 	}
 

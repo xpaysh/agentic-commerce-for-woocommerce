@@ -130,7 +130,7 @@ class Xpay_REST {
 			),
 			'platform'     => array(
 				'kind'    => 'woocommerce',
-				'plugin'  => 'xpay-for-woocommerce',
+				'plugin'  => 'agentic-commerce-for-woocommerce',
 				'version' => XPAY_WC_VERSION,
 			),
 			'catalog'      => array(
