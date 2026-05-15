@@ -2,15 +2,15 @@
 Contributors: xpaysh
 Tags: woocommerce, ai, chatgpt, agentic commerce, llms
 Requires at least: 6.2
-Tested up to: 6.7
+Tested up to: 6.9
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 9.4
-Stable tag: 0.1.9
+Stable tag: 0.1.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Put your WooCommerce catalog inside ChatGPT, Claude, Gemini and Perplexity. AI shoppers see live prices and stock, and complete the purchase through your existing checkout.
+Put your WooCommerce catalog inside ChatGPT, Claude, Gemini and Perplexity — buyers complete checkout on your existing WooCommerce gateway.
 
 == Description ==
 
@@ -182,6 +182,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.1.10 =
+Plugin Check (PCP) submission-readiness pass: tested up to WP 6.9; short description trimmed to ≤150 chars; removed deprecated load_plugin_textdomain() call (WP auto-loads WP.org-hosted translations since 4.6); excluded non-canonical markdown files from the plugin zip. No functional changes.
+
 = 0.1.9 =
 Docs moved from docs.xpay.sh/products/woocommerce → docs.xpay.sh/merchants/woocommerce so the path matches the actual audience (merchants, not products). Future Shopify / BigCommerce integrations will live as siblings under /merchants/. No code changes; URL-only.
 
@@ -200,6 +203,12 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.1.10 =
+* **Tested up to WordPress 6.9** (PCP flagged 6.7 as below current). No code changes — verified compatibility on a real WC 9.x install.
+* **Short description trimmed** to 141 chars (PCP cap is 150).
+* **Removed `load_plugin_textdomain()` call.** Discouraged since WP 4.6 — WordPress.org-hosted plugins get translations loaded automatically by core via the plugin slug.
+* **Excluded non-canonical markdown files** (`INSTAWP_TEST_WALKTHROUGH.md`, `README.md`) from the release zip. The plugin zip should only contain files needed at runtime; READMEs and walkthroughs are repo-only.
 
 = 0.1.9 =
 * Documentation URLs migrated `docs.xpay.sh/products/woocommerce/*` → `docs.xpay.sh/merchants/woocommerce/*`. Merchants is the bucket; WooCommerce is one (of many future) integrations inside it. Future Shopify / BigCommerce docs will live as siblings.

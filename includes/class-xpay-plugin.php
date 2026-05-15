@@ -44,7 +44,6 @@ class Xpay_Plugin {
 			Xpay_Consent::instance();
 		}
 
-		add_action( 'init', array( $this, 'load_textdomain' ) );
 		add_action( 'admin_init', array( $this, 'maybe_redirect_after_activation' ) );
 	}
 
@@ -74,10 +73,6 @@ class Xpay_Plugin {
 		echo '<div class="notice notice-error"><p>';
 		esc_html_e( 'xpay for WooCommerce requires WooCommerce to be installed and active.', 'xpay-for-woocommerce' );
 		echo '</p></div>';
-	}
-
-	public function load_textdomain() {
-		load_plugin_textdomain( 'xpay-for-woocommerce', false, dirname( plugin_basename( XPAY_WC_FILE ) ) . '/languages' );
 	}
 
 	public static function on_activate() {

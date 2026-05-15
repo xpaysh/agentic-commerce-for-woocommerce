@@ -11,6 +11,15 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.1.10] — 2026-05-15
+
+### Changed (Plugin Check (PCP) clean-up)
+
+- **`Tested up to: 6.9`** in readme.txt (was 6.7). PCP rejected anything < current WP minor. Plugin verified working on the real WP 6.x test install; no code changes needed.
+- **Short description trimmed** to 141 chars (was 172). PCP enforces a 150-char cap for the readme summary line that renders below the plugin title on the listing.
+- **Removed `load_plugin_textdomain()` and the `init` hook** that called it. Per PCP: `load_plugin_textdomain() has been discouraged since WordPress version 4.6. When your plugin is hosted on WordPress.org, you no longer need to manually include this function call for translations under your plugin slug.` The `languages/xpay-for-woocommerce.pot` template stays bundled for community translators; core handles loading.
+- **Release script excludes** `INSTAWP_TEST_WALKTHROUGH.md` and `README.md` from the zip. PCP warns on "unexpected markdown files in plugin root" — only canonical files (readme.txt, CHANGELOG.md, license.txt) should ship in a runtime plugin. Repo-side documentation files remain in the GitHub repo for contributors but no longer travel with the installed plugin.
+
 ## [0.1.9] — 2026-05-15
 
 ### Changed
