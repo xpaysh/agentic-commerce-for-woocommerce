@@ -91,7 +91,7 @@ NOW_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 CHANGELOG_JSON=$(jq -Rs . < /tmp/xpay-changelog-section.md)
 cat > /tmp/manifest.json <<JSON
 {
-  "name": "xpay for WooCommerce",
+  "name": "Agentic Commerce for WooCommerce",
   "slug": "${SLUG}",
   "version": "${VERSION}",
   "download_url": "https://install.xpay.sh/woocommerce/${SLUG}-${VERSION}.zip",
@@ -100,9 +100,9 @@ cat > /tmp/manifest.json <<JSON
   "requires": "6.2",
   "requires_php": "7.4",
   "wc_requires": "7.0",
-  "tested": "6.7",
+  "tested": "6.9",
   "wc_tested": "9.4",
-  "homepage": "https://xpay.sh/sellers/woocommerce",
+  "homepage": "https://www.xpay.sh/merchants/woocommerce/",
   "sections": {
     "description": "Put your WooCommerce catalog inside ChatGPT, Claude, Gemini, and Perplexity. Live prices, live stock, cart deeplinks into your existing checkout. Free until your first AI-driven sale.",
     "changelog": ${CHANGELOG_JSON}
