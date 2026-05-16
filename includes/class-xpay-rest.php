@@ -193,13 +193,30 @@ class Xpay_REST {
 
 		if ( $slug ) {
 			$lines[] = sprintf( '- [Agent-readable catalog (JSON)](https://agent-feed.xpay.sh/catalog/%s.json)', $slug );
-			$lines[] = '';
-			$lines[] = '## Commerce protocols';
-			$lines[] = '';
-			$lines[] = sprintf( '- [ACP — Agentic Commerce Protocol](https://agent-commerce.xpay.sh/acp/v1/%s)', $slug );
-			$lines[] = sprintf( '- [UCP — Universal Commerce Protocol](https://agent-commerce.xpay.sh/ucp/v1/%s)', $slug );
-			$lines[] = sprintf( '- [AP2 — Agent Payments Protocol](https://agent-commerce.xpay.sh/ap2/v1/%s)', $slug );
-			$lines[] = sprintf( '- [MCP — Model Context Protocol server](https://agent-commerce.xpay.sh/mcp/%s)', $slug );
+
+			// Only advertise protocol endpoints the backend has confirmed are
+			// live. Backend pushes the list during the Connect flow via the
+			// `xpay_wc_protocol_endpoints` option. Each entry maps a protocol
+			// id to its public URL. Unset / empty => the merchant only gets
+			// the catalog feed + cart deeplink advertised here, which avoids
+			// 501 / 404 follow-ups for agents that try to use the protocol.
+			$endpoints = $this->live_protocol_endpoints( $slug );
+			if ( ! empty( $endpoints ) ) {
+				$lines[] = '';
+				$lines[] = '## Commerce protocols';
+				$lines[] = '';
+				$labels = array(
+					'acp' => 'ACP — Agentic Commerce Protocol',
+					'ucp' => 'UCP — Universal Commerce Protocol',
+					'ap2' => 'AP2 — Agent Payments Protocol',
+					'mcp' => 'MCP — Model Context Protocol server',
+				);
+				foreach ( $endpoints as $proto => $url ) {
+					$label = $labels[ $proto ] ?? strtoupper( $proto );
+					$lines[] = sprintf( '- [%s](%s)', $label, $url );
+				}
+			}
+
 			$lines[] = '';
 			$lines[] = '## Cart handoff';
 			$lines[] = '';
@@ -367,6 +384,47 @@ class Xpay_REST {
 			);
 		}
 		echo wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+	}
+
+	/**
+	 * Resolve the protocols the xpay backend has confirmed live for this
+	 * merchant. Returns an ordered map of `protocol_id => endpoint_url`.
+	 *
+	 * Two sources, in order:
+	 *  1. `xpay_wc_protocol_endpoints` wp_option — backend-pushed during
+	 *     Connect. May be a JSON string or a PHP array. Each value is a
+	 *     fully-qualified URL the agent can hit. Unknown protocol ids are
+	 *     preserved so future protocols don't need plugin updates.
+	 *  2. Filter `xpay_wc_protocol_endpoints` — for power users overriding
+	 *     in code (mu-plugin etc.).
+	 *
+	 * If neither yields anything, returns an empty array — `/llms.txt` will
+	 * advertise only the catalog feed + cart deeplink, both of which are
+	 * actually live today on agent-feed.xpay.sh + the merchant's own domain.
+	 */
+	private function live_protocol_endpoints( $slug ) {
+		$out = array();
+		$raw = get_option( 'xpay_wc_protocol_endpoints' );
+		if ( is_string( $raw ) && '' !== trim( $raw ) ) {
+			$decoded = json_decode( $raw, true );
+			if ( is_array( $decoded ) ) {
+				$raw = $decoded;
+			}
+		}
+		if ( is_array( $raw ) ) {
+			foreach ( $raw as $k => $v ) {
+				if ( is_string( $k ) && is_string( $v ) && '' !== trim( $v ) ) {
+					$out[ strtolower( $k ) ] = $v;
+				}
+			}
+		}
+		if ( function_exists( 'apply_filters' ) ) {
+			$filtered = apply_filters( 'xpay_wc_protocol_endpoints', $out, $slug );
+			if ( is_array( $filtered ) ) {
+				$out = $filtered;
+			}
+		}
+		return $out;
 	}
 
 	private function top_categories() {

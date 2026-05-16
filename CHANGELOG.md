@@ -11,6 +11,34 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-05-16
+
+### Changed — `/llms.txt` only advertises live protocol endpoints
+
+The `## Commerce protocols` section in `/llms.txt` is now gated on the
+`xpay_wc_protocol_endpoints` wp_option, populated by the xpay backend
+during the Connect flow with the set of protocols actually serving for
+the merchant.
+
+Result: an AI agent that fetches `/llms.txt` and follows a protocol URL
+gets a working service (or a structured 501 with retry hints) — never a
+bare 404. Until the backend has confirmed at least one live protocol,
+the section is omitted entirely; the catalog feed and cart deeplink
+(both of which are live today) are still advertised.
+
+The filter `xpay_wc_protocol_endpoints` lets a mu-plugin override.
+
+### Added — backend stubs for `agent-commerce.xpay.sh/{ucp,acp,ap2,mcp}/...`
+
+Companion change on the xpay backend (`xpay-wc-plugin-backend`): the
+protocol-prefixed URLs at `agent-commerce.xpay.sh` now answer with a
+spec-shaped 501 Not Implemented envelope when called. Body includes
+`protocol`, `spec`, `merchant_slug`, `status: "pending_implementation"`,
+`retry_after_seconds`, and a `docs` link. Replaces the earlier bare 404.
+
+The real UCP service will replace the 501 stub as soon as the schemas
+land in `@xpaysh/ucp-schemas@0.2.0`. ACP and AP2 follow.
+
 ## [0.2.0] — 2026-05-16
 
 ### Added — Commerce-standards alignment

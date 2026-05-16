@@ -6,7 +6,7 @@ Tested up to: 6.9
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 9.4
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -182,6 +182,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.2.1 =
+Tighter alignment between what /llms.txt advertises and what's actually serving. The `Commerce protocols` section is now backend-driven: only protocols the xpay backend has confirmed live for your store appear; the catalog feed and cart deeplink (live today) always show up. Companion change on the xpay backend: protocol-prefixed URLs at agent-commerce.xpay.sh now answer with a spec-shaped 501 Not Implemented envelope (with `retry_after_seconds` and a `docs` link) instead of a bare 404 — agents following a URL get a structured signal that the service is provisioned but not yet accepting requests.
+
 = 0.2.0 =
 Aligned with the real commerce standards (ACP, UCP, AP2) and the real discovery conventions (llms.txt, schema.org JSON-LD, robots.txt allowlist). NEW: serves `/.well-known/ucp` — the UCP business profile (spec 2026-04-08) that Google, Shopify, Etsy, Wayfair, Target and Walmart fetch for capability negotiation. Discovery layer is now an extensible registry: new emitters plug in without touching the rest of the plugin. Optional watchlist emitters added for /.well-known/oauth-protected-resource (RFC 9728) and /.well-known/agent-card.json (A2A 1.0) — off by default. Per-protocol endpoints (ACP / UCP / AP2 / MCP) are advertised in /llms.txt and hosted on xpay infra so checkout reach grows as agents adopt each protocol.
 
@@ -212,6 +215,11 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.2.1 =
+* `/llms.txt` `## Commerce protocols` section is now gated on the `xpay_wc_protocol_endpoints` wp_option (backend-pushed during Connect). Agents that follow a URL from `/llms.txt` reach a working service or a structured 501 — never a bare 404.
+* Companion: backend stubs at `agent-commerce.xpay.sh/{ucp,acp,ap2,mcp}/...` now return a 501 Not Implemented envelope with `protocol`, `spec`, `merchant_slug`, `status`, `retry_after_seconds`, and a `docs` link.
+* Filter `xpay_wc_protocol_endpoints` lets a mu-plugin override.
 
 = 0.2.0 =
 * **Aligned with the open commerce standards.** Per-protocol surfaces (ACP, UCP, AP2, MCP) are now advertised in `/llms.txt` and hosted on xpay infrastructure. The plugin keeps the merchant's domain to what genuinely belongs there: discovery files, JSON-LD, robots.txt allowlist.
