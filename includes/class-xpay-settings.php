@@ -98,6 +98,18 @@ class Xpay_Settings {
 		update_option( 'xpay_wc_connected_at', time() );
 		delete_option( self::NONCE_OPTION );
 
+		// Persist the UCP business profile body if the backend sent one.
+		// Served at /.well-known/ucp by Xpay_REST::serve_ucp_profile().
+		if ( isset( $payload['ucp_profile'] ) && is_array( $payload['ucp_profile'] ) ) {
+			$encoded = wp_json_encode( $payload['ucp_profile'] );
+			if ( false !== $encoded ) {
+				update_option( 'xpay_wc_ucp_profile', $encoded );
+			}
+		}
+		if ( isset( $payload['ucp_signing_keys'] ) && is_array( $payload['ucp_signing_keys'] ) ) {
+			update_option( 'xpay_wc_ucp_signing_keys', $payload['ucp_signing_keys'] );
+		}
+
 		Xpay_Telemetry::track( 'finalize_success', array( 'slug' => $slug ) );
 
 		// Kick the first catalog sync.
@@ -116,6 +128,8 @@ class Xpay_Settings {
 		delete_option( 'xpay_wc_api_key' );
 		delete_option( 'xpay_wc_connected_at' );
 		delete_option( 'xpay_wc_last_audit' );
+		delete_option( 'xpay_wc_ucp_profile' );
+		delete_option( 'xpay_wc_ucp_signing_keys' );
 		wp_safe_redirect( admin_url( 'options-general.php?page=agentic-commerce-for-woocommerce&disconnected=1' ) );
 		exit;
 	}
