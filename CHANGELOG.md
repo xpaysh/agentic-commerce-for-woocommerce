@@ -11,6 +11,59 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-05-16
+
+### Added — Commerce-standards alignment
+
+Multi-protocol from this release on. The plugin now speaks the open commerce
+standards (**ACP** — Agentic Commerce Protocol, **UCP** — Universal Commerce
+Protocol, **AP2** — Agent Payments Protocol) and exposes the real discovery
+conventions on the merchant's domain (**llms.txt**, **schema.org** JSON-LD,
+**robots.txt** allowlist for AI user-agents).
+
+The discovery surface is now an **extensible emitter registry**: each standard
+is one entry, with a `default_on` flag and an optional `option_flag` so each
+emitter can be toggled per-merchant. Adding a new standard means adding a new
+emitter — no changes to rewrite logic, settings UI, or the rest of the plugin.
+
+#### Default-on emitters
+
+- **`/llms.txt`** ([llmstxt.org](https://llmstxt.org)) — Markdown discovery
+  document. Lists the agent-readable catalog feed, the per-protocol endpoints
+  (ACP / UCP / AP2 / MCP) hosted on xpay infrastructure, the cart-deeplink
+  template, and top product categories.
+
+#### Watchlist emitters (off by default — opt-in per merchant)
+
+- **`/.well-known/oauth-protected-resource`** — RFC 9728 OAuth 2.0 Protected
+  Resource Metadata. Turns on automatically when UCP OAuth Identity Linking is
+  enabled for the merchant. Option key: `xpay_wc_emit_oauth_protected_resource`.
+- **`/.well-known/agent-card.json`** — A2A 1.0 agent-card metadata. IANA
+  well-known URI, registered 2025-08-01. Opt-in via the
+  `xpay_wc_emit_agent_card` option once A2A adoption matures in commerce.
+
+### Changed — `/llms.txt` body
+
+Now advertises the per-protocol endpoints by name (ACP / UCP / AP2 / MCP) and
+links them at their xpay-hosted URLs (`agent-commerce.xpay.sh/<protocol>/v1/<slug>`).
+A merchant who installs the plugin is automatically reachable by any agent
+that speaks any of these protocols — coverage grows as agents adopt each one.
+
+### Changed — Admin readiness checklist
+
+The "AI assistants know where to send a buyer" row now reflects the standards-based
+architecture: per-protocol endpoints advertised in `/llms.txt` and hosted on
+xpay infrastructure, rather than a single discovery file. All eight audit pills
+continue to turn green after **Connect store**.
+
+### Backward compatibility
+
+No breaking changes for merchants. Cart deeplink handler, catalog feed,
+schema.org JSON-LD on PDPs / shop / home, robots.txt allowlist, lifecycle
+telemetry pipe, and the WooCommerce REST API onboarding handshake are all
+unchanged. The audit-readiness pills continue to turn green after Connect.
+
+
 ## [0.1.12] — 2026-05-15
 
 ### Changed — Plugin RENAMED

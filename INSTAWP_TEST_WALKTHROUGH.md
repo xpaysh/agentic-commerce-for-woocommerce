@@ -69,9 +69,9 @@ You should see:
 - The "Audit readiness" table with most rows already ✓ Ready (llms.txt, robots.txt, JSON-LD, BuyAction — all the discovery checks pass *immediately* without needing a connection)
 
 **Verify before connecting** (open in browser tabs):
-- `https://store-xyz12.instawp.xyz/llms.txt` → text guide
-- `https://store-xyz12.instawp.xyz/.well-known/agentic-commerce.json` → JSON with `endpoints: null` (because slug not assigned yet)
+- `https://store-xyz12.instawp.xyz/llms.txt` → Markdown discovery doc (llmstxt.org). Pre-Connect: lists store home + categories. Post-Connect: also lists the catalog feed and per-protocol endpoints (ACP / UCP / AP2 / MCP).
 - `https://store-xyz12.instawp.xyz/robots.txt` → should contain `User-agent: GPTBot` etc.
+- View source on any product page → look for `<script type="application/ld+json">` with a `Product` + `Offer` + `BuyAction`.
 
 ---
 

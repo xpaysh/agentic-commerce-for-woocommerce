@@ -45,6 +45,18 @@ class Xpay_Plugin {
 		}
 
 		add_action( 'admin_init', array( $this, 'maybe_redirect_after_activation' ) );
+		$this->maybe_handle_version_bump();
+	}
+
+	private function maybe_handle_version_bump() {
+		$stored = get_option( 'xpay_wc_installed_version' );
+		if ( $stored === XPAY_WC_VERSION ) {
+			return;
+		}
+		// Version changed — re-flush rewrite rules so any added or removed
+		// discovery routes take effect without requiring a deactivate/reactivate.
+		update_option( 'xpay_wc_flush_rewrites', 1 );
+		update_option( 'xpay_wc_installed_version', XPAY_WC_VERSION );
 	}
 
 	public function maybe_redirect_after_activation() {

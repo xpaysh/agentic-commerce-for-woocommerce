@@ -229,7 +229,7 @@ class Xpay_Settings {
 		$ajax_url = esc_url( admin_url( 'admin-ajax.php' ) );
 		echo '<div class="card" style="padding:20px;max-width:680px;">';
 		echo '<h2>' . esc_html__( 'Connect your store', 'agentic-commerce-for-woocommerce' ) . '</h2>';
-		echo '<p>' . esc_html__( 'Connect this WooCommerce store to xpay. We\'ll provision a public agent-readable catalog feed, publish your /llms.txt and /.well-known/agentic-commerce.json, and enable cart deeplinks from ChatGPT, Claude, Gemini, and Perplexity.', 'agentic-commerce-for-woocommerce' ) . '</p>';
+		echo '<p>' . esc_html__( 'Connect this WooCommerce store to xpay. We provision a public agent-readable catalog feed, publish your /llms.txt + schema.org JSON-LD + AI-bot robots.txt allowlist (the real AI shopping standards), expose ACP / UCP / AP2 / MCP endpoints on xpay infra, and enable cart deeplinks from ChatGPT, Claude, Gemini, and Perplexity.', 'agentic-commerce-for-woocommerce' ) . '</p>';
 		echo '<p style="font-size:13px;"><a href="https://docs.xpay.sh/merchants/woocommerce/connecting" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Step-by-step guide with screenshots →', 'agentic-commerce-for-woocommerce' ) . '</a></p>';
 		echo '<p><a id="xpay-wc-connect-btn" class="button button-primary button-hero" href="' . esc_url( $onboard_url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Connect store →', 'agentic-commerce-for-woocommerce' ) . '</a></p>';
 		echo '<p style="color:#646970;font-size:13px;">' . esc_html__( 'No payment processor change. Payouts continue through your existing WooCommerce gateway.', 'agentic-commerce-for-woocommerce' ) . '</p>';
@@ -297,7 +297,7 @@ class Xpay_Settings {
 			array( 'AI can read your full catalogue', (bool) $slug, $slug ? sprintf( 'Hosted feed live at agent-feed.xpay.sh/catalog/%s.json', $slug ) : 'Connect store to enable.' ),
 			array( 'Live prices visible to AI', true, 'JSON-LD Product / Offer schema injected on product pages.' ),
 			array( 'Plain-text guide for AI assistants', true, 'Served at /llms.txt.' ),
-			array( 'AI assistants know where to send a buyer', (bool) $slug, $slug ? 'Served at /.well-known/agentic-commerce.json.' : 'Connect store to populate endpoints.' ),
+			array( 'AI assistants know where to send a buyer', (bool) $slug, $slug ? 'Per-protocol endpoints (ACP / UCP / AP2 / MCP) advertised in /llms.txt and hosted on xpay infra.' : 'Connect store to populate endpoints.' ),
 			array( 'AI shoppers are allowed in', ! Xpay_Robots::physical_robots_exists(), Xpay_Robots::physical_robots_exists() ? 'Physical robots.txt detected — needs manual fix.' : 'GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot allowed in robots.txt.' ),
 			array( 'Direct buy link signals', true, 'BuyAction emitted on every product page.' ),
 			array( 'AI shoppers can buy without leaving the chat', (bool) $slug, $slug ? 'Cart deeplink handler active.' : 'Connect store to enable.' ),
