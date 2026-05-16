@@ -1,15 +1,19 @@
-# xpay-woocommerce
+# Agentic Commerce for WooCommerce
 
 WordPress plugin. Puts a WooCommerce store inside ChatGPT, Claude, Gemini, and Perplexity — and routes the sale through the merchant's existing WC checkout. No theme changes, no new payment processor.
 
+Multi-protocol from day one — speaks **[ACP](https://github.com/agentic-commerce-protocol/agentic-commerce-protocol)**, **[UCP](https://github.com/Universal-Commerce-Protocol/ucp)**, and **[AP2](https://github.com/google-agentic-commerce/AP2)** alongside the discovery standards every AI agent reads ([llms.txt](https://llmstxt.org), schema.org JSON-LD, `robots.txt` for real AI crawlers). Rail-agnostic — your existing WC payment gateway (Stripe / WooPayments / PayPal / Square / etc.) handles the money.
+
+This plugin is the **reference implementation** for the broader [`agentic-commerce-for-*`](https://github.com/xpaysh?q=agentic-commerce-for-) family. The shared [plugin template](https://github.com/xpaysh/agentic-commerce-plugin-template) is being extracted from this codebase for sibling platforms (BigCommerce, commercetools, Magento, Shopify-app, Salesforce Commerce, and a long-tail of community plugins). See the curated [awesome-agentic-commerce](https://github.com/xpaysh/awesome-agentic-commerce) registry for the ecosystem.
+
 ## What ships in v0.1
 
-The plugin is built around the eight checks in `scripts/seller-audit/audit.py` (the audit emailed to prospects). Each subsystem flips one or more checks to green.
+The plugin is built around the checks in `scripts/seller-audit/audit.py` (the audit emailed to prospects). Each subsystem flips one or more checks to green.
 
 | File | Audit checks satisfied |
 |---|---|
-| `includes/class-xpay-rest.php` | `ai_guide` (`/llms.txt`), `agent_checkout_discovery` (`/.well-known/agentic-commerce.json`) |
-| `includes/class-xpay-robots.php` | `agents_allowed` (GPTBot / ClaudeBot / PerplexityBot / OAI-SearchBot allow blocks) |
+| `includes/class-xpay-rest.php` | `ai_guide` (`/llms.txt`) |
+| `includes/class-xpay-robots.php` | `agents_allowed` (GPTBot / ClaudeBot / Google-Extended / PerplexityBot / CCBot / OAI-SearchBot / Amazonbot allow blocks) |
 | `includes/class-xpay-schema.php` | `live_pricing` (`Product` + `Offer`), `direct_buy` (`BuyAction`) on PDP / shop / home |
 | `includes/class-xpay-cart.php` | `in_chat_checkout` (signed-JWT cart deeplink → pre-filled WC cart → checkout) |
 | `includes/class-xpay-webhooks.php` | `fresh_inventory` (resync on product / stock change, 30s debounce) |
@@ -40,11 +44,12 @@ Verify after activation:
 
 ```bash
 curl -s https://your-site.test/llms.txt
-curl -s https://your-site.test/.well-known/agentic-commerce.json | jq .
-curl -s https://your-site.test/robots.txt | grep -i 'GPTBot\|ClaudeBot'
+curl -s https://your-site.test/robots.txt | grep -iE 'GPTBot|ClaudeBot|Google-Extended|PerplexityBot|CCBot'
+# Product JSON-LD on a PDP:
+curl -s https://your-site.test/product/some-slug/ | grep -A1 'application/ld\+json' | head
 # After connect:
 python /path/to/mvp/scripts/seller-audit/audit.py --url https://your-site.test
-# All 8 checks should report pass.
+# All audit checks should report pass.
 ```
 
 ## Distribution
@@ -93,3 +98,11 @@ aws --profile agentically cloudfront create-invalidation \
 Semver. The bundled `xpay-woocommerce.php` header carries `Version:`. WP.org
 reads it; self-host installs read it via `https://install.xpay.sh/woocommerce/manifest.json`
 for the auto-update channel.
+
+## See also
+
+- [Plugin template](https://github.com/xpaysh/agentic-commerce-plugin-template) — shared core for the `agentic-commerce-for-*` family
+- [awesome-agentic-commerce](https://github.com/xpaysh/awesome-agentic-commerce) — curated ecosystem registry
+- [ACP vs UCP vs AP2 — Technical Comparison](https://docs.xpay.sh/agentic-commerce-protocols/comparison) on docs.xpay.sh
+- Setup guide on docs.xpay.sh: [/merchants/woocommerce](https://docs.xpay.sh/merchants/woocommerce)
+- xpay.sh commercial overview: [/merchants/woocommerce/](https://www.xpay.sh/merchants/woocommerce/)
