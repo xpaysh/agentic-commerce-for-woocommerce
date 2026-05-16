@@ -32,6 +32,16 @@ emitter — no changes to rewrite logic, settings UI, or the rest of the plugin.
   document. Lists the agent-readable catalog feed, the per-protocol endpoints
   (ACP / UCP / AP2 / MCP) hosted on xpay infrastructure, the cart-deeplink
   template, and top product categories.
+- **`/.well-known/ucp`** — UCP business profile (spec rev `2026-04-08`).
+  Documented at [Google's UCP guide](https://developers.google.com/merchant/ucp/guides/ucp-profile)
+  and [ucp.dev](https://ucp.dev/latest/specification/overview/). Google,
+  Shopify, Etsy, Wayfair, Target and Walmart fetch this profile for capability
+  negotiation before talking to the merchant — the spec requires it to be
+  publicly accessible and unauthenticated. The plugin generates a sensible
+  default profile pointing at xpay-hosted UCP service endpoints
+  (`agent-commerce.xpay.sh/ucp/v1/<slug>`) and exposes two `wp_option` hooks
+  for full overrides: `xpay_wc_ucp_profile` (replace entire body) and
+  `xpay_wc_ucp_signing_keys` (inject JWK array for message verification).
 
 #### Watchlist emitters (off by default — opt-in per merchant)
 

@@ -183,7 +183,7 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 == Upgrade Notice ==
 
 = 0.2.0 =
-Aligned with the real commerce standards (ACP, UCP, AP2) and the real discovery conventions (llms.txt, schema.org JSON-LD, robots.txt allowlist). Discovery layer is now an extensible registry: new emitters plug in without touching the rest of the plugin. Optional watchlist emitters added for /.well-known/oauth-protected-resource (RFC 9728) and /.well-known/agent-card.json (A2A 1.0) — off by default. Per-protocol endpoints (ACP / UCP / AP2 / MCP) are advertised in /llms.txt and hosted on xpay infra so checkout reach grows as agents adopt each protocol.
+Aligned with the real commerce standards (ACP, UCP, AP2) and the real discovery conventions (llms.txt, schema.org JSON-LD, robots.txt allowlist). NEW: serves `/.well-known/ucp` — the UCP business profile (spec 2026-04-08) that Google, Shopify, Etsy, Wayfair, Target and Walmart fetch for capability negotiation. Discovery layer is now an extensible registry: new emitters plug in without touching the rest of the plugin. Optional watchlist emitters added for /.well-known/oauth-protected-resource (RFC 9728) and /.well-known/agent-card.json (A2A 1.0) — off by default. Per-protocol endpoints (ACP / UCP / AP2 / MCP) are advertised in /llms.txt and hosted on xpay infra so checkout reach grows as agents adopt each protocol.
 
 = 0.1.12 =
 Plugin RENAMED to "Agentic Commerce for WooCommerce" (slug `agentic-commerce-for-woocommerce`). The previous name "xpay for WooCommerce" was rejected by WordPress.org as too similar to the long-established "Nexi XPay" payment plugin. New name describes the actual category clearly and avoids any trademark/similarity concern. Same product, same brand owner (xpay), same code. Main plugin file, text domain, admin URLs, .pot file path all updated.
@@ -215,7 +215,8 @@ The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGE
 
 = 0.2.0 =
 * **Aligned with the open commerce standards.** Per-protocol surfaces (ACP, UCP, AP2, MCP) are now advertised in `/llms.txt` and hosted on xpay infrastructure. The plugin keeps the merchant's domain to what genuinely belongs there: discovery files, JSON-LD, robots.txt allowlist.
-* **Discovery layer is an extensible emitter registry.** Each standard (`/llms.txt`, RFC 9728 OAuth metadata, A2A agent-card) is a registered emitter with a default-on/default-off flag and per-merchant override. Adding a new standard means adding a new emitter — no changes elsewhere in the plugin.
+* **NEW: `/.well-known/ucp` (UCP business profile, spec 2026-04-08).** This is the file Google, Shopify, Etsy, Wayfair, Target and Walmart fetch to negotiate capabilities with your store. The plugin generates a sensible default profile pointing at xpay-hosted UCP service endpoints; commercial-tier merchants can override the body + inject JWK signing keys via the `xpay_wc_ucp_profile` and `xpay_wc_ucp_signing_keys` options.
+* **Discovery layer is an extensible emitter registry.** Each standard (`/llms.txt`, `/.well-known/ucp`, RFC 9728 OAuth metadata, A2A agent-card) is a registered emitter with a default-on/default-off flag and per-merchant override. Adding a new standard means adding a new emitter — no changes elsewhere in the plugin.
 * **Added watchlist emitters (off by default):**
   * `/.well-known/oauth-protected-resource` (RFC 9728) — turns on automatically when UCP OAuth Identity Linking is enabled for the merchant on the xpay side.
   * `/.well-known/agent-card.json` (A2A 1.0, IANA-registered 2025-08-01) — opt-in via the `xpay_wc_emit_agent_card` option once A2A adoption matures in commerce.

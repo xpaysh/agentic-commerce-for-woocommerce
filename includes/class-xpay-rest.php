@@ -7,6 +7,13 @@
  * The default config emits only standards that are *real and adopted*:
  *
  *   - GET /llms.txt                                 (llmstxt.org)
+ *   - GET /.well-known/ucp                          (UCP business profile,
+ *                                                    spec 2026-04-08 — Google
+ *                                                    + Shopify + Etsy + Wayfair
+ *                                                    + Target + Walmart fetch
+ *                                                    this for capability
+ *                                                    negotiation; default-on
+ *                                                    once merchant is connected)
  *   - GET /.well-known/oauth-protected-resource     (RFC 9728, when UCP OAuth
  *                                                    identity linking is on)
  *   - GET /.well-known/agent-card.json              (A2A 1.0, IANA-registered
@@ -48,6 +55,14 @@ class Xpay_REST {
 				'content_type' => 'text/plain; charset=utf-8',
 				'generator'    => 'serve_llms_txt',
 				'default_on'   => true,
+			),
+			'ucp_profile'              => array(
+				'route'        => 'ucp_profile',
+				'path'         => '/.well-known/ucp',
+				'content_type' => 'application/json; charset=utf-8',
+				'generator'    => 'serve_ucp_profile',
+				'default_on'   => true,
+				'option_flag'  => 'xpay_wc_emit_ucp_profile',
 			),
 			'oauth_protected_resource' => array(
 				'route'        => 'oauth_protected_resource',
@@ -203,6 +218,96 @@ class Xpay_REST {
 		$lines[] = 'This store accepts agent-initiated purchases via the open commerce protocols above. Live product data is exposed as schema.org JSON-LD on every product page; robots.txt explicitly allows GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, Google-Extended and related AI user-agents.';
 
 		echo esc_html( implode( "\n", $lines ) ) . "\n";
+	}
+
+	/**
+	 * /.well-known/ucp — UCP business profile (Google's Universal Commerce
+	 * Protocol). Documented at https://developers.google.com/merchant/ucp/guides/ucp-profile
+	 * and https://ucp.dev/latest/specification/overview/. Spec rev 2026-04-08.
+	 *
+	 * Google + Shopify + Etsy + Wayfair + Target + Walmart fetch this file for
+	 * capability negotiation. The profile must be publicly accessible and
+	 * unauthenticated — the spec is explicit about this.
+	 *
+	 * The plugin generates a sensible default profile pointing at xpay-hosted
+	 * UCP service endpoints. Merchants on xpay's commercial tier can override
+	 * the entire body via the `xpay_wc_ucp_profile` option (populated during
+	 * Connect from the merchant's per-store config in the xpay backend) — that
+	 * is where signing keys, custom payment handlers, and capability extensions
+	 * are injected.
+	 */
+	private function serve_ucp_profile() {
+		$override = get_option( 'xpay_wc_ucp_profile' );
+		if ( is_string( $override ) && '' !== trim( $override ) ) {
+			$decoded = json_decode( $override, true );
+			if ( is_array( $decoded ) ) {
+				echo wp_json_encode( $decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+				return;
+			}
+		}
+
+		$slug         = Xpay_Plugin::merchant_slug();
+		$spec_version = '2026-04-08';
+		$service_base = $slug
+			? sprintf( 'https://agent-commerce.xpay.sh/ucp/v1/%s', $slug )
+			: home_url( '/wp-json/xpay/ucp/v1' );
+
+		$ucp = array(
+			'version'      => $spec_version,
+			'services'     => array(
+				'dev.ucp.shopping' => array(
+					array(
+						'version'   => $spec_version,
+						'spec'      => 'https://ucp.dev/specification/overview',
+						'transport' => 'rest',
+						'endpoint'  => $service_base,
+						'schema'    => 'https://ucp.dev/' . $spec_version . '/services/shopping/rest.openapi.json',
+					),
+				),
+			),
+			'capabilities' => array(
+				'dev.ucp.shopping.checkout'    => array(
+					array(
+						'version' => $spec_version,
+						'spec'    => 'https://ucp.dev/specification/checkout',
+						'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/checkout.json',
+					),
+				),
+				'dev.ucp.shopping.fulfillment' => array(
+					array(
+						'version' => $spec_version,
+						'spec'    => 'https://ucp.dev/specification/fulfillment',
+						'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/fulfillment.json',
+						'extends' => 'dev.ucp.shopping.checkout',
+					),
+				),
+				'dev.ucp.shopping.discount'    => array(
+					array(
+						'version' => $spec_version,
+						'spec'    => 'https://ucp.dev/specification/discount',
+						'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/discount.json',
+						'extends' => 'dev.ucp.shopping.checkout',
+					),
+				),
+				'dev.ucp.shopping.order'       => array(
+					array(
+						'version' => $spec_version,
+						'spec'    => 'https://ucp.dev/latest/specification/order',
+						'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/order.json',
+					),
+				),
+			),
+		);
+
+		$signing_keys_opt = get_option( 'xpay_wc_ucp_signing_keys' );
+		$signing_keys     = is_array( $signing_keys_opt ) ? $signing_keys_opt : array();
+
+		$payload = array(
+			'ucp'          => $ucp,
+			'signing_keys' => $signing_keys,
+		);
+
+		echo wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
 	}
 
 	/**
