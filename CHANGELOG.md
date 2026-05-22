@@ -11,6 +11,50 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.2.3] — 2026-05-22
+
+### Added — MCP transport in `/.well-known/ucp`
+
+`services.dev.ucp.shopping` now advertises both `rest` and `mcp` transports.
+The MCP endpoint `https://{merchant_slug}.mcp.xpay.sh/mcp` rides on the
+existing xpay `*.mcp.xpay.sh` wildcard infrastructure. The endpoint is
+provisional today and will return real `search_catalog` / `get_product` /
+`create_cart` tool responses once the commerce-MCP handler lands; in the
+meantime agents that speak MCP natively (Claude, ChatGPT Operator, the
+Shopify AI Toolkit) discover the endpoint immediately. No merchant action
+required — the manifest re-emits on plugin update.
+
+### Fixed — UCP manifest validity against the 2026-04-08 spec
+
+- `extends` is now an array (`extends: ["dev.ucp.shopping.checkout"]`)
+  rather than a string. The 2026-04-08 spec made `extends` strictly array-valued; the prior
+  string form failed strict validators.
+- All capability `spec` URLs are now date-prefixed (`https://ucp.dev/2026-04-08/specification/...`)
+  to match the schema URLs. The `order` capability had drifted to `/latest/`.
+- Added `payment_handlers: []` placeholder under `ucp` for parity with the rest of the
+  ecosystem (Shopify, UCPHub). Backend pushes per-merchant handlers via the existing
+  `xpay_wc_ucp_profile` override mechanism when configured.
+
+## [0.2.2] — 2026-05-22
+
+### Fixed — Connect-store retry no longer 401s with "nonce already used"
+
+A merchant whose WordPress site responded slowly during the finalize callback
+would see a 500/504 in the xpay app, and on retry would hit "nonce already used"
+because the backend burned the nonce before the callback fetch.
+
+- `rest_finalize` is now idempotent on replay: if `merchant_slug` + `api_key`
+  already match what the plugin has stored, accept silently (HTTP 200) instead
+  of failing on the missing local nonce.
+- The initial catalog resync is now scheduled via `wp_schedule_single_event` and
+  fired non-blocking, so the REST response returns in well under a second even
+  on hosts whose outbound HTTPS to `agent-commerce.xpay.sh` is slow.
+
+(Paired with backend change in `wc-plugin-setup`: the backend now delivers
+credentials to the plugin BEFORE consuming the nonce, with an 8s AbortSignal
+on the fetch, and surfaces a clear actionable error if the WP site can't be
+reached so the merchant can retry without losing their handshake.)
+
 ## [0.2.1] — 2026-05-16
 
 ### Changed — `/llms.txt` only advertises live protocol endpoints
