@@ -6,7 +6,7 @@ Tested up to: 6.9
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 9.4
-Stable tag: 0.2.1
+Stable tag: 0.2.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,7 +147,7 @@ This plugin connects to the following xpay-operated services to deliver its core
 
 1. **agent-feed.xpay.sh** — Public CDN that hosts your AI-readable catalog feed at `https://agent-feed.xpay.sh/catalog/{your-slug}.json`. The plugin does not contact this URL directly; the xpay backend writes it from your WooCommerce REST API after you click **Connect store**.
 
-2. **agent-commerce.xpay.sh** — The agent-side API that AI shopping agents call to surface and buy from your products. The plugin contacts this host at two paths: (a) `POST /v1/onboard/woocommerce/start` to register a one-time nonce when you click **Connect store**; (b) `POST /v1/merchants/{slug}/resync` to trigger a fresh catalog ingest after a product or stock change.
+2. **agent-commerce.xpay.sh** — The agent-side API that AI shopping agents call to surface and buy from your products. The plugin contacts this host at the following paths: (a) `POST /v1/onboard/woocommerce/start` to register a one-time nonce when you click **Connect store**; (b) `POST /v1/onboard/woocommerce/wc-auth-callback` is the WooCommerce OAuth callback target (WordPress itself calls this on your behalf, server-to-server, after you approve the one-click connect prompt); (c) `GET /v1/onboard/woocommerce/status?nonce=…` is polled by the xpay onboarding page while the handshake finishes; (d) `POST /v1/merchants/{slug}/resync` triggers a fresh catalog ingest after a product or stock change; (e) `DELETE /v1/merchants/{slug}` is sent (non-blocking) when you click **Disconnect** so xpay marks your account as disconnected and archives the cached catalog; (f) `POST /mcp/{slug}` is the JSON-RPC commerce MCP endpoint that AI agents talk to — it serves your catalog and signs cart deeplinks, but the plugin itself does not call this URL (it's advertised in `/.well-known/ucp`).
 
 3. **app.xpay.sh/onboard/woocommerce** — The merchant-side onboarding page opened in a new tab when you click **Connect store**. You sign in or sign up on xpay and grant the WooCommerce REST API permission there.
 
@@ -215,6 +215,16 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.2.3 =
+* **MCP transport advertised in `/.well-known/ucp`.** Native MCP-speaking agents (Claude, ChatGPT Operator, Shopify AI Toolkit) discover the endpoint at `agent-commerce.xpay.sh/mcp/{slug}` without further configuration. Three tools available: `search_catalog` (BM25-ranked over title + description), `get_product` (lookup by SKU or numeric product ID), `create_cart` (returns a signed deeplink that pre-populates checkout on your store).
+* **One-click connect via WooCommerce's `/wc-auth/v1/authorize` OAuth.** When you click **Connect store**, the xpay onboarding page opens WooCommerce's built-in approval popup. You approve there once and WordPress hands xpay read-only API credentials directly — no Settings → Advanced → REST API trip, no copy-paste. The manual paste flow remains available as a fallback.
+* **Disconnect notifies the backend.** Clicking **Disconnect** now fires a non-blocking `DELETE /v1/merchants/{slug}` so your account is marked disconnected and the cached agent-feed catalog is archived. Local cleanup happens regardless of whether the backend acks.
+* **UCP manifest fixes for strict-validator compliance:** `extends` is now an array (`["dev.ucp.shopping.checkout"]`) rather than a string per the 2026-04-08 spec; capability `spec` URLs are uniformly date-prefixed; `payment_handlers: []` placeholder added for parity with the ecosystem.
+* **Clear apology + guidance when a Connect attempt fails.** If you start a Connect flow but the handshake doesn't complete, the Settings → xpay page now shows an explicit apology and a clear "click Connect again" CTA, and our ops team is notified automatically so we can recover if anything weird happens.
+
+= 0.2.2 =
+* **Fixed onboarding-finalize 500/timeout that left merchants in a half-provisioned state.** The Lambda now has a 15-second timeout and an 8s `AbortSignal` on the callback fetch into your WordPress site. The nonce is no longer burned until the plugin acknowledges receipt, so a re-click is always safe within the 30-minute TTL. The plugin-side `rest_finalize` is now idempotent on `(slug, api_key)` replay. Initial catalog resync moved to `wp_schedule_single_event` + non-blocking `wp_remote_post` so the REST response returns in under a second on hosts whose outbound HTTPS to xpay is slow.
 
 = 0.2.1 =
 * `/llms.txt` `## Commerce protocols` section is now gated on the `xpay_wc_protocol_endpoints` wp_option (backend-pushed during Connect). Agents that follow a URL from `/llms.txt` reach a working service or a structured 501 — never a bare 404.

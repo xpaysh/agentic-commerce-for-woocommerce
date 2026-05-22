@@ -269,9 +269,17 @@ class Xpay_REST {
 			? sprintf( 'https://agent-commerce.xpay.sh/ucp/v1/%s', $slug )
 			: home_url( '/wp-json/xpay/ucp/v1' );
 
+		// MCP endpoint lives on agent-commerce.xpay.sh today. We will harmonize
+		// onto the per-tenant `{slug}.mcp.xpay.sh/mcp` shape once the wildcard
+		// routing layer learns how to dispatch commerce slugs separately from
+		// publisher MCP servers — that's queued as M4 work.
+		$mcp_endpoint = $slug
+			? sprintf( 'https://agent-commerce.xpay.sh/mcp/%s', $slug )
+			: home_url( '/wp-json/xpay/mcp' );
+
 		$ucp = array(
-			'version'      => $spec_version,
-			'services'     => array(
+			'version'          => $spec_version,
+			'services'         => array(
 				'dev.ucp.shopping' => array(
 					array(
 						'version'   => $spec_version,
@@ -280,40 +288,48 @@ class Xpay_REST {
 						'endpoint'  => $service_base,
 						'schema'    => 'https://ucp.dev/' . $spec_version . '/services/shopping/rest.openapi.json',
 					),
+					array(
+						'version'   => $spec_version,
+						'spec'      => 'https://ucp.dev/specification/overview',
+						'transport' => 'mcp',
+						'endpoint'  => $mcp_endpoint,
+						'schema'    => 'https://ucp.dev/' . $spec_version . '/services/shopping/mcp.json',
+					),
 				),
 			),
-			'capabilities' => array(
+			'capabilities'     => array(
 				'dev.ucp.shopping.checkout'    => array(
 					array(
 						'version' => $spec_version,
-						'spec'    => 'https://ucp.dev/specification/checkout',
+						'spec'    => 'https://ucp.dev/' . $spec_version . '/specification/checkout',
 						'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/checkout.json',
 					),
 				),
 				'dev.ucp.shopping.fulfillment' => array(
 					array(
 						'version' => $spec_version,
-						'spec'    => 'https://ucp.dev/specification/fulfillment',
+						'spec'    => 'https://ucp.dev/' . $spec_version . '/specification/fulfillment',
 						'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/fulfillment.json',
-						'extends' => 'dev.ucp.shopping.checkout',
+						'extends' => array( 'dev.ucp.shopping.checkout' ),
 					),
 				),
 				'dev.ucp.shopping.discount'    => array(
 					array(
 						'version' => $spec_version,
-						'spec'    => 'https://ucp.dev/specification/discount',
+						'spec'    => 'https://ucp.dev/' . $spec_version . '/specification/discount',
 						'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/discount.json',
-						'extends' => 'dev.ucp.shopping.checkout',
+						'extends' => array( 'dev.ucp.shopping.checkout' ),
 					),
 				),
 				'dev.ucp.shopping.order'       => array(
 					array(
 						'version' => $spec_version,
-						'spec'    => 'https://ucp.dev/latest/specification/order',
+						'spec'    => 'https://ucp.dev/' . $spec_version . '/specification/order',
 						'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/order.json',
 					),
 				),
 			),
+			'payment_handlers' => array(),
 		);
 
 		$signing_keys_opt = get_option( 'xpay_wc_ucp_signing_keys' );

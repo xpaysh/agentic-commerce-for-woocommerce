@@ -32,6 +32,18 @@ class Xpay_Settings {
 		add_filter( 'plugin_action_links_' . plugin_basename( XPAY_WC_FILE ), array( $this, 'plugin_action_links' ) );
 		// Beacon endpoint so the Connect button click can be tracked without blocking the redirect.
 		add_action( 'wp_ajax_xpay_wc_track', array( $this, 'ajax_track' ) );
+		add_action( 'xpay_wc_initial_resync', array( $this, 'cron_initial_resync' ), 10, 1 );
+	}
+
+	/**
+	 * Cron handler — fires the initial catalog resync out-of-band so the REST
+	 * finalize response stays under WordPress's external-request timeout.
+	 */
+	public function cron_initial_resync( $slug ) {
+		if ( ! $slug || ! is_string( $slug ) ) {
+			return;
+		}
+		Xpay_Client::post( '/v1/merchants/' . $slug . '/resync', array( 'reason' => 'initial_install' ) );
 	}
 
 	public function ajax_track() {
@@ -79,24 +91,35 @@ class Xpay_Settings {
 	public function rest_finalize( WP_REST_Request $req ) {
 		$payload = $req->get_json_params();
 		$nonce   = isset( $payload['nonce'] ) ? sanitize_text_field( $payload['nonce'] ) : '';
-		$stored  = get_option( self::NONCE_OPTION );
-
-		if ( ! $nonce || ! $stored || ! hash_equals( $stored, $nonce ) ) {
-			Xpay_Telemetry::track( 'finalize_error', array( 'reason' => 'invalid_nonce' ) );
-			return new WP_REST_Response( array( 'error' => 'invalid_nonce' ), 401 );
-		}
-
 		$slug    = isset( $payload['merchant_slug'] ) ? sanitize_title( $payload['merchant_slug'] ) : '';
 		$api_key = isset( $payload['api_key'] ) ? sanitize_text_field( $payload['api_key'] ) : '';
+
 		if ( ! $slug || ! $api_key ) {
 			Xpay_Telemetry::track( 'finalize_error', array( 'reason' => 'missing_fields' ) );
 			return new WP_REST_Response( array( 'error' => 'missing_fields' ), 400 );
 		}
 
+		$stored        = get_option( self::NONCE_OPTION );
+		$existing_slug = get_option( 'xpay_wc_merchant_slug' );
+		$existing_key  = get_option( 'xpay_wc_api_key' );
+
+		// Idempotent replay path: the backend may re-send the same creds if its
+		// first callback's HTTP response was lost (network/lambda timeout). If
+		// the slug + api_key already match what we have stored, accept silently.
+		$is_replay = $existing_slug && $existing_key && hash_equals( (string) $existing_slug, $slug ) && hash_equals( (string) $existing_key, $api_key );
+
+		if ( ! $is_replay ) {
+			if ( ! $nonce || ! $stored || ! hash_equals( $stored, $nonce ) ) {
+				Xpay_Telemetry::track( 'finalize_error', array( 'reason' => 'invalid_nonce' ) );
+				return new WP_REST_Response( array( 'error' => 'invalid_nonce' ), 401 );
+			}
+		}
+
 		update_option( 'xpay_wc_merchant_slug', $slug );
 		update_option( 'xpay_wc_api_key', $api_key );
 		update_option( 'xpay_wc_connected_at', time() );
-		delete_option( self::NONCE_OPTION );
+		// Clear the pending-attempt marker — the handshake succeeded.
+		delete_option( 'xpay_wc_last_connect_attempt' );
 
 		// Persist the UCP business profile body if the backend sent one.
 		// Served at /.well-known/ucp by Xpay_REST::serve_ucp_profile().
@@ -110,12 +133,47 @@ class Xpay_Settings {
 			update_option( 'xpay_wc_ucp_signing_keys', $payload['ucp_signing_keys'] );
 		}
 
-		Xpay_Telemetry::track( 'finalize_success', array( 'slug' => $slug ) );
+		// Burn the local nonce only after creds are safely stored.
+		// (Skipped on replay — the nonce may already be gone from a prior success.)
+		if ( ! $is_replay ) {
+			delete_option( self::NONCE_OPTION );
+		}
 
-		// Kick the first catalog sync.
-		Xpay_Client::post( '/v1/merchants/' . $slug . '/resync', array( 'reason' => 'initial_install' ) );
+		Xpay_Telemetry::track(
+			'finalize_success',
+			array(
+				'slug'   => $slug,
+				'replay' => $is_replay ? 1 : 0,
+			)
+		);
 
-		return new WP_REST_Response( array( 'ok' => true ), 200 );
+		// Kick the first catalog sync asynchronously (don't block the response,
+		// don't fail finalize if resync errors). Scheduling a single-event cron
+		// is the simplest fire-and-forget that survives request-end on most WP
+		// hosts. Falls back to an inline non-blocking call if cron is disabled.
+		if ( ! $is_replay ) {
+			if ( ! wp_next_scheduled( 'xpay_wc_initial_resync' ) ) {
+				wp_schedule_single_event( time() + 1, 'xpay_wc_initial_resync', array( $slug ) );
+			}
+			// Best-effort inline trigger in case wp-cron is disabled. Non-blocking
+			// `wp_remote_request` returns immediately after the TCP write — perfect
+			// for keeping the REST response fast.
+			wp_remote_post(
+				trailingslashit( XPAY_WC_API_BASE ) . 'v1/merchants/' . rawurlencode( $slug ) . '/resync',
+				array(
+					'timeout'  => 0.5,
+					'blocking' => false,
+					'headers'  => array(
+						'Content-Type'  => 'application/json',
+						'Authorization' => 'Bearer ' . $api_key,
+						'X-Xpay-Site'   => home_url( '/' ),
+					),
+					'body'     => wp_json_encode( array( 'reason' => 'initial_install' ) ),
+				)
+			);
+		}
+
+		return new WP_REST_Response( array( 'ok' => true, 'replay' => $is_replay ), 200 );
 	}
 
 	public function handle_disconnect() {
@@ -123,7 +181,31 @@ class Xpay_Settings {
 			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
 		}
 		check_admin_referer( 'xpay_wc_disconnect' );
-		Xpay_Telemetry::track( 'disconnected', array( 'slug' => Xpay_Plugin::merchant_slug() ) );
+
+		$slug    = Xpay_Plugin::merchant_slug();
+		$api_key = Xpay_Plugin::api_key();
+
+		Xpay_Telemetry::track( 'disconnected', array( 'slug' => $slug ) );
+
+		// Tell the backend BEFORE we clear local creds. Non-blocking, fire-and-forget —
+		// the local disconnect must succeed even if the backend is unreachable. The
+		// backend marks the merchant row status='disconnected' and archives the S3 catalog.
+		if ( $slug && $api_key ) {
+			wp_remote_request(
+				trailingslashit( XPAY_WC_API_BASE ) . 'v1/merchants/' . rawurlencode( $slug ),
+				array(
+					'method'   => 'DELETE',
+					'timeout'  => 0.5,
+					'blocking' => false,
+					'headers'  => array(
+						'Accept'         => 'application/json',
+						'X-Xpay-Api-Key' => $api_key,
+						'X-Xpay-Site'    => home_url( '/' ),
+					),
+				)
+			);
+		}
+
 		delete_option( 'xpay_wc_merchant_slug' );
 		delete_option( 'xpay_wc_api_key' );
 		delete_option( 'xpay_wc_connected_at' );
@@ -198,6 +280,13 @@ class Xpay_Settings {
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		if ( ! $connected ) {
+			$last_attempt = (int) get_option( 'xpay_wc_last_connect_attempt', 0 );
+			// If the merchant tried to connect within the last 24 hours but we
+			// still don't have an api_key locally, surface a clear apology so
+			// they know the previous attempt failed and what to do next.
+			if ( $last_attempt > 0 && ( time() - $last_attempt ) < DAY_IN_SECONDS ) {
+				$this->render_handshake_failed_notice();
+			}
 			$this->render_connect_panel();
 		} else {
 			$this->render_status_panel( $slug, $last_sync, $audit );
@@ -240,6 +329,11 @@ class Xpay_Settings {
 			)
 		);
 
+		// Stamp the attempt time so we can render an apology notice if the
+		// merchant returns later without having completed the handshake (i.e.
+		// no api_key is stored locally yet within the next 24 hours).
+		update_option( 'xpay_wc_last_connect_attempt', time() );
+
 		$ajax_url = esc_url( admin_url( 'admin-ajax.php' ) );
 		echo '<div class="card" style="padding:20px;max-width:680px;">';
 		echo '<h2>' . esc_html__( 'Connect your store', 'agentic-commerce-for-woocommerce' ) . '</h2>';
@@ -280,6 +374,21 @@ class Xpay_Settings {
 		Xpay_Telemetry::set_opt_in( $choice );
 		wp_safe_redirect( admin_url( 'options-general.php?page=agentic-commerce-for-woocommerce' ) );
 		exit;
+	}
+
+	private function render_handshake_failed_notice() {
+		$last_attempt = (int) get_option( 'xpay_wc_last_connect_attempt', 0 );
+		$ago          = $last_attempt ? human_time_diff( $last_attempt, time() ) : '';
+		echo '<div class="notice notice-warning" style="padding:14px 18px;border-left:4px solid #ea580c;background:#fff7ed;">';
+		echo '<h3 style="margin:0 0 8px;font-size:15px;color:#7c2d12;">' . esc_html__( 'Apologies for the trouble — your previous connection attempt didn\'t complete.', 'agentic-commerce-for-woocommerce' ) . '</h3>';
+		echo '<p style="margin:0 0 6px;color:#7c2d12;">';
+		printf(
+			/* translators: %s: human-readable elapsed time */
+			esc_html__( 'About %s ago you tried to connect this store to xpay, but the handshake didn\'t finish. Our team has already been notified; in the meantime please click Connect store again — the link is single-use and short-lived for security, so a fresh click is the fastest path to finishing the setup.', 'agentic-commerce-for-woocommerce' ),
+			esc_html( $ago )
+		);
+		echo '</p>';
+		echo '</div>';
 	}
 
 	private function render_privacy_panel() {
