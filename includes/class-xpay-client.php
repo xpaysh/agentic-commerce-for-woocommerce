@@ -12,6 +12,10 @@ class Xpay_Client {
 		return self::request( 'POST', $path, $body, $timeout );
 	}
 
+	public static function patch( $path, $body = array(), $timeout = 8 ) {
+		return self::request( 'PATCH', $path, $body, $timeout );
+	}
+
 	public static function get( $path, $query = array(), $timeout = 6 ) {
 		if ( ! empty( $query ) ) {
 			$path .= ( false === strpos( $path, '?' ) ? '?' : '&' ) . http_build_query( $query );
