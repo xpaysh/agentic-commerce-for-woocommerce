@@ -1,14 +1,23 @@
 <?php
 /**
- * Settings → xpay admin page. Handles:
- *   - "Connect store" — opens app.xpay.sh/onboard/woocommerce in a popup with a
- *     nonce; xpay calls back to /wp-json/xpay/v1/finalize to deliver
- *     merchant_slug + api_key.
- *   - Status panel — connection state, last sync, last audit score, top issues.
- *   - "View full audit" — links to https://audit.xpay.sh/m/{slug} for a
- *     fresh letter-grade report (discovery + commerce-readiness layers +
- *     per-agent compatibility row).
- *   - "Disconnect" — clears local credentials.
+ * Settings → xpay admin page.
+ *
+ * Layout: when disconnected, a single "Connect store" panel. Once connected,
+ * a tabbed UI with five tabs (general/capabilities/payments/links/tools)
+ * accessible via the `?tab=` query arg. Each save action posts to
+ * admin-post.php with a per-tab nonce.
+ *
+ * Tabs:
+ *   - general:      status, slug, last sync, disconnect, telemetry opt-in
+ *   - capabilities: per-UCP-capability on/off toggles (default ON)
+ *   - payments:     map WC payment gateways to UCP payment_handlers[]
+ *   - links:        auto-detect / override privacy, TOS, about, contact, shipping
+ *   - tools:        view UCP profile, view audit, test connection,
+ *                   refresh catalog, telemetry debug toggle
+ *
+ * The capability and payment-handler choices flow into the in-plugin UCP
+ * manifest emitter (Xpay_REST::serve_ucp_profile) so toggles are reflected
+ * in /.well-known/ucp.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -18,6 +27,25 @@ class Xpay_Settings {
 	private static $instance = null;
 	const NONCE_OPTION       = 'xpay_wc_onboard_nonce';
 
+	/**
+	 * Canonical UCP shopping capability list. Mirrors the hardcoded map in
+	 * Xpay_REST::serve_ucp_profile(). Order is the render order on the
+	 * Capabilities tab.
+	 */
+	const CAPABILITIES = array( 'checkout', 'fulfillment', 'discount', 'order' );
+
+	/**
+	 * Page slugs auto-detected on the Links tab. Each entry is the UCP
+	 * link `rel` paired with the page-slug candidates we probe in order.
+	 */
+	const LINK_TYPES = array(
+		'privacy'  => array( 'privacy-policy', 'privacy', 'legal/privacy' ),
+		'terms'    => array( 'terms-of-service', 'terms', 'tos', 'legal/terms' ),
+		'about'    => array( 'about', 'about-us' ),
+		'contact'  => array( 'contact', 'contact-us' ),
+		'shipping' => array( 'shipping', 'shipping-policy', 'shipping-and-returns' ),
+	);
+
 	public static function instance() {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
@@ -25,11 +53,28 @@ class Xpay_Settings {
 		return self::$instance;
 	}
 
+	public static function tab_url( $tab = 'general', $extra = array() ) {
+		$args = array_merge(
+			array(
+				'page' => 'agentic-commerce-for-woocommerce',
+				'tab'  => $tab,
+			),
+			$extra
+		);
+		return add_query_arg( $args, admin_url( 'options-general.php' ) );
+	}
+
 	private function __construct() {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'admin_post_xpay_wc_disconnect', array( $this, 'handle_disconnect' ) );
 		add_action( 'admin_post_xpay_wc_audit', array( $this, 'handle_audit' ) );
 		add_action( 'admin_post_xpay_wc_telemetry', array( $this, 'handle_telemetry_toggle' ) );
+		add_action( 'admin_post_xpay_wc_save_capabilities', array( $this, 'handle_save_capabilities' ) );
+		add_action( 'admin_post_xpay_wc_save_payments', array( $this, 'handle_save_payments' ) );
+		add_action( 'admin_post_xpay_wc_save_links', array( $this, 'handle_save_links' ) );
+		add_action( 'admin_post_xpay_wc_telemetry_debug', array( $this, 'handle_telemetry_debug_toggle' ) );
+		add_action( 'admin_post_xpay_wc_refresh_catalog', array( $this, 'handle_refresh_catalog' ) );
+		add_action( 'admin_post_xpay_wc_test_connection', array( $this, 'handle_test_connection' ) );
 		add_action( 'rest_api_init', array( $this, 'register_finalize_route' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( XPAY_WC_FILE ), array( $this, 'plugin_action_links' ) );
 		// Beacon endpoint so the Connect button click can be tracked without blocking the redirect.
@@ -74,7 +119,7 @@ class Xpay_Settings {
 	}
 
 	public function plugin_action_links( $links ) {
-		array_unshift( $links, sprintf( '<a href="%s">%s</a>', esc_url( admin_url( 'options-general.php?page=agentic-commerce-for-woocommerce' ) ), esc_html__( 'Settings', 'agentic-commerce-for-woocommerce' ) ) );
+		array_unshift( $links, sprintf( '<a href="%s">%s</a>', esc_url( self::tab_url() ), esc_html__( 'Settings', 'agentic-commerce-for-woocommerce' ) ) );
 		return $links;
 	}
 
@@ -214,7 +259,13 @@ class Xpay_Settings {
 		delete_option( 'xpay_wc_last_audit' );
 		delete_option( 'xpay_wc_ucp_profile' );
 		delete_option( 'xpay_wc_ucp_signing_keys' );
-		wp_safe_redirect( admin_url( 'options-general.php?page=agentic-commerce-for-woocommerce&disconnected=1' ) );
+		delete_option( 'xpay_wc_payment_map' );
+		delete_option( 'xpay_wc_links' );
+		delete_option( 'xpay_wc_telemetry_debug' );
+		foreach ( self::CAPABILITIES as $cap ) {
+			delete_option( 'xpay_wc_capability_' . $cap );
+		}
+		wp_safe_redirect( self::tab_url( 'general', array( 'disconnected' => 1 ) ) );
 		exit;
 	}
 
@@ -252,9 +303,116 @@ class Xpay_Settings {
 				)
 			);
 		}
-		wp_safe_redirect( admin_url( 'options-general.php?page=agentic-commerce-for-woocommerce&audited=1' ) );
+		wp_safe_redirect( self::tab_url( 'general', array( 'audited' => 1 ) ) );
 		exit;
 	}
+
+	// ---- Per-tab save handlers --------------------------------------------------
+
+	public function handle_save_capabilities() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
+		}
+		check_admin_referer( 'xpay_wc_save_capabilities' );
+
+		// Checkbox UI: unchecked boxes don't submit. Default behaviour with no
+		// option set is enabled, so persist explicit 0/1 for every cap.
+		foreach ( self::CAPABILITIES as $cap ) {
+			$on = isset( $_POST[ 'cap_' . $cap ] ) ? 1 : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			update_option( 'xpay_wc_capability_' . $cap, $on );
+		}
+		wp_safe_redirect( self::tab_url( 'capabilities', array( 'saved' => 1 ) ) );
+		exit;
+	}
+
+	public function handle_save_payments() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
+		}
+		check_admin_referer( 'xpay_wc_save_payments' );
+
+		$gateways = $this->available_gateways();
+		$map      = array();
+		foreach ( $gateways as $gw_id => $_gw ) {
+			$enabled = isset( $_POST[ 'pay_' . $gw_id ] ) ? 1 : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			$label   = isset( $_POST[ 'pay_label_' . $gw_id ] ) ? sanitize_text_field( wp_unslash( $_POST[ 'pay_label_' . $gw_id ] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			if ( $enabled ) {
+				$map[ $gw_id ] = array(
+					'enabled' => 1,
+					'label'   => $label,
+				);
+			}
+		}
+		update_option( 'xpay_wc_payment_map', $map );
+		wp_safe_redirect( self::tab_url( 'payments', array( 'saved' => 1 ) ) );
+		exit;
+	}
+
+	public function handle_save_links() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
+		}
+		check_admin_referer( 'xpay_wc_save_links' );
+
+		$links = array();
+		foreach ( array_keys( self::LINK_TYPES ) as $type ) {
+			$raw = isset( $_POST[ 'link_' . $type ] ) ? trim( wp_unslash( $_POST[ 'link_' . $type ] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+			$url = esc_url_raw( $raw );
+			if ( $url ) {
+				$links[ $type ] = $url;
+			}
+		}
+		update_option( 'xpay_wc_links', $links );
+		wp_safe_redirect( self::tab_url( 'links', array( 'saved' => 1 ) ) );
+		exit;
+	}
+
+	public function handle_telemetry_debug_toggle() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
+		}
+		check_admin_referer( 'xpay_wc_telemetry_debug' );
+		$current = (bool) get_option( 'xpay_wc_telemetry_debug', 0 );
+		update_option( 'xpay_wc_telemetry_debug', $current ? 0 : 1 );
+		wp_safe_redirect( self::tab_url( 'tools', array( 'saved' => 1 ) ) );
+		exit;
+	}
+
+	public function handle_refresh_catalog() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
+		}
+		check_admin_referer( 'xpay_wc_refresh_catalog' );
+		$slug   = Xpay_Plugin::merchant_slug();
+		$status = 'noop';
+		if ( $slug ) {
+			$result = Xpay_Client::post( '/v1/merchants/' . rawurlencode( $slug ) . '/resync', array( 'reason' => 'merchant_tools_tab' ) );
+			$status = is_wp_error( $result ) ? 'error' : 'queued';
+		}
+		wp_safe_redirect( self::tab_url( 'tools', array( 'resync' => $status ) ) );
+		exit;
+	}
+
+	public function handle_test_connection() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
+		}
+		check_admin_referer( 'xpay_wc_test_connection' );
+		$slug   = Xpay_Plugin::merchant_slug();
+		$status = 'no_slug';
+		if ( $slug ) {
+			$result = Xpay_Client::get( '/v1/merchants/' . rawurlencode( $slug ) );
+			if ( is_wp_error( $result ) ) {
+				$status = 'error';
+			} else {
+				$status = 'ok';
+			}
+		}
+		wp_safe_redirect( self::tab_url( 'tools', array( 'tested' => $status ) ) );
+		exit;
+	}
+
+	// ---- Render ----------------------------------------------------------------
 
 	public function render_page() {
 		$connected = Xpay_Plugin::is_connected();
@@ -279,23 +437,60 @@ class Xpay_Settings {
 		if ( isset( $_GET['audited'] ) ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Audit re-run queued. Refresh in ~30 seconds.', 'agentic-commerce-for-woocommerce' ) . '</p></div>';
 		}
+		if ( isset( $_GET['saved'] ) ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Settings saved.', 'agentic-commerce-for-woocommerce' ) . '</p></div>';
+		}
+		if ( isset( $_GET['resync'] ) ) {
+			$rs = sanitize_key( wp_unslash( $_GET['resync'] ) );
+			$msg = 'queued' === $rs ? __( 'Catalog refresh queued — feed updates in ~30s.', 'agentic-commerce-for-woocommerce' )
+				: ( 'error' === $rs ? __( 'Catalog refresh failed. Try again or check Tools → Test connection.', 'agentic-commerce-for-woocommerce' )
+				: __( 'Connect the store before refreshing the catalog.', 'agentic-commerce-for-woocommerce' ) );
+			$cls = 'queued' === $rs ? 'notice-success' : ( 'error' === $rs ? 'notice-error' : 'notice-warning' );
+			echo '<div class="notice ' . esc_attr( $cls ) . ' is-dismissible"><p>' . esc_html( $msg ) . '</p></div>';
+		}
+		if ( isset( $_GET['tested'] ) ) {
+			$ts  = sanitize_key( wp_unslash( $_GET['tested'] ) );
+			$msg = 'ok' === $ts ? __( 'Connection OK — xpay backend reachable.', 'agentic-commerce-for-woocommerce' )
+				: ( 'error' === $ts ? __( 'Backend unreachable. Check network or contact support@xpay.sh.', 'agentic-commerce-for-woocommerce' )
+				: __( 'Connect the store first.', 'agentic-commerce-for-woocommerce' ) );
+			$cls = 'ok' === $ts ? 'notice-success' : 'notice-error';
+			echo '<div class="notice ' . esc_attr( $cls ) . ' is-dismissible"><p>' . esc_html( $msg ) . '</p></div>';
+		}
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		if ( ! $connected ) {
 			$last_attempt = (int) get_option( 'xpay_wc_last_connect_attempt', 0 );
-			// If the merchant tried to connect within the last 24 hours but we
-			// still don't have an api_key locally, surface a clear apology so
-			// they know the previous attempt failed and what to do next.
 			if ( $last_attempt > 0 && ( time() - $last_attempt ) < DAY_IN_SECONDS ) {
 				$this->render_handshake_failed_notice();
 			}
 			$this->render_connect_panel();
-		} else {
-			$this->render_status_panel( $slug, $last_sync, $audit );
+			echo '</div>';
+			return;
 		}
 
-		$this->render_readiness_checklist();
-		$this->render_privacy_panel();
+		// Connected: render tab nav + active tab body.
+		$tab = $this->current_tab();
+		$this->render_tab_nav( $tab );
+		echo '<div class="xpay-wc-tab-body" style="margin-top:20px;">';
+		switch ( $tab ) {
+			case 'capabilities':
+				$this->render_tab_capabilities();
+				break;
+			case 'payments':
+				$this->render_tab_payments();
+				break;
+			case 'links':
+				$this->render_tab_links();
+				break;
+			case 'tools':
+				$this->render_tab_tools( $slug );
+				break;
+			case 'general':
+			default:
+				$this->render_tab_general( $slug, $last_sync, $audit );
+				break;
+		}
+		echo '</div>';
 
 		if ( Xpay_Robots::physical_robots_exists() ) {
 			echo '<div class="notice notice-warning"><p>';
@@ -304,6 +499,30 @@ class Xpay_Settings {
 		}
 
 		echo '</div>';
+	}
+
+	private function current_tab() {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- read-only tab selector.
+		$raw = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general';
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		$allowed = array( 'general', 'capabilities', 'payments', 'links', 'tools' );
+		return in_array( $raw, $allowed, true ) ? $raw : 'general';
+	}
+
+	private function render_tab_nav( $active ) {
+		$tabs = array(
+			'general'      => __( 'General', 'agentic-commerce-for-woocommerce' ),
+			'capabilities' => __( 'Capabilities', 'agentic-commerce-for-woocommerce' ),
+			'payments'     => __( 'Payments', 'agentic-commerce-for-woocommerce' ),
+			'links'        => __( 'Links', 'agentic-commerce-for-woocommerce' ),
+			'tools'        => __( 'Tools', 'agentic-commerce-for-woocommerce' ),
+		);
+		echo '<h2 class="nav-tab-wrapper">';
+		foreach ( $tabs as $slug => $label ) {
+			$cls = 'nav-tab' . ( $slug === $active ? ' nav-tab-active' : '' );
+			echo '<a class="' . esc_attr( $cls ) . '" href="' . esc_url( self::tab_url( $slug ) ) . '">' . esc_html( $label ) . '</a>';
+		}
+		echo '</h2>';
 	}
 
 	private function render_connect_panel() {
@@ -348,7 +567,9 @@ class Xpay_Settings {
 		echo '<script>(function(){var b=document.getElementById("xpay-wc-connect-btn");if(!b)return;b.addEventListener("click",function(){try{var fd=new FormData();fd.append("action","xpay_wc_track");fd.append("event","connect_clicked");if(navigator.sendBeacon){navigator.sendBeacon(' . wp_json_encode( $ajax_url ) . ',fd);}else{fetch(' . wp_json_encode( $ajax_url ) . ',{method:"POST",body:fd,keepalive:true,credentials:"same-origin"});}}catch(e){}});})();</script>';
 	}
 
-	private function render_status_panel( $slug, $last_sync, $audit ) {
+	// ---- Tab: General ---------------------------------------------------------
+
+	private function render_tab_general( $slug, $last_sync, $audit ) {
 		echo '<div class="card" style="padding:20px;max-width:680px;">';
 		echo '<h2>' . esc_html__( 'Connected', 'agentic-commerce-for-woocommerce' ) . '</h2>';
 		echo '<table class="form-table"><tbody>';
@@ -360,16 +581,282 @@ class Xpay_Settings {
 		}
 		echo '</tbody></table>';
 
-		// "View full audit" now opens audit.xpay.sh/m/{slug} where the merchant
-		// sees a fresh letter-grade report (discovery + commerce-readiness
-		// layers + per-agent compatibility row). The audit-service caches for
-		// 5 min so spamming this is cheap. The previous "Re-run my audit" path
-		// posted to a stub auditRun Lambda — replaced by this richer surface.
-		$audit_url = sprintf( 'https://audit.xpay.sh/m/%s', rawurlencode( $slug ) );
 		echo '<p>';
-		echo '<a class="button button-primary" target="_blank" rel="noopener noreferrer" href="' . esc_url( $audit_url ) . '">' . esc_html__( 'View full agent-readiness audit →', 'agentic-commerce-for-woocommerce' ) . '</a> ';
 		echo '<a class="button" href="' . esc_url( admin_url( 'admin-post.php?action=xpay_wc_disconnect&_wpnonce=' . wp_create_nonce( 'xpay_wc_disconnect' ) ) ) . '">' . esc_html__( 'Disconnect', 'agentic-commerce-for-woocommerce' ) . '</a>';
 		echo '</p>';
+		echo '</div>';
+
+		$this->render_readiness_checklist();
+		$this->render_privacy_panel();
+	}
+
+	// ---- Tab: Capabilities ----------------------------------------------------
+
+	private function render_tab_capabilities() {
+		echo '<div class="card" style="padding:20px;max-width:680px;">';
+		echo '<h2>' . esc_html__( 'UCP capabilities', 'agentic-commerce-for-woocommerce' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Toggle which shopping capabilities are advertised in /.well-known/ucp. All on by default. Switching one off removes it from the manifest agents fetch.', 'agentic-commerce-for-woocommerce' ) . '</p>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'xpay_wc_save_capabilities' );
+		echo '<input type="hidden" name="action" value="xpay_wc_save_capabilities" />';
+		echo '<table class="form-table"><tbody>';
+		$labels = array(
+			'checkout'    => __( 'Checkout — required for cart-based purchasing.', 'agentic-commerce-for-woocommerce' ),
+			'fulfillment' => __( 'Fulfillment — shipping methods, rates, delivery dates.', 'agentic-commerce-for-woocommerce' ),
+			'discount'    => __( 'Discount — coupons and promotional codes.', 'agentic-commerce-for-woocommerce' ),
+			'order'       => __( 'Order — post-purchase order status lookups.', 'agentic-commerce-for-woocommerce' ),
+		);
+		foreach ( self::CAPABILITIES as $cap ) {
+			$on = $this->capability_enabled( $cap );
+			echo '<tr>';
+			echo '<th scope="row"><label for="cap_' . esc_attr( $cap ) . '">dev.ucp.shopping.' . esc_html( $cap ) . '</label></th>';
+			echo '<td><label><input type="checkbox" id="cap_' . esc_attr( $cap ) . '" name="cap_' . esc_attr( $cap ) . '" value="1"' . checked( $on, true, false ) . ' /> ';
+			echo esc_html( $labels[ $cap ] ) . '</label></td>';
+			echo '</tr>';
+		}
+		echo '</tbody></table>';
+		submit_button( __( 'Save capabilities', 'agentic-commerce-for-woocommerce' ) );
+		echo '</form>';
+		echo '</div>';
+	}
+
+	/**
+	 * Default-on resolver. A missing option key means "enabled" so existing
+	 * connected installs upgrading into 0.2.4 don't see capabilities silently
+	 * disappear from their manifest.
+	 */
+	public static function capability_enabled( $cap ) {
+		$opt = get_option( 'xpay_wc_capability_' . $cap, null );
+		if ( null === $opt || '' === $opt ) {
+			return true;
+		}
+		return (bool) (int) $opt;
+	}
+
+	// ---- Tab: Payments --------------------------------------------------------
+
+	private function available_gateways() {
+		if ( ! function_exists( 'WC' ) ) {
+			return array();
+		}
+		$wc = WC();
+		if ( ! $wc || ! method_exists( $wc, 'payment_gateways' ) ) {
+			return array();
+		}
+		$mgr = $wc->payment_gateways();
+		if ( ! $mgr ) {
+			return array();
+		}
+		$gateways = $mgr->get_available_payment_gateways();
+		return is_array( $gateways ) ? $gateways : array();
+	}
+
+	private function render_tab_payments() {
+		echo '<div class="card" style="padding:20px;max-width:840px;">';
+		echo '<h2>' . esc_html__( 'Payment handlers', 'agentic-commerce-for-woocommerce' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Map your enabled WooCommerce payment gateways to UCP payment_handlers[]. Agents use this list to decide which payment methods they can complete on the buyer\'s behalf.', 'agentic-commerce-for-woocommerce' ) . '</p>';
+
+		$gateways = $this->available_gateways();
+		if ( empty( $gateways ) ) {
+			echo '<p><em>' . esc_html__( 'No payment gateways enabled in WooCommerce yet. Add a gateway under WooCommerce → Settings → Payments first.', 'agentic-commerce-for-woocommerce' ) . '</em></p>';
+			echo '</div>';
+			return;
+		}
+
+		$map = get_option( 'xpay_wc_payment_map', array() );
+		if ( ! is_array( $map ) ) {
+			$map = array();
+		}
+
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'xpay_wc_save_payments' );
+		echo '<input type="hidden" name="action" value="xpay_wc_save_payments" />';
+		echo '<table class="widefat striped"><thead><tr>';
+		echo '<th>' . esc_html__( 'Expose to agents', 'agentic-commerce-for-woocommerce' ) . '</th>';
+		echo '<th>' . esc_html__( 'Gateway', 'agentic-commerce-for-woocommerce' ) . '</th>';
+		echo '<th>' . esc_html__( 'UCP handler label (optional)', 'agentic-commerce-for-woocommerce' ) . '</th>';
+		echo '</tr></thead><tbody>';
+		foreach ( $gateways as $gw_id => $gw ) {
+			$existing = isset( $map[ $gw_id ] ) && is_array( $map[ $gw_id ] ) ? $map[ $gw_id ] : null;
+			$on       = (bool) ( $existing && ! empty( $existing['enabled'] ) );
+			$label    = $existing && isset( $existing['label'] ) ? (string) $existing['label'] : ( method_exists( $gw, 'get_title' ) ? $gw->get_title() : $gw_id );
+			echo '<tr>';
+			echo '<td><label><input type="checkbox" name="pay_' . esc_attr( $gw_id ) . '" value="1"' . checked( $on, true, false ) . ' /></label></td>';
+			echo '<td><code>' . esc_html( $gw_id ) . '</code><br /><span style="color:#646970;font-size:12px;">' . esc_html( method_exists( $gw, 'get_method_title' ) ? $gw->get_method_title() : $gw_id ) . '</span></td>';
+			echo '<td><input type="text" name="pay_label_' . esc_attr( $gw_id ) . '" value="' . esc_attr( $label ) . '" class="regular-text" /></td>';
+			echo '</tr>';
+		}
+		echo '</tbody></table>';
+		submit_button( __( 'Save payment handlers', 'agentic-commerce-for-woocommerce' ) );
+		echo '</form>';
+		echo '</div>';
+	}
+
+	/**
+	 * Public so Xpay_REST::serve_ucp_profile() can use it to populate
+	 * payment_handlers[] in the manifest.
+	 */
+	public static function payment_handlers() {
+		$map = get_option( 'xpay_wc_payment_map', array() );
+		if ( ! is_array( $map ) ) {
+			return array();
+		}
+		$out = array();
+		foreach ( $map as $gw_id => $cfg ) {
+			if ( ! is_array( $cfg ) || empty( $cfg['enabled'] ) ) {
+				continue;
+			}
+			$out[] = array(
+				'id'    => $gw_id,
+				'label' => isset( $cfg['label'] ) ? (string) $cfg['label'] : $gw_id,
+				'type'  => 'merchant_gateway',
+			);
+		}
+		return $out;
+	}
+
+	// ---- Tab: Links -----------------------------------------------------------
+
+	private function render_tab_links() {
+		echo '<div class="card" style="padding:20px;max-width:840px;">';
+		echo '<h2>' . esc_html__( 'Policy & info links', 'agentic-commerce-for-woocommerce' ) . '</h2>';
+		echo '<p>' . esc_html__( 'These appear in the ucp.links array so agents can surface your privacy policy, TOS, contact, etc. to the buyer. Auto-detected where possible; override any field below.', 'agentic-commerce-for-woocommerce' ) . '</p>';
+
+		$saved      = get_option( 'xpay_wc_links', array() );
+		$saved      = is_array( $saved ) ? $saved : array();
+		$detected   = $this->detect_links();
+		$labels     = array(
+			'privacy'  => __( 'Privacy policy', 'agentic-commerce-for-woocommerce' ),
+			'terms'    => __( 'Terms of service', 'agentic-commerce-for-woocommerce' ),
+			'about'    => __( 'About', 'agentic-commerce-for-woocommerce' ),
+			'contact'  => __( 'Contact', 'agentic-commerce-for-woocommerce' ),
+			'shipping' => __( 'Shipping policy', 'agentic-commerce-for-woocommerce' ),
+		);
+
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'xpay_wc_save_links' );
+		echo '<input type="hidden" name="action" value="xpay_wc_save_links" />';
+		echo '<table class="form-table"><tbody>';
+		foreach ( $labels as $type => $label ) {
+			$val = isset( $saved[ $type ] ) ? $saved[ $type ] : ( isset( $detected[ $type ] ) ? $detected[ $type ] : '' );
+			$ph  = isset( $detected[ $type ] ) ? $detected[ $type ] : '';
+			echo '<tr>';
+			echo '<th scope="row"><label for="link_' . esc_attr( $type ) . '">' . esc_html( $label ) . '</label></th>';
+			echo '<td><input type="url" id="link_' . esc_attr( $type ) . '" name="link_' . esc_attr( $type ) . '" value="' . esc_attr( $val ) . '" placeholder="' . esc_attr( $ph ) . '" class="regular-text code" />';
+			if ( $ph && $val !== $ph ) {
+				echo '<br /><span style="color:#646970;font-size:12px;">' . esc_html( sprintf( /* translators: %s: detected URL */ __( 'Auto-detected: %s', 'agentic-commerce-for-woocommerce' ), $ph ) ) . '</span>';
+			}
+			echo '</td></tr>';
+		}
+		echo '</tbody></table>';
+		submit_button( __( 'Save links', 'agentic-commerce-for-woocommerce' ) );
+		echo '</form>';
+		echo '</div>';
+	}
+
+	/**
+	 * Tolerant link auto-detect. Tries WP's privacy_policy_url() first, then
+	 * walks LINK_TYPES candidate slugs, then probes wp_pages by title. Returns
+	 * a `type => url` map; missing types simply aren't keys.
+	 */
+	private function detect_links() {
+		$out = array();
+		if ( function_exists( 'get_privacy_policy_url' ) ) {
+			$pp = get_privacy_policy_url();
+			if ( $pp ) {
+				$out['privacy'] = $pp;
+			}
+		}
+		foreach ( self::LINK_TYPES as $type => $slugs ) {
+			if ( isset( $out[ $type ] ) ) {
+				continue;
+			}
+			foreach ( $slugs as $slug ) {
+				$page = get_page_by_path( $slug );
+				if ( $page ) {
+					$url = get_permalink( $page );
+					if ( $url ) {
+						$out[ $type ] = $url;
+						break;
+					}
+				}
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Public so Xpay_REST::serve_ucp_profile() can render the ucp.links array.
+	 * Falls back to auto-detect so a fresh install with no overrides still
+	 * emits useful links.
+	 */
+	public static function ucp_links() {
+		$self  = self::instance();
+		$saved = get_option( 'xpay_wc_links', array() );
+		$saved = is_array( $saved ) ? $saved : array();
+		// Use detection as fallback for unset types so merchants who never visit
+		// the Links tab still ship a useful manifest.
+		$detected = $self->detect_links();
+		$merged   = array_filter( array_merge( $detected, $saved ) );
+		$links    = array();
+		foreach ( $merged as $rel => $href ) {
+			if ( ! is_string( $href ) || '' === $href ) {
+				continue;
+			}
+			$links[] = array(
+				'rel'  => $rel,
+				'href' => $href,
+			);
+		}
+		return $links;
+	}
+
+	// ---- Tab: Tools -----------------------------------------------------------
+
+	private function render_tab_tools( $slug ) {
+		echo '<div class="card" style="padding:20px;max-width:840px;">';
+		echo '<h2>' . esc_html__( 'Tools', 'agentic-commerce-for-woocommerce' ) . '</h2>';
+
+		$ucp_url   = home_url( '/.well-known/ucp' );
+		$audit_url = $slug ? sprintf( 'https://audit.xpay.sh/m/%s', rawurlencode( $slug ) ) : '';
+
+		echo '<p>';
+		echo '<a class="button" target="_blank" rel="noopener" href="' . esc_url( $ucp_url ) . '">' . esc_html__( 'View UCP profile', 'agentic-commerce-for-woocommerce' ) . '</a> ';
+		if ( $audit_url ) {
+			echo '<a class="button button-primary" target="_blank" rel="noopener" href="' . esc_url( $audit_url ) . '">' . esc_html__( 'View full agent-readiness audit →', 'agentic-commerce-for-woocommerce' ) . '</a>';
+		}
+		echo '</p>';
+
+		echo '<hr />';
+		echo '<h3>' . esc_html__( 'Live actions', 'agentic-commerce-for-woocommerce' ) . '</h3>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block;margin-right:8px;">';
+		wp_nonce_field( 'xpay_wc_test_connection' );
+		echo '<input type="hidden" name="action" value="xpay_wc_test_connection" />';
+		submit_button( __( 'Test connection', 'agentic-commerce-for-woocommerce' ), 'secondary', 'submit', false );
+		echo '</form>';
+
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block;">';
+		wp_nonce_field( 'xpay_wc_refresh_catalog' );
+		echo '<input type="hidden" name="action" value="xpay_wc_refresh_catalog" />';
+		submit_button( __( 'Refresh catalog now', 'agentic-commerce-for-woocommerce' ), 'secondary', 'submit', false );
+		echo '</form>';
+
+		echo '<hr />';
+		echo '<h3>' . esc_html__( 'Debug', 'agentic-commerce-for-woocommerce' ) . '</h3>';
+		$debug_on    = (bool) get_option( 'xpay_wc_telemetry_debug', 0 );
+		$debug_label = $debug_on ? __( 'Turn off telemetry debug logging', 'agentic-commerce-for-woocommerce' ) : __( 'Turn on telemetry debug logging', 'agentic-commerce-for-woocommerce' );
+		$state_label = $debug_on ? __( 'enabled', 'agentic-commerce-for-woocommerce' ) : __( 'disabled', 'agentic-commerce-for-woocommerce' );
+		echo '<p>' . sprintf(
+			/* translators: %s: enabled|disabled */
+			esc_html__( 'Outbound HTTP request logging is %s. When enabled, every xpay backend call is logged to PHP error_log for troubleshooting. Separate from the anonymous-telemetry opt-in on the General tab.', 'agentic-commerce-for-woocommerce' ),
+			'<strong>' . esc_html( $state_label ) . '</strong>'
+		) . '</p>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'xpay_wc_telemetry_debug' );
+		echo '<input type="hidden" name="action" value="xpay_wc_telemetry_debug" />';
+		submit_button( $debug_label, 'secondary', 'submit', false );
+		echo '</form>';
+
 		echo '</div>';
 	}
 
@@ -380,7 +867,7 @@ class Xpay_Settings {
 		check_admin_referer( 'xpay_wc_telemetry' );
 		$choice = isset( $_GET['choice'] ) && 'yes' === $_GET['choice'] ? 'yes' : 'no';
 		Xpay_Telemetry::set_opt_in( $choice );
-		wp_safe_redirect( admin_url( 'options-general.php?page=agentic-commerce-for-woocommerce' ) );
+		wp_safe_redirect( self::tab_url( 'general' ) );
 		exit;
 	}
 
@@ -422,7 +909,6 @@ class Xpay_Settings {
 	 */
 	private function render_readiness_checklist() {
 		$slug = Xpay_Plugin::merchant_slug();
-		$site = home_url( '/' );
 
 		$rows = array(
 			array( 'AI can read your full catalogue', (bool) $slug, $slug ? sprintf( 'Hosted feed live at agent-feed.xpay.sh/catalog/%s.json', $slug ) : 'Connect store to enable.' ),

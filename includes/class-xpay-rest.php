@@ -277,6 +277,56 @@ class Xpay_REST {
 			? sprintf( 'https://agent-commerce.xpay.sh/mcp/%s', $slug )
 			: home_url( '/wp-json/xpay/mcp' );
 
+		// Canonical capability map — order matches Xpay_Settings::CAPABILITIES so
+		// the toggle UI and the manifest stay in sync.
+		$all_capabilities = array(
+			'dev.ucp.shopping.checkout'    => array(
+				'cap_key' => 'checkout',
+				'entry'   => array(
+					'version' => $spec_version,
+					'spec'    => 'https://ucp.dev/' . $spec_version . '/specification/checkout',
+					'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/checkout.json',
+				),
+			),
+			'dev.ucp.shopping.fulfillment' => array(
+				'cap_key' => 'fulfillment',
+				'entry'   => array(
+					'version' => $spec_version,
+					'spec'    => 'https://ucp.dev/' . $spec_version . '/specification/fulfillment',
+					'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/fulfillment.json',
+					'extends' => array( 'dev.ucp.shopping.checkout' ),
+				),
+			),
+			'dev.ucp.shopping.discount'    => array(
+				'cap_key' => 'discount',
+				'entry'   => array(
+					'version' => $spec_version,
+					'spec'    => 'https://ucp.dev/' . $spec_version . '/specification/discount',
+					'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/discount.json',
+					'extends' => array( 'dev.ucp.shopping.checkout' ),
+				),
+			),
+			'dev.ucp.shopping.order'       => array(
+				'cap_key' => 'order',
+				'entry'   => array(
+					'version' => $spec_version,
+					'spec'    => 'https://ucp.dev/' . $spec_version . '/specification/order',
+					'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/order.json',
+				),
+			),
+		);
+
+		$capabilities = array();
+		foreach ( $all_capabilities as $cap_id => $cfg ) {
+			if ( class_exists( 'Xpay_Settings' ) && ! Xpay_Settings::capability_enabled( $cfg['cap_key'] ) ) {
+				continue;
+			}
+			$capabilities[ $cap_id ] = array( $cfg['entry'] );
+		}
+
+		$payment_handlers = class_exists( 'Xpay_Settings' ) ? Xpay_Settings::payment_handlers() : array();
+		$links            = class_exists( 'Xpay_Settings' ) ? Xpay_Settings::ucp_links() : array();
+
 		$ucp = array(
 			'version'          => $spec_version,
 			'services'         => array(
@@ -297,39 +347,9 @@ class Xpay_REST {
 					),
 				),
 			),
-			'capabilities'     => array(
-				'dev.ucp.shopping.checkout'    => array(
-					array(
-						'version' => $spec_version,
-						'spec'    => 'https://ucp.dev/' . $spec_version . '/specification/checkout',
-						'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/checkout.json',
-					),
-				),
-				'dev.ucp.shopping.fulfillment' => array(
-					array(
-						'version' => $spec_version,
-						'spec'    => 'https://ucp.dev/' . $spec_version . '/specification/fulfillment',
-						'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/fulfillment.json',
-						'extends' => array( 'dev.ucp.shopping.checkout' ),
-					),
-				),
-				'dev.ucp.shopping.discount'    => array(
-					array(
-						'version' => $spec_version,
-						'spec'    => 'https://ucp.dev/' . $spec_version . '/specification/discount',
-						'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/discount.json',
-						'extends' => array( 'dev.ucp.shopping.checkout' ),
-					),
-				),
-				'dev.ucp.shopping.order'       => array(
-					array(
-						'version' => $spec_version,
-						'spec'    => 'https://ucp.dev/' . $spec_version . '/specification/order',
-						'schema'  => 'https://ucp.dev/' . $spec_version . '/schemas/shopping/order.json',
-					),
-				),
-			),
-			'payment_handlers' => array(),
+			'capabilities'     => $capabilities,
+			'payment_handlers' => $payment_handlers,
+			'links'            => $links,
 		);
 
 		$signing_keys_opt = get_option( 'xpay_wc_ucp_signing_keys' );

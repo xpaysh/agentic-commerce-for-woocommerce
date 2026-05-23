@@ -6,7 +6,7 @@ Tested up to: 6.9
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 9.4
-Stable tag: 0.2.3
+Stable tag: 0.2.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -182,6 +182,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.2.4 =
+Settings → xpay is now organised into five tabs (General, Capabilities, Payments, Links, Tools). Switch off any UCP shopping capability to remove it from your /.well-known/ucp manifest, map your enabled WooCommerce gateways to `payment_handlers[]` so agents know which methods you accept, and override the auto-detected privacy/TOS/about/contact/shipping URLs that ship in `ucp.links`. The Tools tab adds Test connection + Refresh catalog buttons and a debug-log toggle.
+
 = 0.2.1 =
 Tighter alignment between what /llms.txt advertises and what's actually serving. The `Commerce protocols` section is now backend-driven: only protocols the xpay backend has confirmed live for your store appear; the catalog feed and cart deeplink (live today) always show up. Companion change on the xpay backend: protocol-prefixed URLs at agent-commerce.xpay.sh now answer with a spec-shaped 501 Not Implemented envelope (with `retry_after_seconds` and a `docs` link) instead of a bare 404 — agents following a URL get a structured signal that the service is provisioned but not yet accepting requests.
 
@@ -215,6 +218,12 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.2.4 =
+* **Tabbed Settings → xpay UI.** Five tabs replace the single-screen layout: **General** (status + slug + last sync + disconnect + telemetry opt-in), **Capabilities** (per-UCP-capability toggles), **Payments** (map enabled WC gateways to UCP `payment_handlers[]`), **Links** (auto-detect privacy/TOS/about/contact/shipping with per-row override), **Tools** (view UCP profile, view full audit, test connection, refresh catalog now, telemetry debug log toggle). URL is bookmarkable via `?tab=`.
+* **Capability toggles wired into `/.well-known/ucp`.** Switching off any of `checkout` / `fulfillment` / `discount` / `order` removes the entry from the emitted UCP manifest. Default (no option set) = all enabled, so existing installs don't regress on upgrade.
+* **`payment_handlers[]` now populated from the Payments tab.** Each enabled gateway emits as `{id, label, type:"merchant_gateway"}` so UCP-aware agents can negotiate payment surfaces against the methods you actually accept.
+* **`ucp.links` array.** Privacy, TOS, About, Contact, Shipping URLs are auto-detected (WordPress privacy_policy_url + common page slugs) and overridable on the Links tab; emitted in the manifest as `{rel, href}` pairs.
 
 = 0.2.3 =
 * **MCP transport advertised in `/.well-known/ucp`.** Native MCP-speaking agents (Claude, ChatGPT Operator, Shopify AI Toolkit) discover the endpoint at `agent-commerce.xpay.sh/mcp/{slug}` without further configuration. Three tools available: `search_catalog` (BM25-ranked over title + description), `get_product` (lookup by SKU or numeric product ID), `create_cart` (returns a signed deeplink that pre-populates checkout on your store).
