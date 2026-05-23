@@ -5,7 +5,9 @@
  *     nonce; xpay calls back to /wp-json/xpay/v1/finalize to deliver
  *     merchant_slug + api_key.
  *   - Status panel — connection state, last sync, last audit score, top issues.
- *   - "Re-run audit" — calls api.xpay.sh/v1/audits/run and refreshes the panel.
+ *   - "View full audit" — links to https://audit.xpay.sh/m/{slug} for a
+ *     fresh letter-grade report (discovery + commerce-readiness layers +
+ *     per-agent compatibility row).
  *   - "Disconnect" — clears local credentials.
  */
 
@@ -358,8 +360,14 @@ class Xpay_Settings {
 		}
 		echo '</tbody></table>';
 
+		// "View full audit" now opens audit.xpay.sh/m/{slug} where the merchant
+		// sees a fresh letter-grade report (discovery + commerce-readiness
+		// layers + per-agent compatibility row). The audit-service caches for
+		// 5 min so spamming this is cheap. The previous "Re-run my audit" path
+		// posted to a stub auditRun Lambda — replaced by this richer surface.
+		$audit_url = sprintf( 'https://audit.xpay.sh/m/%s', rawurlencode( $slug ) );
 		echo '<p>';
-		echo '<a class="button button-primary" href="' . esc_url( admin_url( 'admin-post.php?action=xpay_wc_audit&_wpnonce=' . wp_create_nonce( 'xpay_wc_audit' ) ) ) . '">' . esc_html__( 'Re-run my audit', 'agentic-commerce-for-woocommerce' ) . '</a> ';
+		echo '<a class="button button-primary" target="_blank" rel="noopener noreferrer" href="' . esc_url( $audit_url ) . '">' . esc_html__( 'View full agent-readiness audit →', 'agentic-commerce-for-woocommerce' ) . '</a> ';
 		echo '<a class="button" href="' . esc_url( admin_url( 'admin-post.php?action=xpay_wc_disconnect&_wpnonce=' . wp_create_nonce( 'xpay_wc_disconnect' ) ) ) . '">' . esc_html__( 'Disconnect', 'agentic-commerce-for-woocommerce' ) . '</a>';
 		echo '</p>';
 		echo '</div>';
