@@ -11,6 +11,59 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.2.4] — 2026-05-22
+
+### Added — Tabbed Settings → xpay UI (M3.1)
+
+The single-screen settings page is now split into five tabs, accessible via
+`?tab=` URL params:
+
+- **General** — connection status, merchant slug, last sync, disconnect,
+  readiness checklist, anonymous-telemetry opt-in.
+- **Capabilities** — per-UCP-shopping-capability toggles. Each of
+  `checkout` / `fulfillment` / `discount` / `order` can be switched off, in
+  which case the capability disappears from `/.well-known/ucp`. Default
+  (no option set) is enabled, so existing connected installs don't regress
+  on upgrade.
+- **Payments** — lists every enabled WooCommerce gateway. Checking a
+  gateway adds it to UCP `payment_handlers[]` as
+  `{id, label, type:"merchant_gateway"}` (label defaults to the gateway's
+  WC title, overridable per row).
+- **Links** — auto-detects privacy, TOS, about, contact, and shipping URLs
+  via WP's `get_privacy_policy_url()` and common page slugs
+  (`privacy-policy`, `terms`, `about`, `contact`, `shipping`, plus a few
+  variants). Each row is overridable. Emitted in the manifest as
+  `links: [{rel, href}, ...]`.
+- **Tools** — utility actions: view the live UCP profile,
+  jump to the full audit at `audit.xpay.sh/m/{slug}`, run a synchronous
+  "Test connection" probe against the backend, force a "Refresh catalog
+  now" (POSTs `/v1/merchants/{slug}/resync`), and a debug-log toggle for
+  outbound HTTP request logging (separate from the anonymous-telemetry
+  opt-in on General).
+
+Tab nav uses WordPress's standard `nav-tab-wrapper` markup so styling
+matches every other core settings page. URLs are bookmarkable. The
+disconnected layout (single Connect-store card) is unchanged.
+
+### Added — `ucp.links` in the emitted manifest
+
+The plugin's `serve_ucp_profile()` now emits a `links` array drawn from
+the Links tab (with auto-detect fallback for unset rows). This closes the
+last UCPHub-parity gap on the discovery body.
+
+### Changed — `serve_ucp_profile()` is filterable via Capabilities tab
+
+The previously-hardcoded capability map in `class-xpay-rest.php` is now
+overlaid against `xpay_wc_capability_{name}` wp_options. Toggling off
+`discount` on the Capabilities tab causes the `dev.ucp.shopping.discount`
+key to disappear from the JSON body returned at `/.well-known/ucp`.
+
+### Cleanup — disconnect removes the new option keys
+
+`handle_disconnect()` now also deletes `xpay_wc_capability_*`,
+`xpay_wc_payment_map`, `xpay_wc_links`, and `xpay_wc_telemetry_debug`, so
+a disconnect/reconnect cycle leaves no orphan options behind.
+
 ## [0.2.3] — 2026-05-22
 
 ### Added — MCP transport in `/.well-known/ucp`
