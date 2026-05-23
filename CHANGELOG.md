@@ -58,6 +58,30 @@ overlaid against `xpay_wc_capability_{name}` wp_options. Toggling off
 `discount` on the Capabilities tab causes the `dev.ucp.shopping.discount`
 key to disappear from the JSON body returned at `/.well-known/ucp`.
 
+### Added — Per-product delta-resync (M4.2)
+
+Product edits, stock changes, and deletes now dispatch a single-product
+PATCH to `agent-commerce.xpay.sh/v1/merchants/{slug}/products/{sku}`
+instead of triggering a full 50-page-pull rebuild of the S3 catalog.
+The new path runs in ~200ms for a 5MB catalog vs 30–60s for a full
+resync on glycodepot-scale stores.
+
+- Hooks: `woocommerce_update_product`, `woocommerce_new_product`,
+  `woocommerce_delete_product`, `woocommerce_trash_product`,
+  `woocommerce_product_set_stock`, `woocommerce_variation_set_stock`.
+- Variation stock changes resolve to the parent product (variations don't
+  have standalone catalog entries).
+- Debounced per `(product_id, op)` via `wp_schedule_single_event`, so a
+  bulk edit of N products → N backend writes (not N²) and rapid edits to
+  the same product coalesce. Pending `update` is dropped when a `delete`
+  for the same product is queued (and vice versa).
+- Catalog visibility flips (`publish → draft`, `catalog_visibility=hidden`)
+  send `{deleted: true}` so the product disappears from the agent feed.
+- Hard failures (5xx / auth) fall back to a full resync so no edit is
+  lost; hourly `scheduledResync` covers anything else.
+- Backend writes are etag-protected (`If-Match`) with 3-retry RMW;
+  PreconditionFailed exhaustion falls back to a full resync server-side.
+
 ### Cleanup — disconnect removes the new option keys
 
 `handle_disconnect()` now also deletes `xpay_wc_capability_*`,
