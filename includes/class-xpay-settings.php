@@ -66,6 +66,7 @@ class Xpay_Settings {
 
 	private function __construct() {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
+		add_action( 'admin_post_xpay_wc_connect_start', array( $this, 'handle_connect_start' ) );
 		add_action( 'admin_post_xpay_wc_disconnect', array( $this, 'handle_disconnect' ) );
 		add_action( 'admin_post_xpay_wc_audit', array( $this, 'handle_audit' ) );
 		add_action( 'admin_post_xpay_wc_telemetry', array( $this, 'handle_telemetry_toggle' ) );
@@ -77,8 +78,6 @@ class Xpay_Settings {
 		add_action( 'admin_post_xpay_wc_test_connection', array( $this, 'handle_test_connection' ) );
 		add_action( 'rest_api_init', array( $this, 'register_finalize_route' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( XPAY_WC_FILE ), array( $this, 'plugin_action_links' ) );
-		// Beacon endpoint so the Connect button click can be tracked without blocking the redirect.
-		add_action( 'wp_ajax_xpay_wc_track', array( $this, 'ajax_track' ) );
 		add_action( 'xpay_wc_initial_resync', array( $this, 'cron_initial_resync' ), 10, 1 );
 	}
 
@@ -91,21 +90,6 @@ class Xpay_Settings {
 			return;
 		}
 		Xpay_Client::post( '/v1/merchants/' . $slug . '/resync', array( 'reason' => 'initial_install' ) );
-	}
-
-	public function ajax_track() {
-		// Lightly authenticated — admin user only — and event name is enum-checked.
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_success(); // Silent success; never reveal.
-		}
-		$allowed = array( 'connect_clicked', 'settings_viewed' );
-		// Beacon endpoint authenticated via current_user_can(manage_woocommerce) above
-		// and the event value is enum-checked; no form/nonce needed.
-		$event = isset( $_POST['event'] ) ? sanitize_text_field( wp_unslash( $_POST['event'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
-		if ( in_array( $event, $allowed, true ) ) {
-			Xpay_Telemetry::track( $event );
-		}
-		wp_send_json_success();
 	}
 
 	public function register_menu() {
@@ -130,7 +114,13 @@ class Xpay_Settings {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'rest_finalize' ),
-				'permission_callback' => '__return_true', // Validated via nonce in payload.
+				// Authentication is performed inside rest_finalize() itself: the
+				// payload-supplied nonce is compared via hash_equals() against the
+				// single-use option set in handle_connect_start(), and the option
+				// is deleted on first success. This is the OAuth-callback pattern
+				// — no WP user is signed in when xpay calls back, so a capability
+				// check is not possible here; the nonce IS the auth.
+				'permission_callback' => '__return_true',
 			)
 		);
 	}
@@ -526,45 +516,66 @@ class Xpay_Settings {
 	}
 
 	private function render_connect_panel() {
-		$nonce = wp_generate_password( 32, false );
-		update_option( self::NONCE_OPTION, $nonce );
-
-		$onboard_url = add_query_arg(
-			array(
-				'site'  => rawurlencode( home_url( '/' ) ),
-				'nonce' => $nonce,
-				'email' => rawurlencode( wp_get_current_user()->user_email ),
-			),
-			XPAY_WC_ONBOARD_URL
+		// No outbound network calls and no persistent side-effects on render —
+		// nonce generation, attempt-stamping and telemetry happen only when the
+		// merchant clicks Connect (routed through handle_connect_start()).
+		$start_url = wp_nonce_url(
+			admin_url( 'admin-post.php?action=xpay_wc_connect_start' ),
+			'xpay_wc_connect_start'
 		);
 
-		// Pre-register the nonce server-side so the finalize step can validate it.
-		// Failures here are non-fatal — the user can still click the button and the
-		// xpay app will create the nonce on demand if needed.
-		Xpay_Client::post(
-			'/v1/onboard/woocommerce/start',
-			array(
-				'site_url' => home_url( '/' ),
-				'nonce'    => $nonce,
-				'email'    => wp_get_current_user()->user_email,
-			)
-		);
-
-		// Stamp the attempt time so we can render an apology notice if the
-		// merchant returns later without having completed the handshake (i.e.
-		// no api_key is stored locally yet within the next 24 hours).
-		update_option( 'xpay_wc_last_connect_attempt', time() );
-
-		$ajax_url = esc_url( admin_url( 'admin-ajax.php' ) );
 		echo '<div class="card" style="padding:20px;max-width:680px;">';
 		echo '<h2>' . esc_html__( 'Connect your store', 'agentic-commerce-for-woocommerce' ) . '</h2>';
 		echo '<p>' . esc_html__( 'Connect this WooCommerce store to xpay. We provision a public agent-readable catalog feed, publish your /llms.txt + schema.org JSON-LD + AI-bot robots.txt allowlist (the real AI shopping standards), expose ACP / UCP / AP2 / MCP endpoints on xpay infra, and enable cart deeplinks from ChatGPT, Claude, Gemini, and Perplexity.', 'agentic-commerce-for-woocommerce' ) . '</p>';
 		echo '<p style="font-size:13px;"><a href="https://docs.xpay.sh/merchants/woocommerce/connecting" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Step-by-step guide with screenshots →', 'agentic-commerce-for-woocommerce' ) . '</a></p>';
-		echo '<p><a id="xpay-wc-connect-btn" class="button button-primary button-hero" href="' . esc_url( $onboard_url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Connect store →', 'agentic-commerce-for-woocommerce' ) . '</a></p>';
+		echo '<p><a id="xpay-wc-connect-btn" class="button button-primary button-hero" href="' . esc_url( $start_url ) . '">' . esc_html__( 'Connect store →', 'agentic-commerce-for-woocommerce' ) . '</a></p>';
 		echo '<p style="color:#646970;font-size:13px;">' . esc_html__( 'No payment processor change. Payouts continue through your existing WooCommerce gateway.', 'agentic-commerce-for-woocommerce' ) . '</p>';
 		echo '</div>';
-		// Beacon click → admin-ajax (non-blocking, doesn't interfere with the link's target=_blank behaviour).
-		echo '<script>(function(){var b=document.getElementById("xpay-wc-connect-btn");if(!b)return;b.addEventListener("click",function(){try{var fd=new FormData();fd.append("action","xpay_wc_track");fd.append("event","connect_clicked");if(navigator.sendBeacon){navigator.sendBeacon(' . wp_json_encode( $ajax_url ) . ',fd);}else{fetch(' . wp_json_encode( $ajax_url ) . ',{method:"POST",body:fd,keepalive:true,credentials:"same-origin"});}}catch(e){}});})();</script>';
+	}
+
+	/**
+	 * Connect-button click handler. This is the first point at which the
+	 * merchant has affirmatively asked us to contact xpay, so all outbound
+	 * effects live here — never on settings-page render.
+	 */
+	public function handle_connect_start() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
+		}
+		check_admin_referer( 'xpay_wc_connect_start' );
+
+		$nonce = wp_generate_password( 32, false );
+		update_option( self::NONCE_OPTION, $nonce );
+		update_option( 'xpay_wc_last_connect_attempt', time() );
+
+		Xpay_Telemetry::track( 'connect_clicked' );
+
+		// Note: add_query_arg() urlencodes values internally — do NOT pre-encode.
+		$onboard_url = add_query_arg(
+			array(
+				'site'  => home_url( '/' ),
+				'nonce' => $nonce,
+				'email' => wp_get_current_user()->user_email,
+			),
+			XPAY_WC_ONBOARD_URL
+		);
+
+		// Allow-list the xpay onboarding host so wp_safe_redirect() permits the
+		// off-site hop. This is the WP-native pattern for a known SaaS handoff
+		// and is preferred by WP.org review over a raw wp_redirect() to an
+		// external URL.
+		add_filter(
+			'allowed_redirect_hosts',
+			static function ( $hosts ) {
+				$host = wp_parse_url( XPAY_WC_ONBOARD_URL, PHP_URL_HOST );
+				if ( $host ) {
+					$hosts[] = $host;
+				}
+				return $hosts;
+			}
+		);
+		wp_safe_redirect( $onboard_url );
+		exit;
 	}
 
 	// ---- Tab: General ---------------------------------------------------------
