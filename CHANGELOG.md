@@ -11,6 +11,74 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-06-01
+
+### Changed — WordPress.org review-fix release
+
+Addresses the three issues flagged in the WordPress.org plugin-directory
+review of v0.2.4 (review ID `R agentic-commerce-for-woocommerce/xpaysh/
+31May26/T1`), plus hardening cleanups from independent pre-resubmit review.
+
+- **Privacy: no outbound calls on Settings page load.** The Connect panel
+  no longer pre-registers a nonce with the xpay backend when the settings
+  page renders. `render_connect_panel()` is now pure markup — zero
+  outbound HTTP, zero option writes, zero telemetry. The nonce is
+  generated, the attempt is stamped, telemetry fires (only if opted in),
+  and the merchant is redirected to the xpay onboarding flow only after
+  the **Connect store** button is clicked, inside a new
+  `admin_post_xpay_wc_connect_start` handler gated on
+  `current_user_can( 'manage_woocommerce' )` + `check_admin_referer()`.
+- **`Requires Plugins: woocommerce` header.** Declares the WooCommerce
+  dependency via the WP 6.5 plugin-dependencies mechanism so the plugin
+  won't activate without WooCommerce present. Existing manual
+  `woocommerce_active()` check remains as defence-in-depth for pre-6.5
+  sites.
+- **Inline admin script removed.** The Connect button no longer emits an
+  inline `<script>` tag; click-time telemetry is recorded server-side in
+  the redirect handler instead. The associated `wp_ajax_xpay_wc_track`
+  ajax registration and `ajax_track()` method body are also removed —
+  no nonce-less ajax surface remains on the phoning-home concern the
+  reviewer flagged.
+
+### Fixed
+
+- **Double-encoded query args.** `add_query_arg()` urlencodes values
+  internally; the previous `rawurlencode()` wrappers around `site` and
+  `email` were producing double-encoded parameters in the onboard URL.
+- **External hop now uses `wp_safe_redirect()`** with a request-scoped
+  `allowed_redirect_hosts` filter that whitelists the xpay onboarding
+  host. Replaces the previous raw `wp_redirect()` + `phpcs:ignore`.
+- **REST `finalize` callback documented.** Inline comment on the
+  `permission_callback => '__return_true'` registration explains that
+  authentication is performed inside the callback body via
+  `hash_equals()` against a single-use connect nonce. Existing nonce
+  burn-on-success behaviour is unchanged.
+- **Belt-and-suspenders telemetry guard.** `handle_connect_start()` now
+  checks `Xpay_Telemetry::is_enabled()` before calling
+  `Xpay_Telemetry::track()`, even though `track()` already checks
+  internally. Makes the connect-start path trivially auditable as
+  network-silent when telemetry is OFF without reading the Telemetry
+  class.
+
+### Documentation
+
+- **Settings H1 corrected** from "xpay for WooCommerce" to
+  "Agentic Commerce for WooCommerce" — the directory-approved name.
+- **`readme.txt` privacy + external-services sections** now disclose
+  explicitly what is sent to xpay after the merchant clicks **Connect
+  store**: site URL, administrator email address, one-time nonce, WC
+  REST API consumer key/secret, public product fields. Removed the
+  obsolete `/v1/onboard/woocommerce/start` contact path. Qualified
+  telemetry's "no PII" claim as "no customer PII".
+- **Removed alternate-distribution language** from `readme.txt` — the
+  "From a zip file" install section pointing at
+  `install.xpay.sh/woocommerce/latest.zip` and the External Services
+  entry describing `install.xpay.sh` as an auto-update channel. The
+  WordPress.org install path is the only path documented in the WP.org
+  readme.
+- **Removed two "new tab" references** in install steps — the v0.3.0
+  redirect is same-tab via `wp_safe_redirect()`.
+
 ## [0.2.4] — 2026-05-22
 
 ### Added — Tabbed Settings → xpay UI (M3.1)
