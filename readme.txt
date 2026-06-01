@@ -6,7 +6,7 @@ Tested up to: 6.9
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 9.4
-Stable tag: 0.2.4
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,9 +147,9 @@ This plugin connects to the following xpay-operated services to deliver its core
 
 1. **agent-feed.xpay.sh** — Public CDN that hosts your AI-readable catalog feed at `https://agent-feed.xpay.sh/catalog/{your-slug}.json`. The plugin does not contact this URL directly; the xpay backend writes it from your WooCommerce REST API after you click **Connect store**.
 
-2. **agent-commerce.xpay.sh** — The agent-side API that AI shopping agents call to surface and buy from your products. The plugin contacts this host at the following paths: (a) `POST /v1/onboard/woocommerce/start` to register a one-time nonce when you click **Connect store**; (b) `POST /v1/onboard/woocommerce/wc-auth-callback` is the WooCommerce OAuth callback target (WordPress itself calls this on your behalf, server-to-server, after you approve the one-click connect prompt); (c) `GET /v1/onboard/woocommerce/status?nonce=…` is polled by the xpay onboarding page while the handshake finishes; (d) `POST /v1/merchants/{slug}/resync` triggers a fresh catalog ingest after a product or stock change; (e) `DELETE /v1/merchants/{slug}` is sent (non-blocking) when you click **Disconnect** so xpay marks your account as disconnected and archives the cached catalog; (f) `POST /mcp/{slug}` is the JSON-RPC commerce MCP endpoint that AI agents talk to — it serves your catalog and signs cart deeplinks, but the plugin itself does not call this URL (it's advertised in `/.well-known/ucp`).
+2. **agent-commerce.xpay.sh** — The agent-side API that AI shopping agents call to surface and buy from your products. The plugin contacts this host at the following paths: (a) `POST /v1/onboard/woocommerce/wc-auth-callback` is the WooCommerce OAuth callback target (WordPress itself calls this on your behalf, server-to-server, after you approve the one-click connect prompt); (b) `GET /v1/onboard/woocommerce/status?nonce=…` is polled by the xpay onboarding page while the handshake finishes; (c) `POST /v1/merchants/{slug}/resync` triggers a fresh catalog ingest after a product or stock change; (d) `DELETE /v1/merchants/{slug}` is sent (non-blocking) when you click **Disconnect** so xpay marks your account as disconnected and archives the cached catalog; (e) `POST /mcp/{slug}` is the JSON-RPC commerce MCP endpoint that AI agents talk to — it serves your catalog and signs cart deeplinks, but the plugin itself does not call this URL (it's advertised in `/.well-known/ucp`).
 
-3. **app.xpay.sh/onboard/woocommerce** — The merchant-side onboarding page opened in a new tab when you click **Connect store**. You sign in or sign up on xpay and grant the WooCommerce REST API permission there.
+3. **app.xpay.sh/onboard/woocommerce** — The merchant-side onboarding page. When you click **Connect store**, the plugin redirects your browser here with three query-string parameters: your site URL, your administrator email address, and a one-time random nonce generated locally. No data is sent to xpay before you click the button. You sign in or sign up on xpay and grant the WooCommerce REST API permission there.
 
 4. **install.xpay.sh** — Auto-update channel (manifest + zip) for sites that installed the plugin from xpay's website instead of WordPress.org. WordPress.org installs use WP.org's native update system and never contact this host.
 
@@ -162,7 +162,9 @@ Privacy policy: [install.xpay.sh/woocommerce/privacy.html](https://install.xpay.
 
 xpay is built non-custodially: we never see your customers, your orders, or any payment data. Concretely:
 
-* **Always sent after you click Connect store** (required for the plugin to work): your site URL, your WooCommerce REST API consumer key/secret (so xpay can read the product catalog), and your public product fields (name, description, price, stock, image URLs, categories). No customer data. No order data. No payment data.
+* **Nothing leaves your site before you click Connect store.** The Settings → xpay page is pure markup — no outbound HTTP, no analytics ping, no nonce pre-registration.
+
+* **Sent only after you click Connect store** (required for the plugin to work): your site URL, your administrator email address, a one-time random nonce, your WooCommerce REST API consumer key/secret (so xpay can read the product catalog), and your public product fields (name, description, price, stock, image URLs, categories). No customer data. No order data. No payment data.
 
 * **Optionally sent if you opt in to anonymous telemetry** (default OFF): lifecycle event names tagged with your site URL, plugin version, WP version, WC version, PHP version, locale. No customer data, no order data, no PII.
 
@@ -181,6 +183,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 5. JSON-LD on every product page including BuyAction — view-source proof.
 
 == Upgrade Notice ==
+
+= 0.3.0 =
+Privacy hardening: the Settings → xpay page no longer contacts the xpay backend on load — outbound requests now happen only after you click **Connect store**. Declares its WooCommerce dependency via the WP 6.5 `Requires Plugins` header. Internal admin script refactor (no merchant-facing change).
 
 = 0.2.4 =
 Settings → xpay is now organised into five tabs (General, Capabilities, Payments, Links, Tools). Switch off any UCP shopping capability to remove it from your /.well-known/ucp manifest, map your enabled WooCommerce gateways to `payment_handlers[]` so agents know which methods you accept, and override the auto-detected privacy/TOS/about/contact/shipping URLs that ship in `ucp.links`. The Tools tab adds Test connection + Refresh catalog buttons and a debug-log toggle.
@@ -218,6 +223,11 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.3.0 =
+* **Privacy: no outbound calls on Settings page load.** The Connect panel no longer pre-registers a nonce with the xpay backend when the page renders. The nonce is generated, the attempt is stamped, and the merchant is redirected to the xpay onboarding flow only after the **Connect store** button is clicked. Matches WordPress.org's no-phoning-home guideline.
+* **`Requires Plugins: woocommerce` header.** Declares the WooCommerce dependency via the WP 6.5 plugin-dependencies mechanism so the plugin won't activate without WooCommerce present. Existing manual activation check remains as defence-in-depth for pre-6.5 sites.
+* **Inline admin script removed.** The Connect button no longer emits an inline `<script>` tag; click-time telemetry is recorded server-side in the redirect handler instead.
 
 = 0.2.4 =
 * **Tabbed Settings → xpay UI.** Five tabs replace the single-screen layout: **General** (status + slug + last sync + disconnect + telemetry opt-in), **Capabilities** (per-UCP-capability toggles), **Payments** (map enabled WC gateways to UCP `payment_handlers[]`), **Links** (auto-detect privacy/TOS/about/contact/shipping with per-row override), **Tools** (view UCP profile, view full audit, test connection, refresh catalog now, telemetry debug log toggle). URL is bookmarkable via `?tab=`.
