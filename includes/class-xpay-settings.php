@@ -548,7 +548,14 @@ class Xpay_Settings {
 		update_option( self::NONCE_OPTION, $nonce );
 		update_option( 'xpay_wc_last_connect_attempt', time() );
 
-		Xpay_Telemetry::track( 'connect_clicked' );
+		// Defence-in-depth: do not call into Telemetry at all unless the merchant
+		// has explicitly opted in. Telemetry::track() also checks this internally,
+		// but this guard makes handle_connect_start() trivially auditable as
+		// network-silent when telemetry is OFF — a reviewer can verify the
+		// no-phone-home guarantee without reading the Telemetry class body.
+		if ( Xpay_Telemetry::is_enabled() ) {
+			Xpay_Telemetry::track( 'connect_clicked' );
+		}
 
 		// Note: add_query_arg() urlencodes values internally — do NOT pre-encode.
 		$onboard_url = add_query_arg(
