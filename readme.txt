@@ -42,7 +42,7 @@ Put your WooCommerce catalog inside ChatGPT, Claude, Gemini and Perplexity — b
 
 1. Install the plugin from this directory or upload the zip. ([detailed walk-through](https://docs.xpay.sh/merchants/woocommerce/installing))
 2. Activate. You'll be taken to **Settings → xpay**.
-3. Click **Connect store**. A new tab opens at app.xpay.sh, where you grant a read-only WooCommerce REST API key. ([how to generate one](https://docs.xpay.sh/merchants/woocommerce/rest-api-keys))
+3. Click **Connect store**. You're redirected to app.xpay.sh, where you grant a read-only WooCommerce REST API key. ([how to generate one](https://docs.xpay.sh/merchants/woocommerce/rest-api-keys))
 4. Your catalog goes live on AI surfaces within about 10 minutes. The plugin's built-in audit-readiness checklist ([what each row means](https://docs.xpay.sh/merchants/woocommerce/audit-readiness)) turns green as each piece confirms.
 
 Stuck on any step? [Troubleshooting guide](https://docs.xpay.sh/merchants/woocommerce/troubleshooting).
@@ -70,14 +70,7 @@ The plugin source is published under GPLv2-or-later. Public repo and issue track
 2. Search for "Agentic Commerce for WooCommerce".
 3. Click **Install Now**, then **Activate**.
 4. You'll be redirected to **Settings → xpay**. Click **Connect store**.
-5. Approve the WooCommerce REST API permissions in the new tab that opens at app.xpay.sh.
-
-= From a zip file =
-
-1. Download the latest release from [install.xpay.sh/woocommerce/latest.zip](https://install.xpay.sh/woocommerce/latest.zip).
-2. In your WordPress admin, go to **Plugins → Add New → Upload Plugin**.
-3. Choose the zip file and click **Install Now**, then **Activate**.
-4. Continue from step 4 above.
+5. Approve the WooCommerce REST API permissions on app.xpay.sh, then you'll be redirected back to your store.
 
 = System requirements =
 
@@ -151,9 +144,7 @@ This plugin connects to the following xpay-operated services to deliver its core
 
 3. **app.xpay.sh/onboard/woocommerce** — The merchant-side onboarding page. When you click **Connect store**, the plugin redirects your browser here with three query-string parameters: your site URL, your administrator email address, and a one-time random nonce generated locally. No data is sent to xpay before you click the button. You sign in or sign up on xpay and grant the WooCommerce REST API permission there.
 
-4. **install.xpay.sh** — Auto-update channel (manifest + zip) for sites that installed the plugin from xpay's website instead of WordPress.org. WordPress.org installs use WP.org's native update system and never contact this host.
-
-5. **agent-commerce.xpay.sh/v1/events** — Optional anonymous telemetry. Disabled by default; only contacted if you explicitly opt in via the first-activation admin notice or **Settings → xpay → Privacy**. Full payload disclosure in the Privacy section.
+4. **agent-commerce.xpay.sh/v1/events** — Optional anonymous telemetry. Disabled by default; only contacted if you explicitly opt in via the first-activation admin notice or **Settings → xpay → Privacy**. Full payload disclosure in the Privacy section.
 
 Terms of use: [install.xpay.sh/woocommerce/terms.html](https://install.xpay.sh/woocommerce/terms.html)
 Privacy policy: [install.xpay.sh/woocommerce/privacy.html](https://install.xpay.sh/woocommerce/privacy.html)
@@ -166,7 +157,7 @@ xpay is built non-custodially: we never see your customers, your orders, or any 
 
 * **Sent only after you click Connect store** (required for the plugin to work): your site URL, your administrator email address, a one-time random nonce, your WooCommerce REST API consumer key/secret (so xpay can read the product catalog), and your public product fields (name, description, price, stock, image URLs, categories). No customer data. No order data. No payment data.
 
-* **Optionally sent if you opt in to anonymous telemetry** (default OFF): lifecycle event names tagged with your site URL, plugin version, WP version, WC version, PHP version, locale. No customer data, no order data, no PII.
+* **Optionally sent if you opt in to anonymous telemetry** (default OFF): lifecycle event names tagged with your site URL, plugin version, WP version, WC version, PHP version, locale. No customer data, no order data, no customer PII.
 
 * **Opt out of anonymous telemetry**: **Settings → xpay → Privacy → Turn off**. Or define `XPAY_WC_TELEMETRY` to `false` in `wp-config.php` for a system-wide hard disable that overrides any UI choice.
 

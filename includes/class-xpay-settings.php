@@ -418,7 +418,7 @@ class Xpay_Settings {
 		);
 
 		echo '<div class="wrap xpay-wc-settings">';
-		echo '<h1>' . esc_html__( 'xpay for WooCommerce', 'agentic-commerce-for-woocommerce' ) . '</h1>';
+		echo '<h1>' . esc_html__( 'Agentic Commerce for WooCommerce', 'agentic-commerce-for-woocommerce' ) . '</h1>';
 
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- read-only display flags after admin-post redirect.
 		if ( isset( $_GET['disconnected'] ) ) {
