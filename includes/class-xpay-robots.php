@@ -71,7 +71,13 @@ class Xpay_Robots {
 	 * Called from the settings page to surface a warning.
 	 */
 	public static function physical_robots_exists() {
-		$path = untrailingslashit( ABSPATH ) . '/robots.txt';
+		// Use get_home_path() per the WP.org "Determining file and directory
+		// locations" guideline; it resolves the on-disk site root regardless
+		// of how WordPress is installed (subdir, custom WP_SITEURL, etc.).
+		if ( ! function_exists( 'get_home_path' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+		$path = trailingslashit( get_home_path() ) . 'robots.txt';
 		return file_exists( $path );
 	}
 }

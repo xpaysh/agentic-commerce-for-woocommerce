@@ -11,6 +11,72 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-06-02
+
+### Fixed — second WordPress.org review-fix release
+
+Addresses the issue flagged in the WP.org plugin-directory review of v0.3.0
+(review ID `R agentic-commerce-for-woocommerce/xpaysh/31May26/T2 2Jun26/4.0.1`):
+hardcoded `/wp-json` REST paths in the UCP manifest. Also folds in every
+finding from a fresh independent guidelines-driven audit (Claude + Codex,
+neither anchored on the prior rejection list).
+
+- **REST endpoints constructed via `rest_url()` instead of `home_url('/wp-json/...')`.**
+  In `Xpay_REST::serve_ucp_profile()`, the fallback `service_base` and `mcp_endpoint`
+  for the pre-onboarded ("pending") state now call `rest_url( 'xpay/ucp/v1' )` and
+  `rest_url( 'xpay/mcp' )`. The previous hardcoded `/wp-json` prefix did not respect
+  installs that customize the REST route prefix via the `rest_url_prefix` filter or
+  serve the REST API behind a non-default permalink structure. Per
+  <https://developer.wordpress.org/plugins/plugin-basics/determining-plugin-and-content-directories/>.
+- **`robots.txt` detection switched to `get_home_path()`.**
+  `Xpay_Robots::physical_robots_exists()` no longer concatenates `ABSPATH . '/robots.txt'`;
+  it uses the canonical helper (loaded from `wp-admin/includes/file.php` on demand).
+- **`$_GET['choice']` reads sanitized at the boundary.**
+  Both telemetry-consent handlers (`Xpay_Consent::handle_choice()`,
+  `Xpay_Settings::handle_telemetry_toggle()`) now pass the raw value through
+  `sanitize_key( wp_unslash( ... ) )` before the `'yes' === ...` comparison.
+- **No telemetry on settings-page render.** `Xpay_Telemetry::track('settings_viewed')`
+  was already gated by the opt-in `is_enabled()` check, but the call was emitted from
+  the page-render path. Removed entirely — lifecycle events now fire exclusively from
+  explicit admin-post handlers (Connect, Disconnect, telemetry toggle).
+- **Belt-and-suspenders `is_enabled()` guard at activation/deactivation telemetry
+  call sites.** `Xpay_Telemetry::track()` already short-circuits when telemetry is
+  not opted in; the duplicate check at the call site makes the activate / deactivate
+  paths trivially auditable as network-silent on fresh installs.
+- **Audit-readiness checklist strings wrapped for i18n.** All eight row labels and
+  every status detail in `Xpay_Settings::render_readiness_checklist()` are now wrapped
+  in `__()` against the `agentic-commerce-for-woocommerce` text domain.
+- **`/llms.txt` output no longer HTML-escaped.** `Xpay_REST::serve_llms_txt()` was
+  passing the body through `esc_html()` — wrong escape direction for a `text/plain`
+  Markdown document (it entity-encoded `&` in URLs and quote characters). Dynamic
+  fields (blog name, description, category names) are now stripped of any HTML at
+  insertion time via `wp_strip_all_tags()`; URLs go through `esc_url_raw()`. The
+  final `echo` writes raw Markdown.
+- **`uninstall.php` extended to cover every option the plugin writes.** Added 12
+  previously-missed keys (`xpay_wc_payment_map`, `xpay_wc_links`, `xpay_wc_ucp_profile`,
+  `xpay_wc_ucp_signing_keys`, `xpay_wc_telemetry_debug`, `xpay_wc_last_connect_attempt`,
+  `xpay_wc_connect_finalize_nonce`, `xpay_wc_protocol_endpoints`,
+  `xpay_wc_emit_ucp_profile`, `xpay_wc_emit_oauth_protected_resource`,
+  `xpay_wc_emit_agent_card`, `xpay_wc_installed_version`) plus a loop-delete of
+  per-capability flags (`xpay_wc_capability_<cap>`) against the canonical
+  `Xpay_Settings::CAPABILITIES` list.
+- **External services disclosure expanded.** Added `audit.xpay.sh`, `auth.xpay.sh`,
+  and `install.xpay.sh` to the `readme.txt` External services section; broke out the
+  full per-endpoint inventory on `agent-commerce.xpay.sh` (`GET /v1/merchants/{slug}`,
+  `PATCH /v1/merchants/{slug}/products/{sku}`) that the plugin contacts.
+- **Removed `wp-content` wording from the public readme** ("served from `wp-content`"
+  → "served through WordPress rewrite rules") to align with the Determining Locations
+  guideline and avoid reviewer regex flags.
+- **`CHANGELOG.md` excluded from the WP.org ship zip.** The internal Keep-a-Changelog
+  file references `install.xpay.sh` URLs (alternate-distribution language reviewers
+  dislike); the public-facing changelog already lives in `readme.txt`. `scripts/release.sh`
+  now adds `--exclude='CHANGELOG.md'` to the rsync stage.
+- **Tested-up-to bumps.** `Tested up to: 7.0` (released 2026), `WC tested up to: 10.8.1`
+  (released 2026-05-27) — exercised end-to-end on a clean InstaWP sandbox with
+  `WP_DEBUG=true` and `WP_DEBUG_LOG=true`, `debug.log` clean across activate → connect
+  → manifest → disconnect, with permalinks flipped between Plain and Post-name to
+  verify `rest_url()` resolves under both modes.
+
 ## [0.3.0] — 2026-06-01
 
 ### Changed — WordPress.org review-fix release

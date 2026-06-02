@@ -68,6 +68,7 @@ rsync -a --exclude='.git' --exclude='node_modules' --exclude='.DS_Store' \
   --exclude='scripts' --exclude='.serverless' --exclude='assets' \
   --exclude='phpcs.xml.dist' --exclude='.gitignore' \
   --exclude='INSTAWP_TEST_WALKTHROUGH.md' --exclude='README.md' \
+  --exclude='CHANGELOG.md' \
   "$PLUGIN_DIR/" "$STAGE/$SLUG/"
 
 ZIP=/tmp/${SLUG}-${VERSION}.zip

@@ -346,7 +346,13 @@ class Xpay_Settings {
 
 		$links = array();
 		foreach ( array_keys( self::LINK_TYPES ) as $type ) {
-			$raw = isset( $_POST[ 'link_' . $type ] ) ? trim( wp_unslash( $_POST[ 'link_' . $type ] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+			$key = 'link_' . $type;
+			if ( ! isset( $_POST[ $key ] ) ) {
+				continue;
+			}
+			// Sanitize at the boundary (PCP rule WordPress.Security.ValidatedSanitizedInput.InputNotSanitized),
+			// then validate as a URL with esc_url_raw().
+			$raw = sanitize_text_field( wp_unslash( $_POST[ $key ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- check_admin_referer above.
 			$url = esc_url_raw( $raw );
 			if ( $url ) {
 				$links[ $type ] = $url;
@@ -410,12 +416,12 @@ class Xpay_Settings {
 		$last_sync = (int) get_option( 'xpay_wc_last_sync_at', 0 );
 		$audit     = get_option( 'xpay_wc_last_audit' );
 
-		Xpay_Telemetry::track(
-			'settings_viewed',
-			array(
-				'connected' => $connected,
-			)
-		);
+		// Intentionally no telemetry on settings-page render. The
+		// `Xpay_Telemetry::is_enabled()` gate would short-circuit when the
+		// merchant has not opted in, but emitting any outbound HTTP from a
+		// settings render path is a perception risk under the WP.org
+		// "no phoning home" guideline. Lifecycle events fire from explicit
+		// admin-post handlers only (Connect, Disconnect, telemetry toggle).
 
 		echo '<div class="wrap xpay-wc-settings">';
 		echo '<h1>' . esc_html__( 'Agentic Commerce for WooCommerce', 'agentic-commerce-for-woocommerce' ) . '</h1>';
@@ -883,7 +889,8 @@ class Xpay_Settings {
 			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
 		}
 		check_admin_referer( 'xpay_wc_telemetry' );
-		$choice = isset( $_GET['choice'] ) && 'yes' === $_GET['choice'] ? 'yes' : 'no';
+		$raw    = isset( $_GET['choice'] ) ? sanitize_key( wp_unslash( $_GET['choice'] ) ) : '';
+		$choice = ( 'yes' === $raw ) ? 'yes' : 'no';
 		Xpay_Telemetry::set_opt_in( $choice );
 		wp_safe_redirect( self::tab_url( 'general' ) );
 		exit;
@@ -928,15 +935,60 @@ class Xpay_Settings {
 	private function render_readiness_checklist() {
 		$slug = Xpay_Plugin::merchant_slug();
 
+		$physical_robots = Xpay_Robots::physical_robots_exists();
+
 		$rows = array(
-			array( 'AI can read your full catalogue', (bool) $slug, $slug ? sprintf( 'Hosted feed live at agent-feed.xpay.sh/catalog/%s.json', $slug ) : 'Connect store to enable.' ),
-			array( 'Live prices visible to AI', true, 'JSON-LD Product / Offer schema injected on product pages.' ),
-			array( 'Plain-text guide for AI assistants', true, 'Served at /llms.txt.' ),
-			array( 'AI assistants know where to send a buyer', (bool) $slug, $slug ? 'Per-protocol endpoints (ACP / UCP / AP2 / MCP) advertised in /llms.txt and hosted on xpay infra.' : 'Connect store to populate endpoints.' ),
-			array( 'AI shoppers are allowed in', ! Xpay_Robots::physical_robots_exists(), Xpay_Robots::physical_robots_exists() ? 'Physical robots.txt detected — needs manual fix.' : 'GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot allowed in robots.txt.' ),
-			array( 'Direct buy link signals', true, 'BuyAction emitted on every product page.' ),
-			array( 'AI shoppers can buy without leaving the chat', (bool) $slug, $slug ? 'Cart deeplink handler active.' : 'Connect store to enable.' ),
-			array( 'Stock & price kept current', (bool) $slug, $slug ? 'Webhook resync on product/stock change.' : 'Connect store to enable.' ),
+			array(
+				__( 'AI can read your full catalogue', 'agentic-commerce-for-woocommerce' ),
+				(bool) $slug,
+				$slug
+					/* translators: %s: merchant slug */
+					? sprintf( __( 'Hosted feed live at agent-feed.xpay.sh/catalog/%s.json', 'agentic-commerce-for-woocommerce' ), $slug )
+					: __( 'Connect store to enable.', 'agentic-commerce-for-woocommerce' ),
+			),
+			array(
+				__( 'Live prices visible to AI', 'agentic-commerce-for-woocommerce' ),
+				true,
+				__( 'JSON-LD Product / Offer schema injected on product pages.', 'agentic-commerce-for-woocommerce' ),
+			),
+			array(
+				__( 'Plain-text guide for AI assistants', 'agentic-commerce-for-woocommerce' ),
+				true,
+				__( 'Served at /llms.txt.', 'agentic-commerce-for-woocommerce' ),
+			),
+			array(
+				__( 'AI assistants know where to send a buyer', 'agentic-commerce-for-woocommerce' ),
+				(bool) $slug,
+				$slug
+					? __( 'Per-protocol endpoints (ACP / UCP / AP2 / MCP) advertised in /llms.txt and hosted on xpay infra.', 'agentic-commerce-for-woocommerce' )
+					: __( 'Connect store to populate endpoints.', 'agentic-commerce-for-woocommerce' ),
+			),
+			array(
+				__( 'AI shoppers are allowed in', 'agentic-commerce-for-woocommerce' ),
+				! $physical_robots,
+				$physical_robots
+					? __( 'Physical robots.txt detected — needs manual fix.', 'agentic-commerce-for-woocommerce' )
+					: __( 'GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot allowed in robots.txt.', 'agentic-commerce-for-woocommerce' ),
+			),
+			array(
+				__( 'Direct buy link signals', 'agentic-commerce-for-woocommerce' ),
+				true,
+				__( 'BuyAction emitted on every product page.', 'agentic-commerce-for-woocommerce' ),
+			),
+			array(
+				__( 'AI shoppers can buy without leaving the chat', 'agentic-commerce-for-woocommerce' ),
+				(bool) $slug,
+				$slug
+					? __( 'Cart deeplink handler active.', 'agentic-commerce-for-woocommerce' )
+					: __( 'Connect store to enable.', 'agentic-commerce-for-woocommerce' ),
+			),
+			array(
+				__( 'Stock & price kept current', 'agentic-commerce-for-woocommerce' ),
+				(bool) $slug,
+				$slug
+					? __( 'Webhook resync on product/stock change.', 'agentic-commerce-for-woocommerce' )
+					: __( 'Connect store to enable.', 'agentic-commerce-for-woocommerce' ),
+			),
 		);
 
 		echo '<h2 style="margin-top:32px;">' . esc_html__( 'Audit readiness', 'agentic-commerce-for-woocommerce' ) . '</h2>';
@@ -945,11 +997,13 @@ class Xpay_Settings {
 		echo '<th>' . esc_html__( 'Status', 'agentic-commerce-for-woocommerce' ) . '</th>';
 		echo '<th>' . esc_html__( 'Detail', 'agentic-commerce-for-woocommerce' ) . '</th>';
 		echo '</tr></thead><tbody>';
+		$ready_label   = esc_html__( '✓ Ready', 'agentic-commerce-for-woocommerce' );
+		$pending_label = esc_html__( '⚠ Pending', 'agentic-commerce-for-woocommerce' );
 		foreach ( $rows as $r ) {
 			list( $label, $pass, $detail ) = $r;
 			$badge                         = $pass
-				? '<span style="color:#15803d;font-weight:600;">✓ Ready</span>'
-				: '<span style="color:#b91c1c;font-weight:600;">⚠ Pending</span>';
+				? '<span style="color:#15803d;font-weight:600;">' . $ready_label . '</span>'
+				: '<span style="color:#b91c1c;font-weight:600;">' . $pending_label . '</span>';
 			echo '<tr>';
 			echo '<td>' . esc_html( $label ) . '</td>';
 			echo '<td>' . wp_kses_post( $badge ) . '</td>';

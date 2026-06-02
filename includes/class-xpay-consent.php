@@ -56,7 +56,8 @@ class Xpay_Consent {
 			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
 		}
 		check_admin_referer( self::ACTION );
-		$choice = isset( $_GET['choice'] ) && 'yes' === $_GET['choice'] ? 'yes' : 'no';
+		$raw    = isset( $_GET['choice'] ) ? sanitize_key( wp_unslash( $_GET['choice'] ) ) : '';
+		$choice = ( 'yes' === $raw ) ? 'yes' : 'no';
 		Xpay_Telemetry::set_opt_in( $choice );
 		$ref = wp_get_referer();
 		wp_safe_redirect( $ref ? $ref : admin_url( 'plugins.php' ) );
