@@ -174,9 +174,14 @@ class Xpay_REST {
 	 * feed and per-protocol surfaces (ACP / UCP / AP2) hosted by xpay.
 	 */
 	private function serve_llms_txt() {
-		$site_name = get_bloginfo( 'name' );
-		$site_desc = get_bloginfo( 'description' );
-		$site_url  = home_url( '/' );
+		// llms.txt is plain-text Markdown for LLM crawlers. We must NOT
+		// HTML-escape the body (that would mangle ampersands in URLs and
+		// quotes in titles). Defence-in-depth: strip any HTML that crept
+		// in via blog name / description / category names at the source
+		// instead, then echo the joined lines as-is.
+		$site_name = wp_strip_all_tags( (string) get_bloginfo( 'name' ) );
+		$site_desc = wp_strip_all_tags( (string) get_bloginfo( 'description' ) );
+		$site_url  = esc_url_raw( home_url( '/' ) );
 		$slug      = Xpay_Plugin::merchant_slug();
 
 		$lines   = array();
@@ -226,7 +231,9 @@ class Xpay_REST {
 		$lines[] = '';
 		$lines[] = '## Top categories';
 		foreach ( $this->top_categories() as $cat ) {
-			$lines[] = sprintf( '- [%s](%s)', $cat['name'], $cat['url'] );
+			$cat_name = wp_strip_all_tags( (string) $cat['name'] );
+			$cat_url  = esc_url_raw( $cat['url'] );
+			$lines[]  = sprintf( '- [%s](%s)', $cat_name, $cat_url );
 		}
 
 		$lines[] = '';
@@ -234,7 +241,12 @@ class Xpay_REST {
 		$lines[] = '';
 		$lines[] = 'This store accepts agent-initiated purchases via the open commerce protocols above. Live product data is exposed as schema.org JSON-LD on every product page; robots.txt explicitly allows GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, Google-Extended and related AI user-agents.';
 
-		echo esc_html( implode( "\n", $lines ) ) . "\n";
+		// Content-Type was set to text/plain by the caller. Inputs are stripped
+		// of HTML at construction time (site name, descriptions, category names
+		// via wp_strip_all_tags; URLs via esc_url_raw). esc_html() is wrong
+		// here — it would entity-encode characters that belong literally in
+		// Markdown/URLs.
+		echo implode( "\n", $lines ) . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
 	/**
@@ -267,7 +279,7 @@ class Xpay_REST {
 		$spec_version = '2026-04-08';
 		$service_base = $slug
 			? sprintf( 'https://agent-commerce.xpay.sh/ucp/v1/%s', $slug )
-			: home_url( '/wp-json/xpay/ucp/v1' );
+			: rest_url( 'xpay/ucp/v1' );
 
 		// MCP endpoint lives on agent-commerce.xpay.sh today. We will harmonize
 		// onto the per-tenant `{slug}.mcp.xpay.sh/mcp` shape once the wildcard
@@ -275,7 +287,7 @@ class Xpay_REST {
 		// publisher MCP servers — that's queued as M4 work.
 		$mcp_endpoint = $slug
 			? sprintf( 'https://agent-commerce.xpay.sh/mcp/%s', $slug )
-			: home_url( '/wp-json/xpay/mcp' );
+			: rest_url( 'xpay/mcp' );
 
 		// Canonical capability map — order matches Xpay_Settings::CAPABILITIES so
 		// the toggle UI and the manifest stay in sync.

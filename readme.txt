@@ -5,8 +5,8 @@ Requires at least: 6.2
 Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
-WC tested up to: 9.4
-Stable tag: 0.3.0
+WC tested up to: 10.8.1
+Stable tag: 0.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,7 +83,7 @@ The plugin source is published under GPLv2-or-later. Public repo and issue track
 
 = Does this slow down my site? =
 
-No. The plugin emits a small `<script type="application/ld+json">` block in `<head>` on product pages, shop and home (only when no other plugin has already emitted equivalent schema). The discovery files are served from `wp-content` via a single rewrite rule with no DB query. The catalog feed itself is hosted on xpay's CDN, not your origin — so AI shoppers reading it never load your origin.
+No. The plugin emits a small `<script type="application/ld+json">` block in `<head>` on product pages, shop and home (only when no other plugin has already emitted equivalent schema). The discovery files (`/llms.txt`, `/.well-known/ucp`, `/.well-known/oauth-protected-resource`, `/.well-known/agent.json`) are served through WordPress rewrite rules with no database query. The catalog feed itself is hosted on xpay's CDN, not your origin — so AI shoppers reading it never load your origin.
 
 = Does xpay see my customers' payment info? =
 
@@ -140,11 +140,15 @@ This plugin connects to the following xpay-operated services to deliver its core
 
 1. **agent-feed.xpay.sh** — Public CDN that hosts your AI-readable catalog feed at `https://agent-feed.xpay.sh/catalog/{your-slug}.json`. The plugin does not contact this URL directly; the xpay backend writes it from your WooCommerce REST API after you click **Connect store**.
 
-2. **agent-commerce.xpay.sh** — The agent-side API that AI shopping agents call to surface and buy from your products. The plugin contacts this host at the following paths: (a) `POST /v1/onboard/woocommerce/wc-auth-callback` is the WooCommerce OAuth callback target (WordPress itself calls this on your behalf, server-to-server, after you approve the one-click connect prompt); (b) `GET /v1/onboard/woocommerce/status?nonce=…` is polled by the xpay onboarding page while the handshake finishes; (c) `POST /v1/merchants/{slug}/resync` triggers a fresh catalog ingest after a product or stock change; (d) `DELETE /v1/merchants/{slug}` is sent (non-blocking) when you click **Disconnect** so xpay marks your account as disconnected and archives the cached catalog; (e) `POST /mcp/{slug}` is the JSON-RPC commerce MCP endpoint that AI agents talk to — it serves your catalog and signs cart deeplinks, but the plugin itself does not call this URL (it's advertised in `/.well-known/ucp`).
+2. **agent-commerce.xpay.sh** — The agent-side API that AI shopping agents call to surface and buy from your products. The plugin contacts this host at the following paths: (a) `POST /v1/onboard/woocommerce/wc-auth-callback` is the WooCommerce OAuth callback target (WordPress itself calls this on your behalf, server-to-server, after you approve the one-click connect prompt); (b) `GET /v1/onboard/woocommerce/status?nonce=…` is polled by the xpay onboarding page while the handshake finishes; (c) `POST /v1/merchants/{slug}/resync` triggers a fresh catalog ingest after a product or stock change; (d) `GET /v1/merchants/{slug}` is called when **Settings → xpay** verifies the current connection state; (e) `PATCH /v1/merchants/{slug}/products/{sku}` pushes a single-product delta when a WooCommerce product/stock webhook fires; (f) `DELETE /v1/merchants/{slug}` is sent (non-blocking) when you click **Disconnect** so xpay marks your account as disconnected and archives the cached catalog. The hostname is also the publicly advertised target for `POST /mcp/{slug}` (the JSON-RPC commerce MCP endpoint AI agents talk to) — the plugin itself does not call this URL but lists it in the `/.well-known/ucp` manifest.
 
 3. **app.xpay.sh/onboard/woocommerce** — The merchant-side onboarding page. When you click **Connect store**, the plugin redirects your browser here with three query-string parameters: your site URL, your administrator email address, and a one-time random nonce generated locally. No data is sent to xpay before you click the button. You sign in or sign up on xpay and grant the WooCommerce REST API permission there.
 
-4. **agent-commerce.xpay.sh/v1/events** — Optional anonymous telemetry. Disabled by default; only contacted if you explicitly opt in via the first-activation admin notice or **Settings → xpay → Privacy**. Full payload disclosure in the Privacy section.
+4. **agent-commerce.xpay.sh/v1/events** — Optional anonymous lifecycle telemetry. Disabled by default; only contacted if you explicitly opt in via the first-activation admin notice or **Settings → xpay → Privacy**. Full payload disclosure in the Privacy section.
+
+5. **audit.xpay.sh** — Merchant-facing audit dashboard. The plugin emits a link to `audit.xpay.sh/{your-slug}` on the Settings page so you can review the live agent-readiness score xpay computed from your catalog; the plugin itself does not fetch from this host. Opening the link from your browser sends standard browser headers to xpay.
+6. **auth.xpay.sh** — Public OAuth-protected-resource discovery target. The plugin publishes `auth.xpay.sh` as the `authorization_servers[0]` entry in `/.well-known/oauth-protected-resource` (an RFC 9728 metadata document AI agents fetch to learn where to obtain a token). The plugin does not contact this host server-to-server; it is referenced for agent-side discovery only.
+7. **install.xpay.sh/woocommerce/{terms,privacy}.html** — Static legal documents linked from this readme and from the Settings privacy panel. The plugin itself does not fetch these URLs; clicking the links opens them in your browser.
 
 Terms of use: [install.xpay.sh/woocommerce/terms.html](https://install.xpay.sh/woocommerce/terms.html)
 Privacy policy: [install.xpay.sh/woocommerce/privacy.html](https://install.xpay.sh/woocommerce/privacy.html)
@@ -175,23 +179,26 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.3.1 =
+WP.org review fix: REST endpoints constructed via `rest_url()` instead of hardcoded `/wp-json`. Plus PCP polish (sanitization, i18n, uninstall cleanup) and expanded External services disclosure. See Changelog for full details.
+
 = 0.3.0 =
-Privacy hardening: the Settings → xpay page no longer contacts the xpay backend on load — outbound requests now happen only after you click **Connect store**. Declares its WooCommerce dependency via the WP 6.5 `Requires Plugins` header. Internal admin script refactor (no merchant-facing change).
+Privacy hardening: Settings → xpay no longer contacts the xpay backend on load; outbound requests fire only after you click **Connect store**. Declares WC dependency via the WP 6.5 `Requires Plugins` header. See Changelog for full details.
 
 = 0.2.4 =
-Settings → xpay is now organised into five tabs (General, Capabilities, Payments, Links, Tools). Switch off any UCP shopping capability to remove it from your /.well-known/ucp manifest, map your enabled WooCommerce gateways to `payment_handlers[]` so agents know which methods you accept, and override the auto-detected privacy/TOS/about/contact/shipping URLs that ship in `ucp.links`. The Tools tab adds Test connection + Refresh catalog buttons and a debug-log toggle.
+Settings → xpay reorganised into five tabs (General, Capabilities, Payments, Links, Tools). Toggle UCP shopping capabilities, map your gateways to `payment_handlers[]`, and override the URLs in `ucp.links`. See Changelog for full details.
 
 = 0.2.1 =
-Tighter alignment between what /llms.txt advertises and what's actually serving. The `Commerce protocols` section is now backend-driven: only protocols the xpay backend has confirmed live for your store appear; the catalog feed and cart deeplink (live today) always show up. Companion change on the xpay backend: protocol-prefixed URLs at agent-commerce.xpay.sh now answer with a spec-shaped 501 Not Implemented envelope (with `retry_after_seconds` and a `docs` link) instead of a bare 404 — agents following a URL get a structured signal that the service is provisioned but not yet accepting requests.
+Tighter alignment between what /llms.txt advertises and what's actually serving — the Commerce protocols section is now backend-driven. See Changelog for the full backend-side changes.
 
 = 0.2.0 =
-Aligned with the real commerce standards (ACP, UCP, AP2) and the real discovery conventions (llms.txt, schema.org JSON-LD, robots.txt allowlist). NEW: serves `/.well-known/ucp` — the UCP business profile (spec 2026-04-08) that Google, Shopify, Etsy, Wayfair, Target and Walmart fetch for capability negotiation. Discovery layer is now an extensible registry: new emitters plug in without touching the rest of the plugin. Optional watchlist emitters added for /.well-known/oauth-protected-resource (RFC 9728) and /.well-known/agent-card.json (A2A 1.0) — off by default. Per-protocol endpoints (ACP / UCP / AP2 / MCP) are advertised in /llms.txt and hosted on xpay infra so checkout reach grows as agents adopt each protocol.
+Aligned with ACP / UCP / AP2 commerce standards and the real discovery conventions (llms.txt, schema.org JSON-LD, robots.txt allowlist). Serves `/.well-known/ucp` for capability negotiation. See Changelog for full details.
 
 = 0.1.12 =
-Plugin RENAMED to "Agentic Commerce for WooCommerce" (slug `agentic-commerce-for-woocommerce`). The previous name "xpay for WooCommerce" was rejected by WordPress.org as too similar to the long-established "Nexi XPay" payment plugin. New name describes the actual category clearly and avoids any trademark/similarity concern. Same product, same brand owner (xpay), same code. Main plugin file, text domain, admin URLs, .pot file path all updated.
+Plugin RENAMED to "Agentic Commerce for WooCommerce" (slug `agentic-commerce-for-woocommerce`). Same product, same code, name change only — previous name was rejected by WP.org as too similar to "Nexi XPay". See Changelog for full details.
 
 = 0.1.11 =
-Plugin Check (PCP) follow-up: cleared the four remaining PrefixAllGlobals warnings. uninstall.php now runs in a closure (no top-level globals). schema renderer uses a local $xpay_product var without touching WC's template global. WooCommerce-active check uses raw option lookup + class_exists (no apply_filters on a core hook). No functional changes.
+Plugin Check (PCP) follow-up: cleared the four remaining PrefixAllGlobals warnings. No functional changes. See Changelog for full details.
 
 = 0.1.10 =
 Plugin Check (PCP) submission-readiness pass: tested up to WP 6.9; short description trimmed to ≤150 chars; removed deprecated load_plugin_textdomain() call (WP auto-loads WP.org-hosted translations since 4.6); excluded non-canonical markdown files from the plugin zip. No functional changes.
@@ -214,6 +221,10 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.3.1 =
+* **REST endpoints constructed via `rest_url()`.** The fallback UCP manifest now calls `rest_url('xpay/ucp/v1')` / `rest_url('xpay/mcp')` instead of hardcoding `home_url('/wp-json/...')`, so the plugin respects sites that customize the REST prefix. Per the WP.org Determining Locations guideline.
+* **Tested against WordPress 7.0 + WooCommerce 10.8.1** on a clean sandbox with `WP_DEBUG=true`.
 
 = 0.3.0 =
 * **Privacy: no outbound calls on Settings page load.** The Connect panel no longer pre-registers a nonce with the xpay backend when the page renders. The nonce is generated, the attempt is stamped, and the merchant is redirected to the xpay onboarding flow only after the **Connect store** button is clicked. Matches WordPress.org's no-phoning-home guideline.

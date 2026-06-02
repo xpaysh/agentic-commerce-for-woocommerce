@@ -109,7 +109,12 @@ class Xpay_Plugin {
 			set_transient( 'xpay_wc_post_activation_redirect', 1, 60 );
 		}
 
-		if ( class_exists( 'Xpay_Telemetry' ) ) {
+		// Belt-and-suspenders: Xpay_Telemetry::track() already short-circuits
+		// when telemetry is not opted in, but checking is_enabled() at the
+		// call site makes the activation path trivially auditable as
+		// network-silent on fresh installs without reading the Telemetry
+		// class body.
+		if ( class_exists( 'Xpay_Telemetry' ) && Xpay_Telemetry::is_enabled() ) {
 			Xpay_Telemetry::track(
 				'plugin_activated',
 				array(
@@ -121,7 +126,8 @@ class Xpay_Plugin {
 
 	public static function on_deactivate() {
 		flush_rewrite_rules();
-		if ( class_exists( 'Xpay_Telemetry' ) ) {
+		// Belt-and-suspenders is_enabled() guard — see on_activate() above.
+		if ( class_exists( 'Xpay_Telemetry' ) && Xpay_Telemetry::is_enabled() ) {
 			Xpay_Telemetry::track(
 				'plugin_deactivated',
 				array(
