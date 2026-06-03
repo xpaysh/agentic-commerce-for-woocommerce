@@ -11,6 +11,46 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.3.2] — 2026-06-03
+
+### Fixed — good-neighbour `/llms.txt` + `/.well-known/*` handling
+
+Until this release, the plugin's discovery emitters registered a `'top'`-priority
+rewrite rule for `/llms.txt`, `/.well-known/ucp`, `/.well-known/oauth-protected-resource`,
+and `/.well-known/agent-card.json` and served freshly-built content on
+`template_redirect` priority 0. With no detection of pre-existing content, any
+merchant who already had an `/llms.txt` curated by Yoast SEO AI, RankMath AI,
+AIOSEO, the official `llms-txt` plugin, or hand-rolled code would have their
+file silently overwritten within seconds of activation.
+
+v0.3.2 fixes this by detecting external emitters at activation time, every
+6 hours via transient cache, and once daily via WP-Cron.
+
+- **`/llms.txt` now appends to upstream content.** If the probe finds an
+  external `/llms.txt` (non-empty, doesn't contain the `agent-feed.xpay.sh`
+  fingerprint, ≤64 KB), `Xpay_REST::serve_llms_txt()` renders that upstream
+  body first, separated by a comment marker, and adds our agent-shopping
+  sections (`## Store`, `## Commerce protocols`, `## Cart handoff`,
+  `## For AI shopping agents`) at the end. No content is ever overwritten.
+- **`/.well-known/*` JSON emitters defer when an external handler is detected.**
+  Deep-merging competing JSON schemas isn't safe at the plugin level — when
+  another emitter is in place, our handler returns early in `is_enabled()`
+  so WordPress's normal routing serves the existing file unchanged.
+- **HTTP self-probe with `X-Xpay-Probe: 1` header.** `Xpay_Emitter_Probe` runs
+  `wp_remote_get()` against `home_url($path)` with the probe header set.
+  `Xpay_REST::maybe_serve()` reads that header on every request and
+  short-circuits when present, so the probe sees what other handlers would
+  serve. Result cached for 6h, fail-cached for 1h to avoid hammering the
+  merchant's own host on transient errors.
+- **Daily WP-Cron refresh.** Auto-detects when a merchant installs another
+  AI-SEO plugin after activating ours.
+- **Probe priming on activation.** Single-shot WP-Cron event 10 seconds after
+  activation populates the cache without blocking the activation request
+  itself.
+
+No new options, no admin UI changes, no merchant-facing behavior change when
+no external emitter is present.
+
 ## [0.3.1] — 2026-06-02
 
 ### Fixed — second WordPress.org review-fix release

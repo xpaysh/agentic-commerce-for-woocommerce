@@ -8,6 +8,7 @@ defined( 'ABSPATH' ) || exit;
 require_once XPAY_WC_PATH . 'includes/class-xpay-client.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-telemetry.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-consent.php';
+require_once XPAY_WC_PATH . 'includes/class-xpay-emitter-probe.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-rest.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-robots.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-schema.php';
@@ -39,6 +40,7 @@ class Xpay_Plugin {
 		Xpay_Cart::instance();
 		Xpay_Webhooks::instance();
 		Xpay_Settings::instance();
+		Xpay_Emitter_Probe::register_cron();
 		Xpay_Widget::instance();
 		if ( is_admin() ) {
 			Xpay_Consent::instance();
@@ -109,6 +111,15 @@ class Xpay_Plugin {
 			set_transient( 'xpay_wc_post_activation_redirect', 1, 60 );
 		}
 
+		// Prime the emitter-probe cache shortly after activation so the
+		// first /llms.txt or /.well-known/* request sees a populated
+		// detection result. Skips silently if Xpay_Emitter_Probe isn't
+		// loaded yet (defensive — the require_once chain in this file
+		// loads it before this method runs, but staying paranoid).
+		if ( class_exists( 'Xpay_Emitter_Probe' ) ) {
+			Xpay_Emitter_Probe::prime_on_activation();
+		}
+
 		// Belt-and-suspenders: Xpay_Telemetry::track() already short-circuits
 		// when telemetry is not opted in, but checking is_enabled() at the
 		// call site makes the activation path trivially auditable as
@@ -126,6 +137,9 @@ class Xpay_Plugin {
 
 	public static function on_deactivate() {
 		flush_rewrite_rules();
+		if ( class_exists( 'Xpay_Emitter_Probe' ) ) {
+			Xpay_Emitter_Probe::unregister_cron();
+		}
 		// Belt-and-suspenders is_enabled() guard — see on_activate() above.
 		if ( class_exists( 'Xpay_Telemetry' ) && Xpay_Telemetry::is_enabled() ) {
 			Xpay_Telemetry::track(
