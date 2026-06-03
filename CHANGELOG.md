@@ -80,6 +80,36 @@ client (separate `backend/wc-plugin-setup/` commit). Shipping the
 plugin-side capability now so the backend rollout doesn't require
 another plugin update walk.
 
+### Fixed — concurrent-OAuth-callback false-negative
+
+Real failure observed 2026-06-03 on `snowflake-quoll-134a4c.instawp.site`:
+WC's OAuth completion fires xpay's `wcAuthCallback` Lambda twice — the
+server-side wc-auth POST AND the browser-return path both trigger it
+within ~500ms. Pre-fix backend behavior minted a fresh random api_key
+in each invocation, so the second `/wp-json/xpay/v1/finalize` POST
+arrived at the plugin with a **different api_key** plus the now-consumed
+nonce → plugin failed `is_replay` (api_keys differ) and failed the nonce
+match (nonce gone) → returned 401 → backend marked `plugin_callback_failed`,
+overwriting the first invocation's `done` state. Frontend showed
+"Connection failed: 401" even though the plugin actually finalized
+cleanly on call #1.
+
+Plugin-side defense-in-depth fix (`rest_finalize`):
+
+- When `is_replay` fails BUT a slug + api_key are already stored from a
+  prior finalize, treat the request as a **duplicate callback no-op**.
+  Return 200 with `{ok: true, already_finalized: true, slug: <existing>,
+  site_token: <existing>}` — never overwrite stored creds. First-call
+  truth wins.
+- New telemetry event `finalize_duplicate_callback` so the digest
+  surfaces these races when they happen.
+
+The load-bearing fix is on the backend: replace `randomKey(32)` with
+deterministic HMAC derivation from the nonce + a per-stage SSM secret.
+Concurrent invocations now produce identical api_keys, so the second
+call hits `is_replay=true` cleanly even on older plugin versions. See
+`backend/wc-plugin-setup/src/onboard.ts:deriveApiKey()`.
+
 ## [0.3.1] — 2026-06-02
 
 ### Fixed — second WordPress.org review-fix release
