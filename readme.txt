@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.3.1
+Stable tag: 0.3.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -179,6 +179,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.3.2 =
+Good-neighbour fix: `/llms.txt` now appends to any existing file from Yoast SEO AI, RankMath AI, AIOSEO or hand-rolled rewrites instead of replacing it. JSON `/.well-known/*` emitters defer entirely when an external handler is already serving the path. Daily WP-cron keeps the detection cache fresh.
+
 = 0.3.1 =
 WP.org review fix: REST endpoints constructed via `rest_url()` instead of hardcoded `/wp-json`. Plus PCP polish (sanitization, i18n, uninstall cleanup) and expanded External services disclosure. See Changelog for full details.
 
@@ -221,6 +224,12 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.3.2 =
+* **`/llms.txt` now appends to existing content, never replaces.** If another plugin (Yoast SEO AI, RankMath AI, AIOSEO, the official `llms-txt` plugin) or a hand-rolled rewrite is already serving `/llms.txt`, our handler renders that upstream content first and appends our agent-shopping sections (`## Commerce protocols`, `## Cart handoff`, `## For AI shopping agents`) at the end. Merchants keep every curated link they wrote.
+* **JSON discovery files (`/.well-known/ucp`, `/.well-known/oauth-protected-resource`, `/.well-known/agent-card.json`) defer when an external handler is in place.** Appending isn't structurally valid for JSON; skipping is the safer don't-clobber answer.
+* **Detection via HTTP self-probe with `X-Xpay-Probe: 1` header.** Our handler short-circuits when that header is present so the probe sees what another handler would serve.
+* **Daily WP-cron refreshes the detection cache.** A merchant installing another AI-SEO plugin after activation is auto-detected within ~24h with no manual intervention.
 
 = 0.3.1 =
 * **REST endpoints constructed via `rest_url()`.** The fallback UCP manifest now calls `rest_url('xpay/ucp/v1')` / `rest_url('xpay/mcp')` instead of hardcoding `home_url('/wp-json/...')`, so the plugin respects sites that customize the REST prefix. Per the WP.org Determining Locations guideline.

@@ -118,6 +118,15 @@ class Xpay_REST {
 	}
 
 	public function maybe_serve() {
+		// Probe short-circuit. When Xpay_Emitter_Probe self-fetches our
+		// own discovery URLs to detect another plugin/theme serving the
+		// same path, it sets the X-Xpay-Probe: 1 header. We must not
+		// answer those requests — the whole point is to see what would
+		// be served *without* us in the chain.
+		if ( Xpay_Emitter_Probe::request_is_probe() ) {
+			return;
+		}
+
 		$route    = get_query_var( self::QUERY_VAR );
 		$emitters = self::emitters();
 
@@ -166,7 +175,23 @@ class Xpay_REST {
 				return (bool) $opt;
 			}
 		}
-		return ! empty( $em['default_on'] );
+		if ( ! empty( $em['default_on'] ) ) {
+			// Don't-clobber gate for JSON emitters. /llms.txt is
+			// Markdown — we *append* to upstream content, handled in
+			// serve_llms_txt(). For the /.well-known/*.json files
+			// appending isn't structurally valid; the safer answer is
+			// to skip serving entirely when an external emitter is
+			// already in place. The Markdown path stays enabled here
+			// and merges at serve time.
+			if ( 'llms' !== $key ) {
+				$probe = Xpay_Emitter_Probe::get_result( $em['path'] );
+				if ( is_array( $probe ) && ! empty( $probe['has_external'] ) ) {
+					return false;
+				}
+			}
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -184,13 +209,35 @@ class Xpay_REST {
 		$site_url  = esc_url_raw( home_url( '/' ) );
 		$slug      = Xpay_Plugin::merchant_slug();
 
-		$lines   = array();
-		$lines[] = '# ' . $site_name;
-		if ( $site_desc ) {
+		// Append mode. If another plugin / theme / web-server file is
+		// already serving /llms.txt, render their content first then add
+		// our agent-shopping sections at the end. The merchant keeps
+		// every curated link they wrote (Yoast SEO AI, RankMath AI,
+		// AIOSEO, hand-rolled). We never overwrite, we never reorder
+		// their content — we only contribute the commerce/discovery
+		// sections nobody else writes today.
+		$probe    = Xpay_Emitter_Probe::get_result( '/llms.txt' );
+		$external = ( is_array( $probe ) && ! empty( $probe['has_external'] ) ) ? (string) $probe['body'] : '';
+
+		$lines = array();
+
+		if ( '' !== $external ) {
+			// Preserve upstream verbatim. Trim only trailing whitespace so
+			// the join with our additions doesn't introduce a stack of
+			// blank lines, but keep the body otherwise byte-identical.
+			$lines[] = rtrim( $external, "\r\n\t " );
 			$lines[] = '';
-			$lines[] = '> ' . $site_desc;
+			$lines[] = '<!-- xpay agentic-commerce-for-woocommerce: appended sections below -->';
+			$lines[] = '';
+		} else {
+			$lines[] = '# ' . $site_name;
+			if ( $site_desc ) {
+				$lines[] = '';
+				$lines[] = '> ' . $site_desc;
+			}
+			$lines[] = '';
 		}
-		$lines[] = '';
+
 		$lines[] = '## Store';
 		$lines[] = '';
 		$lines[] = sprintf( '- [Shop home](%sshop/)', $site_url );
