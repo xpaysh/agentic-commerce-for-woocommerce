@@ -72,6 +72,7 @@ class Xpay_Admin_REST {
 	public function handle_refresh( WP_REST_Request $req ) {
 		$body    = $req->get_json_params();
 		$actions = is_array( $body ) && isset( $body['actions'] ) && is_array( $body['actions'] ) ? $body['actions'] : array();
+		$params  = is_array( $body ) && isset( $body['params'] ) && is_array( $body['params'] ) ? $body['params'] : array();
 
 		$executed = array();
 		$skipped  = array();
@@ -119,6 +120,32 @@ class Xpay_Admin_REST {
 						$executed[] = $action;
 						break;
 
+					case 'set_llms_txt_extra_sections':
+						// Backend pushes per-merchant extra Markdown sections to
+						// append at the END of /llms.txt (after our existing
+						// Store / Commerce protocols / Cart handoff / Top categories
+						// / For AI shopping agents blocks). Sanitized + capped so a
+						// hostile or misconfigured backend can't blow up the file.
+						$raw = isset( $params['llms_txt_extra_sections'] ) && is_array( $params['llms_txt_extra_sections'] )
+							? $params['llms_txt_extra_sections']
+							: array();
+						$clean = self::sanitize_llms_txt_extra_sections( $raw );
+						if ( empty( $clean ) ) {
+							delete_option( 'xpay_wc_llms_txt_extra_sections' );
+						} else {
+							$encoded = wp_json_encode( $clean );
+							if ( false !== $encoded ) {
+								update_option( 'xpay_wc_llms_txt_extra_sections', $encoded );
+							}
+						}
+						$executed[] = $action;
+						break;
+
+					case 'clear_llms_txt_extra_sections':
+						delete_option( 'xpay_wc_llms_txt_extra_sections' );
+						$executed[] = $action;
+						break;
+
 					default:
 						$skipped[] = $action;
 				}
@@ -139,5 +166,63 @@ class Xpay_Admin_REST {
 				'errors'         => $errors,
 			)
 		);
+	}
+
+	const LLMS_TXT_MAX_SECTIONS    = 20;
+	const LLMS_TXT_MAX_HEADING_LEN = 200;
+	const LLMS_TXT_MAX_BODY_LEN    = 4096;
+
+	/**
+	 * Normalise + bound backend-pushed sections so we never store unbounded
+	 * input. Each section is `{heading: string, body: string}`. HTML is
+	 * stripped from both fields; Markdown control characters are kept since
+	 * the body is rendered verbatim into a Markdown file.
+	 *
+	 * Silently drops malformed entries — backend gets an executed=ok response
+	 * either way (an empty array is an explicit "clear" semantically).
+	 */
+	private static function sanitize_llms_txt_extra_sections( $raw ) {
+		$clean = array();
+		foreach ( $raw as $entry ) {
+			if ( ! is_array( $entry ) ) {
+				continue;
+			}
+			$heading = isset( $entry['heading'] ) && is_string( $entry['heading'] ) ? $entry['heading'] : '';
+			$body    = isset( $entry['body'] ) && is_string( $entry['body'] ) ? $entry['body'] : '';
+			$heading = wp_strip_all_tags( $heading );
+			$body    = wp_strip_all_tags( $body );
+			$heading = mb_substr( $heading, 0, self::LLMS_TXT_MAX_HEADING_LEN );
+			$body    = mb_substr( $body, 0, self::LLMS_TXT_MAX_BODY_LEN );
+			if ( '' === $heading && '' === $body ) {
+				continue;
+			}
+			$clean[] = array(
+				'heading' => $heading,
+				'body'    => $body,
+			);
+			if ( count( $clean ) >= self::LLMS_TXT_MAX_SECTIONS ) {
+				break;
+			}
+		}
+		return $clean;
+	}
+
+	/**
+	 * Reader used by Xpay_REST::serve_llms_txt() to append the backend-pushed
+	 * sections at the end of the file. Returns an array of `{heading, body}`
+	 * or empty array if nothing has been pushed.
+	 */
+	public static function get_llms_txt_extra_sections() {
+		$encoded = (string) get_option( 'xpay_wc_llms_txt_extra_sections', '' );
+		if ( '' === $encoded ) {
+			return array();
+		}
+		$decoded = json_decode( $encoded, true );
+		if ( ! is_array( $decoded ) ) {
+			return array();
+		}
+		// Re-sanitize on read in case the option was hand-edited (defence in
+		// depth — same bounds as the writer).
+		return self::sanitize_llms_txt_extra_sections( $decoded );
 	}
 }
