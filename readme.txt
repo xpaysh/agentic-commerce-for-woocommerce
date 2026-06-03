@@ -230,6 +230,7 @@ The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGE
 * **JSON discovery files (`/.well-known/ucp`, `/.well-known/oauth-protected-resource`, `/.well-known/agent-card.json`) defer when an external handler is in place.** Appending isn't structurally valid for JSON; skipping is the safer don't-clobber answer.
 * **Detection via HTTP self-probe with `X-Xpay-Probe: 1` header.** Our handler short-circuits when that header is present so the probe sees what another handler would serve.
 * **Daily WP-cron refreshes the detection cache.** A merchant installing another AI-SEO plugin after activation is auto-detected within ~24h with no manual intervention.
+* **New backend-callable refresh endpoint** at `/wp-json/xpay/v1/admin/refresh`, authenticated by the `X-Xpay-Site-Token` header constant-time-compared against the local `xpay_wc_site_token` option. Lets xpay reconcile a connected merchant on demand (re-probe emitters, flush rewrite rules, clear discovery cache) without waiting for the next plugin update.
 
 = 0.3.1 =
 * **REST endpoints constructed via `rest_url()`.** The fallback UCP manifest now calls `rest_url('xpay/ucp/v1')` / `rest_url('xpay/mcp')` instead of hardcoding `home_url('/wp-json/...')`, so the plugin respects sites that customize the REST prefix. Per the WP.org Determining Locations guideline.

@@ -51,6 +51,35 @@ v0.3.2 fixes this by detecting external emitters at activation time, every
 No new options, no admin UI changes, no merchant-facing behavior change when
 no external emitter is present.
 
+### Added — backend-callable `/wp-json/xpay/v1/admin/refresh` endpoint
+
+Lets xpay's backend trigger site-local maintenance on a single merchant
+without waiting for the next plugin update or daily WP-Cron tick. Useful
+when we ship a fix and want to reconcile already-connected merchants
+without a plugin upgrade walk.
+
+- **Auth: `X-Xpay-Site-Token` header** constant-time-compared against
+  the `xpay_wc_site_token` option (auto-generated on activation since
+  v0.1.x). Returns 401 if the header is missing, empty, or wrong —
+  without leaking which case applies.
+- **Forward-compatible action vocabulary** — `emitter_probe_refresh`,
+  `flush_rewrites`, `clear_discovery_cache`, `clear_ucp_profile_cache`.
+  Unknown actions are silently recorded under `skipped` in the response
+  so the backend can issue newer action names that older plugin
+  versions safely ignore.
+- **Token exchange via the existing finalize handshake.** The plugin's
+  `/wp-json/xpay/v1/finalize` response now returns `site_token`
+  alongside the existing `ok`/`replay` fields. The backend captures it
+  server-to-server during finalize (no URL params, no logs, no
+  referer leak). Idempotent on replay.
+- **No SSRF surface** — every action operates on local state only
+  (transients, rewrite rules, options).
+
+Dormant in v0.3.2 until the backend wires up the token store and refresh
+client (separate `backend/wc-plugin-setup/` commit). Shipping the
+plugin-side capability now so the backend rollout doesn't require
+another plugin update walk.
+
 ## [0.3.1] — 2026-06-02
 
 ### Fixed — second WordPress.org review-fix release
