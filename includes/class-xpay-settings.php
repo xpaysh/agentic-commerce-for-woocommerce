@@ -146,6 +146,33 @@ class Xpay_Settings {
 		$is_replay = $existing_slug && $existing_key && hash_equals( (string) $existing_slug, $slug ) && hash_equals( (string) $existing_key, $api_key );
 
 		if ( ! $is_replay ) {
+			// Concurrent-OAuth-callback race: WC's server-side wc-auth POST and
+			// the browser-return path can both fire xpay's wcAuthCallback Lambda
+			// within ~500ms of each other. Each invocation mints a fresh api_key
+			// (pre-v0.3.2-backend behavior), so the second call arrives with a
+			// different api_key + the same nonce. The first call already burned
+			// the nonce; this second one fails is_replay (api_keys differ) and
+			// fails nonce match (nonce gone). Without this guard it 401s and the
+			// backend marks the merchant as plugin_callback_failed even though
+			// the plugin actually finalized cleanly on call #1.
+			//
+			// If creds are already stored (any slug + any api_key), treat the
+			// incoming request as a duplicate callback. Return 200 with the
+			// EXISTING slug so the orchestration upstream stays consistent. We
+			// never overwrite stored creds on this path — the first finalize
+			// won, and that's the truth.
+			if ( $existing_slug && $existing_key ) {
+				Xpay_Telemetry::track( 'finalize_duplicate_callback', array( 'slug' => $existing_slug ) );
+				return new WP_REST_Response(
+					array(
+						'ok'                => true,
+						'already_finalized' => true,
+						'slug'              => (string) $existing_slug,
+						'site_token'        => (string) get_option( 'xpay_wc_site_token', '' ),
+					),
+					200
+				);
+			}
 			if ( ! $nonce || ! $stored || ! hash_equals( $stored, $nonce ) ) {
 				Xpay_Telemetry::track( 'finalize_error', array( 'reason' => 'invalid_nonce' ) );
 				return new WP_REST_Response( array( 'error' => 'invalid_nonce' ), 401 );
