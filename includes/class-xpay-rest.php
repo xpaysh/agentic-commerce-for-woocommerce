@@ -288,6 +288,21 @@ class Xpay_REST {
 		$lines[] = '';
 		$lines[] = 'This store accepts agent-initiated purchases via the open commerce protocols above. Live product data is exposed as schema.org JSON-LD on every product page; robots.txt explicitly allows GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, Google-Extended and related AI user-agents.';
 
+		// Backend-pushed extra sections (set via /admin/refresh with action
+		// `set_llms_txt_extra_sections`). Rendered at the very end so they
+		// don't disturb the merchant's own upstream content (prepended at
+		// the top) or our discovery scaffolding (Store / Commerce protocols
+		// / Cart handoff / Top categories / For AI shopping agents).
+		if ( class_exists( 'Xpay_Admin_REST' ) ) {
+			$extra = Xpay_Admin_REST::get_llms_txt_extra_sections();
+			foreach ( $extra as $section ) {
+				$lines[] = '';
+				$lines[] = '## ' . $section['heading'];
+				$lines[] = '';
+				$lines[] = $section['body'];
+			}
+		}
+
 		// Content-Type was set to text/plain by the caller. Inputs are stripped
 		// of HTML at construction time (site name, descriptions, category names
 		// via wp_strip_all_tags; URLs via esc_url_raw). esc_html() is wrong
