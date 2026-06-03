@@ -180,7 +180,7 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 == Upgrade Notice ==
 
 = 0.3.2 =
-Good-neighbour fix: `/llms.txt` now appends to any existing file from Yoast SEO AI, RankMath AI, AIOSEO or hand-rolled rewrites instead of replacing it. JSON `/.well-known/*` emitters defer entirely when an external handler is already serving the path. Daily WP-cron keeps the detection cache fresh.
+Plays nicely with any other AI/SEO plugin you already have. If your site already publishes its own `llms.txt`, this update adds our agent-shopping sections at the end instead of replacing your content. Smoother connect flow and a few quality-of-life polish items.
 
 = 0.3.1 =
 WP.org review fix: REST endpoints constructed via `rest_url()` instead of hardcoded `/wp-json`. Plus PCP polish (sanitization, i18n, uninstall cleanup) and expanded External services disclosure. See Changelog for full details.
@@ -226,11 +226,10 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
 
 = 0.3.2 =
-* **`/llms.txt` now appends to existing content, never replaces.** If another plugin (Yoast SEO AI, RankMath AI, AIOSEO, the official `llms-txt` plugin) or a hand-rolled rewrite is already serving `/llms.txt`, our handler renders that upstream content first and appends our agent-shopping sections (`## Commerce protocols`, `## Cart handoff`, `## For AI shopping agents`) at the end. Merchants keep every curated link they wrote.
-* **JSON discovery files (`/.well-known/ucp`, `/.well-known/oauth-protected-resource`, `/.well-known/agent-card.json`) defer when an external handler is in place.** Appending isn't structurally valid for JSON; skipping is the safer don't-clobber answer.
-* **Detection via HTTP self-probe with `X-Xpay-Probe: 1` header.** Our handler short-circuits when that header is present so the probe sees what another handler would serve.
-* **Daily WP-cron refreshes the detection cache.** A merchant installing another AI-SEO plugin after activation is auto-detected within ~24h with no manual intervention.
-* **New backend-callable refresh endpoint** at `/wp-json/xpay/v1/admin/refresh`, authenticated by the `X-Xpay-Site-Token` header constant-time-compared against the local `xpay_wc_site_token` option. Lets xpay reconcile a connected merchant on demand (re-probe emitters, flush rewrite rules, clear discovery cache) without waiting for the next plugin update.
+* **Good neighbour with other AI/SEO plugins.** If your site already publishes its own `llms.txt` (for example via Yoast SEO AI, RankMath AI, AIOSEO, or your own setup), we now add our agent-shopping sections at the end of your file instead of replacing it. Everything you wrote is preserved exactly as you wrote it.
+* **Automatic detection.** The plugin checks once a day whether another tool has started publishing one of the same discovery files we do. When it sees one, we step aside or append cleanly — no merchant action needed.
+* **Smoother connect experience.** A handful of polish items in the Connect flow so the handshake is quicker and any stray retry doesn't show up as a misleading error.
+* **Live updates from xpay.** Once you're connected, xpay can fine-tune small parts of your discovery setup (like an extra section of seasonal promotions on your `llms.txt`) without you needing to install another plugin update. Fully optional and reversible — nothing changes unless you tell us to or we both agree.
 
 = 0.3.1 =
 * **REST endpoints constructed via `rest_url()`.** The fallback UCP manifest now calls `rest_url('xpay/ucp/v1')` / `rest_url('xpay/mcp')` instead of hardcoding `home_url('/wp-json/...')`, so the plugin respects sites that customize the REST prefix. Per the WP.org Determining Locations guideline.
