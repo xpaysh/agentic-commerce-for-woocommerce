@@ -10,6 +10,7 @@ require_once XPAY_WC_PATH . 'includes/class-xpay-telemetry.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-consent.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-emitter-probe.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-rest.php';
+require_once XPAY_WC_PATH . 'includes/class-xpay-admin-rest.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-robots.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-schema.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-cart.php';
@@ -41,6 +42,7 @@ class Xpay_Plugin {
 		Xpay_Webhooks::instance();
 		Xpay_Settings::instance();
 		Xpay_Emitter_Probe::register_cron();
+		Xpay_Admin_REST::instance();
 		Xpay_Widget::instance();
 		if ( is_admin() ) {
 			Xpay_Consent::instance();

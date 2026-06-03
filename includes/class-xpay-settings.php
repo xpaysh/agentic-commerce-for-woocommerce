@@ -210,7 +210,20 @@ class Xpay_Settings {
 			);
 		}
 
-		return new WP_REST_Response( array( 'ok' => true, 'replay' => $is_replay ), 200 );
+		// Ship the site_token back as part of the finalize handshake response
+		// so the backend can capture and persist it server-to-server, without
+		// it ever appearing in a URL parameter, browser history, or access
+		// log. The backend stores this on the merchant record and uses it as
+		// the X-Xpay-Site-Token header for any future /wp-json/xpay/v1/admin/refresh
+		// call. Idempotent: same value on every finalize (including replays).
+		return new WP_REST_Response(
+			array(
+				'ok'         => true,
+				'replay'     => $is_replay,
+				'site_token' => (string) get_option( 'xpay_wc_site_token', '' ),
+			),
+			200
+		);
 	}
 
 	public function handle_disconnect() {
