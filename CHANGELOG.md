@@ -32,6 +32,17 @@ plugin to that bar.
   this surfaces what was already true; see
   `docs/jun/12/wc-plugin-non-destructive-discovery-behavior.md`.)
 
+### Changed — value-first telemetry consent prompt
+
+- The first-activation consent notice (`class-xpay-consent.php`) was framed
+  around what *we* get ("help us improve onboarding"). Reframed around what the
+  *merchant* gets: a heads-up when something silently breaks their store's AI
+  connection (failed sync, blocked endpoint, dropped connection) so we can flag
+  or fix it before their products fall out of ChatGPT / Claude / Perplexity. The
+  no-PII / no-customer-data / change-anytime / "what's sent" reassurances are
+  unchanged; default is still OFF (opt-in only). Button relabeled "Share
+  anonymous diagnostics".
+
 ### Added — "External services this plugin contacts" panel
 
 - New transparency card on the connected **General** tab listing every external
