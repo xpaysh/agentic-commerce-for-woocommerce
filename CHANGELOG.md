@@ -11,6 +11,34 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.3.4] — 2026-06-12
+
+### Changed — merchant-friendly Connect screen
+
+A cautious D2C merchant (Bag Selection, 2026-06-12) flagged the pre-connect
+panel as too developer-facing — a wall of `ACP / UCP / AP2 / MCP`,
+`llms.txt`, `schema.org JSON-LD` jargon as the very first impression. The
+sibling publisher plugin's connect copy was already plainer; this aligns the WC
+plugin to that bar.
+
+- **Pre-connect panel rewritten outcome-first.** Leads with the benefit —
+  "Make your products discoverable to AI shoppers… no code, and no change to
+  how you get paid" — and demotes the protocol acronyms to a small footnote
+  (still present for technical reviewers / WP.org).
+- **Upfront safety promise.** Adds a highlighted reassurance, code-verified this
+  session: the plugin writes **zero files** to the merchant's site, doesn't
+  touch the theme or payments, **appends** to any existing `/llms.txt` rather
+  than replacing it, and fully reverts on deactivate. (Behavior unchanged —
+  this surfaces what was already true; see
+  `docs/jun/12/wc-plugin-non-destructive-discovery-behavior.md`.)
+
+### Added — "External services this plugin contacts" panel
+
+- New transparency card on the connected **General** tab listing every external
+  host the plugin talks to (`agent-feed.xpay.sh`, `agent-commerce.xpay.sh`,
+  `app.xpay.sh`) and what each receives, plus Terms / Privacy links. Ported from
+  the publisher plugin's disclosure pattern. Static copy, no network calls.
+
 ## [0.3.3] — 2026-06-12
 
 ### Added — Run site diagnostics (Tools tab)
