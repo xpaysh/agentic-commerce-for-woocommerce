@@ -41,11 +41,11 @@ class Xpay_Consent {
 		$decline_url = wp_nonce_url( admin_url( 'admin-post.php?action=' . self::ACTION . '&choice=no' ), self::ACTION );
 
 		echo '<div class="notice notice-info" style="border-left-color:#0ea5e9;">';
-		echo '<p><strong>' . esc_html__( 'Agentic Commerce for WooCommerce — help us improve onboarding', 'agentic-commerce-for-woocommerce' ) . '</strong></p>';
-		echo '<p>' . esc_html__( 'May we send anonymous lifecycle events (plugin activated, store connected, audit re-run, sync errors) to help us catch broken onboarding flows? No PII or customer data is ever sent. You can change this any time under Settings → xpay.', 'agentic-commerce-for-woocommerce' ) . ' ';
-		echo '<a href="https://install.xpay.sh/woocommerce/privacy.html" target="_blank" rel="noopener noreferrer">' . esc_html__( 'What gets sent', 'agentic-commerce-for-woocommerce' ) . '</a>.</p>';
+		echo '<p><strong>' . esc_html__( 'Help us keep your store discoverable to AI shoppers', 'agentic-commerce-for-woocommerce' ) . '</strong></p>';
+		echo '<p>' . esc_html__( 'Switch this on and we get a heads-up when something quietly breaks your store\'s AI connection — a failed catalog sync, a blocked endpoint, a connection that drops — so we can flag it or fix it before your products fall out of ChatGPT, Claude and Perplexity. We only ever see plugin events (activated, connected, audit re-run, sync errors) tied to your site URL — never customer data, order data, or any personal information. Change it any time under Settings → xpay.', 'agentic-commerce-for-woocommerce' ) . ' ';
+		echo '<a href="https://install.xpay.sh/woocommerce/privacy.html" target="_blank" rel="noopener noreferrer">' . esc_html__( 'See exactly what\'s sent', 'agentic-commerce-for-woocommerce' ) . '</a>.</p>';
 		echo '<p>';
-		echo '<a class="button button-primary" href="' . esc_url( $enable_url ) . '">' . esc_html__( 'Enable anonymous telemetry', 'agentic-commerce-for-woocommerce' ) . '</a> ';
+		echo '<a class="button button-primary" href="' . esc_url( $enable_url ) . '">' . esc_html__( 'Share anonymous diagnostics', 'agentic-commerce-for-woocommerce' ) . '</a> ';
 		echo '<a class="button" href="' . esc_url( $decline_url ) . '">' . esc_html__( 'No thanks', 'agentic-commerce-for-woocommerce' ) . '</a>';
 		echo '</p>';
 		echo '</div>';
