@@ -636,10 +636,12 @@ class Xpay_Settings {
 
 		echo '<div class="card" style="padding:20px;max-width:680px;">';
 		echo '<h2>' . esc_html__( 'Connect your store', 'agentic-commerce-for-woocommerce' ) . '</h2>';
-		echo '<p>' . esc_html__( 'Connect this WooCommerce store to xpay. We provision a public agent-readable catalog feed, publish your /llms.txt + schema.org JSON-LD + AI-bot robots.txt allowlist (the real AI shopping standards), expose ACP / UCP / AP2 / MCP endpoints on xpay infra, and enable cart deeplinks from ChatGPT, Claude, Gemini, and Perplexity.', 'agentic-commerce-for-woocommerce' ) . '</p>';
+		echo '<p>' . esc_html__( 'Make your products discoverable to AI shoppers. Connecting lets ChatGPT, Claude, Gemini and Perplexity find your catalog and send buyers to your existing checkout — no code, and no change to how you get paid.', 'agentic-commerce-for-woocommerce' ) . '</p>';
+		echo '<p style="color:#1d2327;background:#f0f6fc;border-left:4px solid #2271b1;padding:10px 12px;margin:14px 0;">' . esc_html__( 'Safe to try: the plugin never writes files to your site and doesn\'t touch your theme or payments. If you already have an /llms.txt, we add to it rather than replace it. Deactivate anytime and your site is exactly as it was.', 'agentic-commerce-for-woocommerce' ) . '</p>';
 		echo '<p style="font-size:13px;"><a href="https://docs.xpay.sh/merchants/woocommerce/connecting" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Step-by-step guide with screenshots →', 'agentic-commerce-for-woocommerce' ) . '</a></p>';
 		echo '<p><a id="xpay-wc-connect-btn" class="button button-primary button-hero" href="' . esc_url( $start_url ) . '">' . esc_html__( 'Connect store →', 'agentic-commerce-for-woocommerce' ) . '</a></p>';
 		echo '<p style="color:#646970;font-size:13px;">' . esc_html__( 'No payment processor change. Payouts continue through your existing WooCommerce gateway.', 'agentic-commerce-for-woocommerce' ) . '</p>';
+		echo '<p style="color:#8c8f94;font-size:12px;margin-top:16px;">' . esc_html__( 'Technical details: publishes /llms.txt, schema.org JSON-LD and an AI-bot robots.txt allowlist, and exposes ACP / UCP / AP2 / MCP endpoints on xpay infrastructure.', 'agentic-commerce-for-woocommerce' ) . '</p>';
 		echo '</div>';
 	}
 
@@ -716,6 +718,28 @@ class Xpay_Settings {
 
 		$this->render_readiness_checklist();
 		$this->render_privacy_panel();
+		$this->render_external_services_panel();
+	}
+
+	/**
+	 * Transparency card: every external host this plugin contacts and why.
+	 * Mirrors the publisher plugin's "External services this plugin contacts"
+	 * disclosure — a comforting, reviewer-friendly surface that makes the data
+	 * flow auditable at a glance. No network calls; static copy.
+	 */
+	private function render_external_services_panel() {
+		echo '<h2 style="margin-top:32px;">' . esc_html__( 'External services this plugin contacts', 'agentic-commerce-for-woocommerce' ) . '</h2>';
+		echo '<ul style="list-style:disc;margin-left:20px;max-width:680px;">';
+		echo '<li><code>agent-feed.xpay.sh</code> — ' . esc_html__( 'public CDN that hosts your agent-readable catalog feed (product titles, prices, links, images). No customer or order data.', 'agentic-commerce-for-woocommerce' ) . '</li>';
+		echo '<li><code>agent-commerce.xpay.sh</code> — ' . esc_html__( 'hosts the ACP / UCP / AP2 / MCP commerce endpoints agents use to build carts and hand off to your checkout.', 'agentic-commerce-for-woocommerce' ) . '</li>';
+		echo '<li><code>app.xpay.sh</code> — ' . esc_html__( 'your xpay dashboard and the connect flow, opened in a new tab. Not embedded in wp-admin.', 'agentic-commerce-for-woocommerce' ) . '</li>';
+		echo '</ul>';
+		echo '<p style="font-size:13px;">' . sprintf(
+			/* translators: 1: terms-of-use link, 2: privacy-policy link */
+			esc_html__( 'Terms of use: %1$s · Privacy policy: %2$s', 'agentic-commerce-for-woocommerce' ),
+			'<a href="https://www.xpay.sh/legal/terms-of-use/" target="_blank" rel="noopener">xpay.sh/legal/terms-of-use</a>', // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			'<a href="https://www.xpay.sh/legal/privacy-policy/" target="_blank" rel="noopener">xpay.sh/legal/privacy-policy</a>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		) . '</p>';
 	}
 
 	// ---- Tab: Capabilities ----------------------------------------------------

@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.3.3
+Stable tag: 0.3.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -179,6 +179,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.3.4 =
+Friendlier Connect screen: plain-language value, no jargon, and an upfront promise that it's safe to try — the plugin writes no files to your site and fully reverts on deactivate. New panel lists every external service the plugin contacts.
+
 = 0.3.3 =
 New Tools → Run site diagnostics button checks that AI agents and xpay can reach your store (Permalinks, REST API, /.well-known/ discovery files) and tells you exactly what to fix if something is being blocked.
 
@@ -227,6 +230,11 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.3.4 =
+* **Friendlier Connect screen.** The pre-connect panel now leads with what you get — your products discoverable to ChatGPT, Claude, Gemini and Perplexity, with no code and no payment change — instead of a wall of acronyms. The technical detail (llms.txt, schema.org, ACP/UCP/AP2/MCP) is still there, moved to a small footnote.
+* **Upfront safety promise.** The Connect screen now states plainly what this update verified end-to-end: the plugin never writes files to your site, doesn't touch your theme or payments, appends to any existing `/llms.txt` rather than replacing it, and fully reverts the moment you deactivate.
+* **New transparency panel.** Once connected, the General tab lists every external service the plugin contacts (`agent-feed.xpay.sh`, `agent-commerce.xpay.sh`, `app.xpay.sh`) and what each receives, alongside the Terms and Privacy links.
 
 = 0.3.3 =
 * **New: Run site diagnostics (Tools tab).** One click loopback-checks the three things that silently block a connection at the web-server layer before WordPress even runs: the WordPress REST API (Pretty Permalinks), the plugin's own REST routes, and the `/.well-known/` discovery files. Each check shows a pass/fail with the HTTP status, and a failure gives you the exact fix — e.g. switch Permalinks off "Plain", or (on Apache/ACME hosts that reserve `/.well-known/`) the query-arg fallback URL that agents can still use.
