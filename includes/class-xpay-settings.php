@@ -76,6 +76,7 @@ class Xpay_Settings {
 		add_action( 'admin_post_xpay_wc_telemetry_debug', array( $this, 'handle_telemetry_debug_toggle' ) );
 		add_action( 'admin_post_xpay_wc_refresh_catalog', array( $this, 'handle_refresh_catalog' ) );
 		add_action( 'admin_post_xpay_wc_test_connection', array( $this, 'handle_test_connection' ) );
+		add_action( 'admin_post_xpay_wc_run_diagnostics', array( $this, 'handle_run_diagnostics' ) );
 		add_action( 'rest_api_init', array( $this, 'register_finalize_route' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( XPAY_WC_FILE ), array( $this, 'plugin_action_links' ) );
 		add_action( 'xpay_wc_initial_resync', array( $this, 'cron_initial_resync' ), 10, 1 );
@@ -446,6 +447,69 @@ class Xpay_Settings {
 		}
 		wp_safe_redirect( self::tab_url( 'tools', array( 'tested' => $status ) ) );
 		exit;
+	}
+
+	/**
+	 * Self-diagnostics. Loopback-probes the three things that silently break a
+	 * merchant connection at the web-server layer before WordPress ever runs:
+	 * Pretty Permalinks (the WP REST API), our own REST namespace, and the
+	 * /.well-known/ discovery files (Apache/ACME shadowing on shared hosting).
+	 * Network-only on this explicit click — never on settings render.
+	 */
+	public function handle_run_diagnostics() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
+		}
+		check_admin_referer( 'xpay_wc_run_diagnostics' );
+
+		$checks = array(
+			// rest_url() — never hardcode /wp-json (configurable + absent on
+			// Plain permalinks). A non-2xx here means the WP REST API is
+			// unreachable, which blocks the entire connect handshake.
+			'rest_api'       => $this->probe_loopback( rest_url() ),
+			// Our namespace index. 2xx ⇒ the plugin's routes are registered
+			// and reachable; the finalize callback can land.
+			'xpay_routes'    => $this->probe_loopback( rest_url( 'xpay/v1' ) ),
+			// Discovery file at the literal web-server path. A 404 here while
+			// rest_api passes is the classic Apache-reserves-/.well-known case.
+			'well_known_ucp' => $this->probe_loopback( home_url( '/.well-known/ucp' ) ),
+		);
+
+		set_transient( 'xpay_wc_diagnostics', array( 'checks' => $checks, 'at' => time() ), 10 * MINUTE_IN_SECONDS );
+		wp_safe_redirect( self::tab_url( 'tools', array( 'diagnosed' => 1 ) ) );
+		exit;
+	}
+
+	/**
+	 * Single loopback GET. Returns ['ok'=>bool, 'code'=>int] (code 0 on a
+	 * transport error). Mirrors Xpay_Emitter_Probe's self-fetch posture:
+	 * short timeout, follow a couple redirects, don't fail on a self-signed
+	 * cert (common on staging).
+	 */
+	private function probe_loopback( $url ) {
+		$res = wp_remote_get(
+			$url,
+			array(
+				'timeout'     => 6,
+				'redirection' => 2,
+				'sslverify'   => false,
+				'headers'     => array(
+					'User-Agent' => 'agentic-commerce-for-woocommerce/' . XPAY_WC_VERSION . ' (self-diagnostics)',
+					'Accept'     => 'application/json',
+				),
+			)
+		);
+		if ( is_wp_error( $res ) ) {
+			return array(
+				'ok'   => false,
+				'code' => 0,
+			);
+		}
+		$code = (int) wp_remote_retrieve_response_code( $res );
+		return array(
+			'ok'   => ( $code >= 200 && $code < 300 ),
+			'code' => $code,
+		);
 	}
 
 	// ---- Render ----------------------------------------------------------------
@@ -899,11 +963,19 @@ class Xpay_Settings {
 		submit_button( __( 'Test connection', 'agentic-commerce-for-woocommerce' ), 'secondary', 'submit', false );
 		echo '</form>';
 
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block;">';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block;margin-right:8px;">';
 		wp_nonce_field( 'xpay_wc_refresh_catalog' );
 		echo '<input type="hidden" name="action" value="xpay_wc_refresh_catalog" />';
 		submit_button( __( 'Refresh catalog now', 'agentic-commerce-for-woocommerce' ), 'secondary', 'submit', false );
 		echo '</form>';
+
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block;">';
+		wp_nonce_field( 'xpay_wc_run_diagnostics' );
+		echo '<input type="hidden" name="action" value="xpay_wc_run_diagnostics" />';
+		submit_button( __( 'Run site diagnostics', 'agentic-commerce-for-woocommerce' ), 'secondary', 'submit', false );
+		echo '</form>';
+
+		$this->render_diagnostics_result();
 
 		echo '<hr />';
 		echo '<h3>' . esc_html__( 'Debug', 'agentic-commerce-for-woocommerce' ) . '</h3>';
@@ -922,6 +994,52 @@ class Xpay_Settings {
 		echo '</form>';
 
 		echo '</div>';
+	}
+
+	/**
+	 * Render the cached result of the last "Run site diagnostics" click, with
+	 * targeted remediation for whichever layer failed.
+	 */
+	private function render_diagnostics_result() {
+		$diag = get_transient( 'xpay_wc_diagnostics' );
+		if ( ! is_array( $diag ) || empty( $diag['checks'] ) ) {
+			echo '<p style="color:#646970;font-size:13px;margin-top:12px;max-width:680px;">' . esc_html__( 'Run site diagnostics to confirm AI agents and the xpay backend can reach your store: WordPress Permalinks, the REST API, our plugin routes, and the /.well-known/ discovery files.', 'agentic-commerce-for-woocommerce' ) . '</p>';
+			return;
+		}
+
+		$checks = $diag['checks'];
+		$rest   = isset( $checks['rest_api'] ) && is_array( $checks['rest_api'] ) ? $checks['rest_api'] : array( 'ok' => false, 'code' => 0 );
+		$routes = isset( $checks['xpay_routes'] ) && is_array( $checks['xpay_routes'] ) ? $checks['xpay_routes'] : array( 'ok' => false, 'code' => 0 );
+		$wk     = isset( $checks['well_known_ucp'] ) && is_array( $checks['well_known_ucp'] ) ? $checks['well_known_ucp'] : array( 'ok' => false, 'code' => 0 );
+
+		echo '<table class="widefat striped" style="max-width:680px;margin-top:14px;"><tbody>';
+		$this->diag_row( __( 'WordPress REST API (Permalinks)', 'agentic-commerce-for-woocommerce' ), $rest );
+		$this->diag_row( __( 'xpay plugin REST routes', 'agentic-commerce-for-woocommerce' ), $routes );
+		$this->diag_row( __( '/.well-known/ discovery files', 'agentic-commerce-for-woocommerce' ), $wk );
+		echo '</tbody></table>';
+
+		if ( ! $rest['ok'] ) {
+			echo '<div class="notice notice-error inline" style="max-width:680px;margin-top:10px;"><p>' . esc_html__( 'Your WordPress REST API is not reachable. Go to Settings → Permalinks, choose "Post name", and click Save Changes. This is required before connecting to xpay and for AI agents to read your catalog.', 'agentic-commerce-for-woocommerce' ) . '</p></div>';
+		} elseif ( ! $routes['ok'] ) {
+			echo '<div class="notice notice-warning inline" style="max-width:680px;margin-top:10px;"><p>' . esc_html__( "The plugin's REST routes are not responding even though the REST API is up. Try deactivating and reactivating the plugin. If it persists, a security plugin (Wordfence, iThemes Security) or a server firewall may be blocking /wp-json/xpay/.", 'agentic-commerce-for-woocommerce' ) . '</p></div>';
+		} elseif ( ! $wk['ok'] ) {
+			$fallback_url = home_url( '/?xpay_route=ucp_profile' );
+			echo '<div class="notice notice-warning inline" style="max-width:680px;margin-top:10px;"><p>';
+			echo esc_html__( 'Your store is connectable, but /.well-known/ files return an error at the web-server layer. Some hosts (Apache/ACME) reserve /.well-known/ and answer before WordPress runs. AI agents can still reach your discovery profile via this fallback URL:', 'agentic-commerce-for-woocommerce' );
+			echo ' <a href="' . esc_url( $fallback_url ) . '" target="_blank" rel="noopener"><code>' . esc_html( $fallback_url ) . '</code></a>. ';
+			echo esc_html__( 'For clean /.well-known/ URLs, ask your host to let WordPress handle /.well-known/ requests.', 'agentic-commerce-for-woocommerce' );
+			echo '</p></div>';
+		} else {
+			echo '<div class="notice notice-success inline" style="max-width:680px;margin-top:10px;"><p>' . esc_html__( 'All checks passed — agents and xpay can reach your store.', 'agentic-commerce-for-woocommerce' ) . '</p></div>';
+		}
+	}
+
+	private function diag_row( $label, $check ) {
+		$ok   = ! empty( $check['ok'] );
+		$code = isset( $check['code'] ) ? (int) $check['code'] : 0;
+		$mark = $ok ? '<span style="color:#008a20;font-weight:600;">&#10003;</span>' : '<span style="color:#d63638;font-weight:600;">&#10007;</span>';
+		$http = $code > 0 ? sprintf( 'HTTP %d', $code ) : __( 'no response', 'agentic-commerce-for-woocommerce' );
+		echo '<tr><td style="width:32px;">' . wp_kses_post( $mark ) . '</td><td>' . esc_html( $label ) . '</td><td style="color:#646970;">' . esc_html( $http ) . '</td></tr>';
 	}
 
 	public function handle_telemetry_toggle() {

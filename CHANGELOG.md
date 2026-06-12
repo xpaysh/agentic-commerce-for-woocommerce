@@ -11,6 +11,36 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.3.3] — 2026-06-12
+
+### Added — Run site diagnostics (Tools tab)
+
+Real-merchant onboarding failures (Payplug, 2026-06-11) traced back to silent
+failures at the **web-server layer**, before WordPress ever runs: Plain
+Permalinks 404-ing `/wp-json/*` at Apache, security plugins blocking the REST
+namespace, and Apache/ACME hosts reserving `/.well-known/` and short-circuiting
+the discovery files. None of these are visible from inside wp-admin, so the
+merchant has no way to know why "Connect store" fails.
+
+- **New "Run site diagnostics" button** under Tools → Live actions. On an
+  explicit click it loopback-probes three layers and caches the result for
+  10 minutes:
+  - **WordPress REST API (Permalinks)** — `rest_url()`; a non-2xx means Pretty
+    Permalinks are off and the whole connect handshake will fail.
+  - **xpay plugin REST routes** — `rest_url('xpay/v1')`; isolates "REST is up
+    but our namespace is blocked" (Wordfence / iThemes / server firewall).
+  - **`/.well-known/` discovery files** — the literal web-server path; a 404
+    here while the REST API passes is the classic Apache-reserves-`/.well-known/`
+    case.
+- **Targeted remediation per failure** — each result row shows pass/fail + the
+  HTTP status, and a failure renders the exact next step (switch Permalinks off
+  "Plain"; deactivate/reactivate or check a security plugin; or, for
+  `/.well-known/` shadowing, the `/?xpay_route=ucp_profile` fallback URL that
+  agents can still use plus the host-side fix).
+- **No change to the connect flow or the no-phone-home guarantee.** The probes
+  are network-only on the button click; the Settings page still makes zero
+  outbound calls on render.
+
 ## [0.3.2] — 2026-06-03
 
 ### Fixed — good-neighbour `/llms.txt` + `/.well-known/*` handling

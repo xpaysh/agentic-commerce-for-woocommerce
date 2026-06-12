@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.3.2
+Stable tag: 0.3.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -179,6 +179,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.3.3 =
+New Tools → Run site diagnostics button checks that AI agents and xpay can reach your store (Permalinks, REST API, /.well-known/ discovery files) and tells you exactly what to fix if something is being blocked.
+
 = 0.3.2 =
 Plays nicely with any other AI/SEO plugin you already have. If your site already publishes its own `llms.txt`, this update adds our agent-shopping sections at the end instead of replacing your content. Smoother connect flow and a few quality-of-life polish items.
 
@@ -224,6 +227,10 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.3.3 =
+* **New: Run site diagnostics (Tools tab).** One click loopback-checks the three things that silently block a connection at the web-server layer before WordPress even runs: the WordPress REST API (Pretty Permalinks), the plugin's own REST routes, and the `/.well-known/` discovery files. Each check shows a pass/fail with the HTTP status, and a failure gives you the exact fix — e.g. switch Permalinks off "Plain", or (on Apache/ACME hosts that reserve `/.well-known/`) the query-arg fallback URL that agents can still use.
+* **No behaviour change to the connect flow itself.** Diagnostics are network-only on the explicit button click; the Settings page still makes zero outbound calls on render.
 
 = 0.3.2 =
 * **Good neighbour with other AI/SEO plugins.** If your site already publishes its own `llms.txt` (for example via Yoast SEO AI, RankMath AI, AIOSEO, or your own setup), we now add our agent-shopping sections at the end of your file instead of replacing it. Everything you wrote is preserved exactly as you wrote it.
