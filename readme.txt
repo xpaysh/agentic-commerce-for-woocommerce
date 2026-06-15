@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.3.4
+Stable tag: 0.3.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -179,6 +179,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.3.5 =
+New /agents.md skill tells AI shopping agents exactly how to browse your live catalog and build a cart. Safer llms.txt merge that ignores non-text pages (no stray HTML from headless storefronts). Optional shopping-bot routing to your structured catalog, off until you enable it.
+
 = 0.3.4 =
 Friendlier Connect screen: plain-language value, no jargon, and an upfront promise that it's safe to try — the plugin writes no files to your site and fully reverts on deactivate. New panel lists every external service the plugin contacts.
 
@@ -230,6 +233,12 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.3.5 =
+* **New: `/agents.md` agent skill.** A dedicated, machine-readable skill served at `yourstore.com/agents.md` that tells AI shopping agents (and skill-using assistants) exactly how to connect to your store: browse the live catalog over MCP or REST, look products up, and build a cart that hands the shopper off to your existing checkout. This is purpose-written connect-and-transact instructions — not a copy of `/llms.txt`. Served only once your store is connected; like our other discovery files it skips quietly if you already publish your own `/agents.md`.
+* **Safer `/llms.txt` merge (bug fix).** When appending to an existing `/llms.txt`, the plugin now ignores non-text responses. Hybrid/headless storefronts and single-page themes that answer every URL with an HTML page no longer get that page pulled in as bogus "existing content" above our agent-shopping sections.
+* **Catalog link points at your branded agent surface.** The `/llms.txt` catalog link now uses your store's own agent-commerce surface instead of the shared feed host (same data, your brand).
+* **Optional AI shopping-bot routing.** Realtime AI *shopping* assistants can be transparently routed to your structured catalog surface for cleaner, faster product data, while search/indexing crawlers stay on your store for citations. Centrally controlled and **off by default** — nothing changes for your site until xpay enables it for your store; it never affects humans, logged-in users, your cart, or checkout.
 
 = 0.3.4 =
 * **Friendlier Connect screen.** The pre-connect panel now leads with what you get — your products discoverable to ChatGPT, Claude, Gemini and Perplexity, with no code and no payment change — instead of a wall of acronyms. The technical detail (llms.txt, schema.org, ACP/UCP/AP2/MCP) is still there, moved to a small footnote.

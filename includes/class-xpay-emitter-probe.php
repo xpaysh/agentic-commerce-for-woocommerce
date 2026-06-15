@@ -41,7 +41,14 @@ class Xpay_Emitter_Probe {
 	const CACHE_FAIL_SECONDS   = HOUR_IN_SECONDS;
 	const PROBE_TIMEOUT        = 3;
 	const MAX_UPSTREAM_BYTES   = 64 * 1024; // 64 KB; refuse to merge anything larger.
-	const SELF_FINGERPRINT     = 'agent-feed.xpay.sh';
+	// Stable, URL-independent marker emitted into every discovery body we serve
+	// (llms.txt + agents.md). Used to recognise our OWN content when it leaks back
+	// into a probe (e.g. a full-page cache serving our cached file without honouring
+	// the X-Xpay-Probe short-circuit) so we never (a) treat our own output as an
+	// external file to append, or (b) skip-if-external our own agents.md. Was the
+	// catalog host `agent-feed.xpay.sh`, which the sidecar-link migration removed
+	// from our output — so it is now a fixed plugin token, not a URL.
+	const SELF_FINGERPRINT     = 'xpay agentic-commerce-for-woocommerce';
 	const CRON_HOOK            = 'xpay_wc_emitter_probe_refresh';
 
 	/**
@@ -118,10 +125,23 @@ class Xpay_Emitter_Probe {
 		$content_type = (string) wp_remote_retrieve_header( $response, 'content-type' );
 		$len          = strlen( $body );
 
+		// HTML guard. Hybrid/headless storefronts and SPA catch-all routes answer
+		// 200 with an HTML page for EVERY path — including /llms.txt and the
+		// /.well-known/* files nothing actually serves. Without this, the probe
+		// captures that HTML page as "external upstream content" and we prepend a
+		// wall of markup above our llms.txt sections (and skip-if-external would
+		// wrongly suppress our JSON emitters). None of our discovery files are
+		// HTML, so an HTML response is never a real external emitter for them.
+		$looks_html = (
+			false !== stripos( $content_type, 'text/html' )
+			|| 1 === preg_match( '/^(?:\xEF\xBB\xBF)?\s*<(?:!doctype|html|head|body|\?xml)\b/i', $body )
+		);
+
 		$looks_external = (
 			$code >= 200 && $code < 300
 			&& $len > 0
 			&& $len <= self::MAX_UPSTREAM_BYTES
+			&& ! $looks_html
 			&& false === strpos( $body, self::SELF_FINGERPRINT )
 		);
 
@@ -170,6 +190,7 @@ class Xpay_Emitter_Probe {
 	public static function known_paths() {
 		return array(
 			'/llms.txt',
+			'/agents.md',
 			'/.well-known/ucp',
 			'/.well-known/oauth-protected-resource',
 			'/.well-known/agent-card.json',
