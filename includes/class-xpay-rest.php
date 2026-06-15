@@ -56,6 +56,14 @@ class Xpay_REST {
 				'generator'    => 'serve_llms_txt',
 				'default_on'   => true,
 			),
+			'agents_md'                => array(
+				'route'        => 'agents_md',
+				'path'         => '/agents.md',
+				'content_type' => 'text/markdown; charset=utf-8',
+				'generator'    => 'serve_agents_md',
+				'default_on'   => true,
+				'option_flag'  => 'xpay_wc_emit_agents_md',
+			),
 			'ucp_profile'              => array(
 				'route'        => 'ucp_profile',
 				'path'         => '/.well-known/ucp',
@@ -307,11 +315,121 @@ class Xpay_REST {
 			}
 		}
 
+		// Stable self-fingerprint (Xpay_Emitter_Probe::SELF_FINGERPRINT). In append
+		// mode the marker already appears near the top; this trailing copy guarantees
+		// it in fresh mode too, so a cached copy of our own llms.txt is never mistaken
+		// for external upstream content and re-prepended.
+		$lines[] = '';
+		$lines[] = '<!-- xpay agentic-commerce-for-woocommerce -->';
+
 		// Content-Type was set to text/plain by the caller. Inputs are stripped
 		// of HTML at construction time (site name, descriptions, category names
 		// via wp_strip_all_tags; URLs via esc_url_raw). esc_html() is wrong
 		// here — it would entity-encode characters that belong literally in
 		// Markdown/URLs.
+		echo implode( "\n", $lines ) . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	/**
+	 * /agents.md — a real connect-and-transact SKILL for skill-using AI shopping
+	 * agents (OpenClaw-style runtimes, Claude/ChatGPT skills, etc.). This is NOT
+	 * a mirror of /llms.txt: llms.txt is a generic discovery surface (links +
+	 * prose for crawlers); agents.md is operational instructions an agent follows
+	 * to browse this store's live catalog and build a cart.
+	 *
+	 * It advertises ONLY surfaces the xpay backend actually serves today:
+	 *   - the MCP server (search_catalog / get_product / create_cart),
+	 *   - the REST catalog API,
+	 *   - the bulk catalog JSON,
+	 *   - the cart deeplink hand-off (the human completes payment on the
+	 *     merchant's own WooCommerce checkout — there is no in-protocol payment).
+	 * Unconnected stores have no agent rails, so we serve a short honest stub.
+	 */
+	private function serve_agents_md() {
+		$site_name = wp_strip_all_tags( (string) get_bloginfo( 'name' ) );
+		$site_url  = esc_url_raw( home_url( '/' ) );
+		$slug      = Xpay_Plugin::merchant_slug();
+
+		$lines = array();
+
+		if ( ! $slug ) {
+			// No slug => the store hasn't connected to xpay, so none of the agent
+			// rails exist. Be honest rather than advertise dead endpoints.
+			$lines[] = '# ' . ( $site_name ? $site_name : 'This store' ) . ' — agent skill';
+			$lines[] = '';
+			$lines[] = 'This store is not yet connected to an agent-commerce surface, so there is no';
+			$lines[] = 'live catalog API or cart endpoint to call. Browse the store at ' . $site_url . '.';
+			$lines[] = '';
+			// Stable self-fingerprint (Xpay_Emitter_Probe::SELF_FINGERPRINT) so a cached
+			// copy of our own output is never mistaken for an external /agents.md.
+			$lines[] = '<!-- xpay agentic-commerce-for-woocommerce -->';
+			echo implode( "\n", $lines ) . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			return;
+		}
+
+		$mcp_endpoint  = sprintf( 'https://agent-commerce.xpay.sh/mcp/%s', $slug );
+		$rest_base     = sprintf( 'https://agent-commerce.xpay.sh/v1/%s', $slug );
+		$catalog_url   = sprintf( 'https://%s.agentic-commerce.xpay.sh/catalog.json', $slug );
+
+		$lines[] = '# ' . $site_name . ' — agent shopping skill';
+		$lines[] = '';
+		$lines[] = 'A skill for AI shopping agents to browse this store\'s live catalog and build a';
+		$lines[] = 'cart. Prices and stock are live. Checkout is a hand-off: you assemble the cart,';
+		$lines[] = 'then send the shopper to the store\'s own checkout to pay — no payment happens';
+		$lines[] = 'inside this protocol.';
+		$lines[] = '';
+
+		$lines[] = '## Connect (recommended: MCP)';
+		$lines[] = '';
+		$lines[] = sprintf( 'Model Context Protocol server (JSON-RPC 2.0, no auth required):' );
+		$lines[] = '';
+		$lines[] = '```';
+		$lines[] = $mcp_endpoint;
+		$lines[] = '```';
+		$lines[] = '';
+		$lines[] = 'Call `initialize`, then `tools/list`. Three tools are available:';
+		$lines[] = '';
+		$lines[] = '- `search_catalog` — keyword search over the live product catalog. Returns name, price, currency, availability, SKU, product URL, image.';
+		$lines[] = '- `get_product` — look up one product by SKU or id for full detail before adding to cart.';
+		$lines[] = '- `create_cart` — pass a list of `{ sku, quantity }`; receives back a single cart deeplink (below). Validates every SKU against live stock first.';
+		$lines[] = '';
+
+		$lines[] = '## Connect (alternative: REST)';
+		$lines[] = '';
+		$lines[] = 'If you cannot speak MCP, the same data is on a plain REST API:';
+		$lines[] = '';
+		$lines[] = sprintf( '- `GET %s/products` — list products (supports `?q=` search and `?category=`).', $rest_base );
+		$lines[] = sprintf( '- `GET %s/products/{sku}` — one product by SKU.', $rest_base );
+		$lines[] = sprintf( '- `POST %s/cart` — body `{ "items": [{ "sku": "...", "quantity": 1 }] }` → returns a cart deeplink.', $rest_base );
+		$lines[] = '';
+		$lines[] = sprintf( 'Bulk catalog snapshot (all products, refreshed continuously): %s', $catalog_url );
+		$lines[] = '';
+
+		$lines[] = '## Checkout (hand-off)';
+		$lines[] = '';
+		$lines[] = '`create_cart` / `POST /cart` return a deeplink of the form:';
+		$lines[] = '';
+		$lines[] = '```';
+		$lines[] = $site_url . '?xpay_cart={token}';
+		$lines[] = '```';
+		$lines[] = '';
+		$lines[] = 'Open it for the shopper. It pre-fills the store\'s native cart and lands them on';
+		$lines[] = 'the store\'s existing checkout, where the human completes payment, shipping, and';
+		$lines[] = 'any account steps. Do not attempt to pay programmatically — there is no payment';
+		$lines[] = 'API, x402, or mandate flow here by design; the shopper finishes on the merchant\'s';
+		$lines[] = 'own checkout.';
+		$lines[] = '';
+
+		$lines[] = '## Notes';
+		$lines[] = '';
+		$lines[] = '- Every product page also carries schema.org JSON-LD if you prefer to read pages directly.';
+		$lines[] = '- Treat the deeplink token as opaque and single-cart; build a fresh cart per shopper.';
+		$lines[] = '- Realtime shopping fetchers may be transparently routed to the structured catalog surface; the endpoints above are stable regardless.';
+		$lines[] = '';
+		// Stable self-fingerprint (Xpay_Emitter_Probe::SELF_FINGERPRINT) so a cached
+		// copy of our own output is never mistaken for an external /agents.md.
+		$lines[] = '<!-- xpay agentic-commerce-for-woocommerce -->';
+
 		echo implode( "\n", $lines ) . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 

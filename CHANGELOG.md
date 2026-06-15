@@ -11,6 +11,55 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.3.5] — 2026-06-15
+
+### Added — `/agents.md` agent skill
+
+- **New discovery emitter at `/agents.md`** (`class-xpay-rest.php`): a real
+  connect-and-transact SKILL for skill-using AI shopping agents (OpenClaw-style
+  runtimes, Claude/ChatGPT skills), explicitly **not** a mirror of `/llms.txt`.
+  Advertises only surfaces the backend actually serves today — the MCP server
+  (`search_catalog` / `get_product` / `create_cart`), the REST catalog API, the
+  bulk catalog JSON, and the cart-deeplink hand-off (the human completes payment
+  on the store's own checkout; there is no in-protocol payment, by design).
+- Served only when the store is connected (a slug exists); an unconnected store
+  gets a short honest stub. Registered `default_on` with the same
+  **skip-if-external** don't-clobber guard as the `/.well-known/*` emitters, and
+  added to the emitter-probe's `known_paths()` so an existing third-party
+  `/agents.md` is detected and left untouched.
+
+### Fixed — discovery emitter-probe robustness
+
+- **HTML guard on the upstream probe** (`class-xpay-emitter-probe.php`): hybrid
+  /headless storefronts and SPA catch-all routes answer `200` with an HTML page
+  for *every* path, including `/llms.txt` and the `/.well-known/*` files nothing
+  actually serves. The probe now rejects HTML responses (by `Content-Type` and a
+  leading-markup sniff), so that page is no longer captured as "external upstream
+  content" and prepended above our `/llms.txt` sections (nor does it wrongly
+  suppress our JSON emitters via skip-if-external).
+- **Stable self-fingerprint.** `SELF_FINGERPRINT` moved off the catalog host
+  `agent-feed.xpay.sh` (removed from our output by the sidecar-link change) to a
+  fixed, URL-independent token (`xpay agentic-commerce-for-woocommerce`) now
+  emitted into both `/llms.txt` and `/agents.md`. Prevents a cached copy of our
+  own output from being mistaken for an external file (re-prepend loop on
+  `/llms.txt`; spurious skip on `/agents.md`).
+
+### Changed — catalog link + optional shopping-bot deflection
+
+- **`/llms.txt` catalog link now points at the merchant's branded agent surface**
+  (`<slug>.agentic-commerce.xpay.sh/catalog.json`, the install-safe wildcard)
+  instead of the shared `agent-feed.xpay.sh` feed host. Same data, merchant brand,
+  valid the moment the store connects (no CNAME required).
+- **Agent-deflection enforcer** (`class-xpay-deflection.php`, server-driven policy,
+  **off by default**): realtime AI *shopping* fetchers (ChatGPT-User, Claude-User,
+  Perplexity-User, MistralAI-User, DuckAssistBot, Meta-ExternalFetcher) can be
+  routed (302) to the structured catalog surface, while search/index crawlers stay
+  on origin for citations. Writes zero files, no network on the request path
+  (policy fetched in the background via WP-Cron, cached in a transient), fail-open
+  everywhere, and never touches admin / REST / cron / logged-in users / non-GET /
+  `/cart` / `/checkout` / `/my-account` / discovery files. Does nothing until xpay
+  enables it for a given store.
+
 ## [0.3.4] — 2026-06-12
 
 ### Changed — merchant-friendly Connect screen
