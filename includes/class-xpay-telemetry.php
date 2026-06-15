@@ -49,6 +49,17 @@ class Xpay_Telemetry {
 				return;
 			}
 
+			$props = is_array( $props ) ? $props : array();
+
+			// First-party dogfood marker. Set `define( 'XPAY_WC_DOGFOOD', true )`
+			// in wp-config.php on our own provisioned stores so the lifecycle
+			// digest can segment them from real merchants WITHOUT excluding a
+			// whole hosting provider (e.g. instawp.site) — which would silently
+			// bury real customers who happen to host there.
+			if ( defined( 'XPAY_WC_DOGFOOD' ) && true === XPAY_WC_DOGFOOD ) {
+				$props['dogfood'] = true;
+			}
+
 			$payload = array(
 				'event'          => $event,
 				'site_url'       => home_url( '/' ),
@@ -59,7 +70,7 @@ class Xpay_Telemetry {
 				'php_version'    => PHP_VERSION,
 				'locale'         => get_locale(),
 				'ts'             => time(),
-				'props'          => is_array( $props ) ? $props : array(),
+				'props'          => $props,
 			);
 
 			$url = trailingslashit( XPAY_WC_API_BASE ) . ltrim( self::ENDPOINT_PATH, '/' );
