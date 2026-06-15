@@ -244,7 +244,11 @@ class Xpay_REST {
 		$lines[] = sprintf( '- [Products sitemap](%ssitemap_index.xml)', $site_url );
 
 		if ( $slug ) {
-			$lines[] = sprintf( '- [Agent-readable catalog (JSON)](https://agent-feed.xpay.sh/catalog/%s.json)', $slug );
+			// Served from the merchant's sidecar (off the shared agent-feed CDN).
+			// Use the always-resolving wildcard host so the link is valid the moment
+			// the store connects — no CNAME required. Once the merchant connects a
+			// branded agents.<domain>, the wildcard 302-redirects there.
+			$lines[] = sprintf( '- [Agent-readable catalog (JSON)](https://%s.agentic-commerce.xpay.sh/catalog.json)', $slug );
 
 			// Only advertise protocol endpoints the backend has confirmed are
 			// live. Backend pushes the list during the Connect flow via the
