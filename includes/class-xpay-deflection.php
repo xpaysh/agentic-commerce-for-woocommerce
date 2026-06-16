@@ -180,6 +180,10 @@ class Xpay_Deflection {
 
 		// All clear: 302 (temporary) to the sidecar, preserving the path + query.
 		$location = rtrim( $target, '/' ) . $uri;
+		// In-memory marker so Xpay_Agent_Analytics (which runs on `shutdown`, after
+		// this exit) can record deflected=true for this request. Purely a runtime
+		// flag — writes nothing, changes no behaviour here.
+		$GLOBALS['xpay_wc_deflected'] = true;
 		nocache_headers();
 		// External host by design (the merchant's sidecar) — wp_redirect, not
 		// wp_safe_redirect (which would strip the off-site host).

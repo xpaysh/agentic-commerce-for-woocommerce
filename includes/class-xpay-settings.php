@@ -733,6 +733,7 @@ class Xpay_Settings {
 		echo '<li><code>agent-feed.xpay.sh</code> — ' . esc_html__( 'public CDN that hosts your agent-readable catalog feed (product titles, prices, links, images). No customer or order data.', 'agentic-commerce-for-woocommerce' ) . '</li>';
 		echo '<li><code>agent-commerce.xpay.sh</code> — ' . esc_html__( 'hosts the ACP / UCP / AP2 / MCP commerce endpoints agents use to build carts and hand off to your checkout.', 'agentic-commerce-for-woocommerce' ) . '</li>';
 		echo '<li><code>app.xpay.sh</code> — ' . esc_html__( 'your xpay dashboard and the connect flow, opened in a new tab. Not embedded in wp-admin.', 'agentic-commerce-for-woocommerce' ) . '</li>';
+		echo '<li><code>agent-commerce.xpay.sh/v1/agent-analytics</code> — ' . esc_html__( 'optional, opt-in only: anonymous AI-bot crawl counts (which AI crawler fetched which kind of page, the HTTP status, and whether we routed it to your catalog), plus an aggregate daily count of human pageviews (a number only — no UA, no URL, no per-visit data) so you can see the AI-vs-human split. No customer or order data, no IPs. Batched in the background; shares the Privacy opt-in below.', 'agentic-commerce-for-woocommerce' ) . '</li>';
 		echo '</ul>';
 		echo '<p style="font-size:13px;">' . sprintf(
 			/* translators: 1: terms-of-use link, 2: privacy-policy link */
@@ -1105,6 +1106,7 @@ class Xpay_Settings {
 			esc_html__( 'Anonymous lifecycle telemetry is %s. No customer data, no order data, no PII is ever sent. We only see plugin lifecycle events (activate, connect, sync errors) tied to your site URL.', 'agentic-commerce-for-woocommerce' ),
 			'<strong>' . esc_html( $state_label ) . '</strong>'
 		) . '</p>';
+		echo '<p style="font-size:13px;color:#646970;">' . esc_html__( 'This same switch also controls anonymous AI-bot crawl analytics: when on, the plugin counts how AI crawlers (GPTBot, ClaudeBot, PerplexityBot and similar) discover your store — which pages they fetch and whether they reach your discovery files — so you can see this on your xpay dashboard. It records known AI bots plus an aggregate daily count of human pageviews (a number only — no per-visit data) as the AI-vs-human denominator, and never customer, order, or personal data. To disable just this while keeping lifecycle telemetry, add', 'agentic-commerce-for-woocommerce' ) . ' <code>define( \'XPAY_WC_AGENT_ANALYTICS\', false );</code> ' . esc_html__( 'to wp-config.php.', 'agentic-commerce-for-woocommerce' ) . '</p>';
 
 		$url = wp_nonce_url( admin_url( 'admin-post.php?action=xpay_wc_telemetry&choice=' . $toggle_choice ), 'xpay_wc_telemetry' );
 		echo '<p><a class="button" href="' . esc_url( $url ) . '">' . esc_html( $toggle_label ) . '</a></p>';

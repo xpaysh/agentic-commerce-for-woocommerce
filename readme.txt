@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.3.5
+Stable tag: 0.3.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -146,6 +146,8 @@ This plugin connects to the following xpay-operated services to deliver its core
 
 4. **agent-commerce.xpay.sh/v1/events** — Optional anonymous lifecycle telemetry. Disabled by default; only contacted if you explicitly opt in via the first-activation admin notice or **Settings → xpay → Privacy**. Full payload disclosure in the Privacy section.
 
+8. **agent-commerce.xpay.sh/v1/agent-analytics** — Optional anonymous AI-bot crawl analytics. Disabled by default; shares the same opt-in as item 4 (and respects a separate `define( 'XPAY_WC_AGENT_ANALYTICS', false )` hard-off). When enabled, the plugin counts requests from *known AI bots only* (e.g. GPTBot, ChatGPT-User, ClaudeBot, PerplexityBot, Google-Extended) — recording the bot name, a coarse page type (home/product/category/discovery-file/sitemap/other), the HTTP status, and whether we routed the bot to your structured catalog. It also sends an aggregate daily count of human pageviews (a number only — no user-agent, no URLs, no per-visit data) as the AI-vs-human denominator. Events are buffered locally and sent in the background by WP-Cron, never on a page load. Cart, checkout, account, admin and REST paths are never recorded. No per-visit human data, no IP addresses, no customer, order, or personal data.
+
 5. **audit.xpay.sh** — Merchant-facing audit dashboard. The plugin emits a link to `audit.xpay.sh/{your-slug}` on the Settings page so you can review the live agent-readiness score xpay computed from your catalog; the plugin itself does not fetch from this host. Opening the link from your browser sends standard browser headers to xpay.
 6. **auth.xpay.sh** — Public OAuth-protected-resource discovery target. The plugin publishes `auth.xpay.sh` as the `authorization_servers[0]` entry in `/.well-known/oauth-protected-resource` (an RFC 9728 metadata document AI agents fetch to learn where to obtain a token). The plugin does not contact this host server-to-server; it is referenced for agent-side discovery only.
 7. **install.xpay.sh/woocommerce/{terms,privacy}.html** — Static legal documents linked from this readme and from the Settings privacy panel. The plugin itself does not fetch these URLs; clicking the links opens them in your browser.
@@ -163,6 +165,8 @@ xpay is built non-custodially: we never see your customers, your orders, or any 
 
 * **Optionally sent if you opt in to anonymous telemetry** (default OFF): lifecycle event names tagged with your site URL, plugin version, WP version, WC version, PHP version, locale. No customer data, no order data, no customer PII.
 
+* **Optionally sent if you opt in (default OFF), as part of the same telemetry consent — AI-bot crawl analytics**: for requests from *known AI bots only*, the bot name, a coarse page type (home/product/category/discovery-file/sitemap/other), the HTTP status, and whether the bot was routed to your structured catalog — tagged with your site URL. Also sent: an aggregate daily count of human pageviews (a number only — the AI-vs-human denominator). Never recorded: per-visit human data, IP addresses, query strings, cart/checkout/account/admin/REST paths, or any customer, order, or personal data. Hard-disable just this (while keeping lifecycle telemetry) with `define( 'XPAY_WC_AGENT_ANALYTICS', false );`.
+
 * **Opt out of anonymous telemetry**: **Settings → xpay → Privacy → Turn off**. Or define `XPAY_WC_TELEMETRY` to `false` in `wp-config.php` for a system-wide hard disable that overrides any UI choice.
 
 * **Request data deletion**: email privacy@xpay.sh from your admin email with your merchant slug. We process within 7 business days.
@@ -178,6 +182,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 5. JSON-LD on every product page including BuyAction — view-source proof.
 
 == Upgrade Notice ==
+
+= 0.3.6 =
+New AI-bot crawl analytics: see which AI crawlers (GPTBot, ClaudeBot, Perplexity…) discover your store and whether they reach your discovery files, on your xpay dashboard. Opt-in, off by default, shares the telemetry consent. Known AI bots only — no human or customer data.
 
 = 0.3.5 =
 New /agents.md skill tells AI shopping agents exactly how to browse your live catalog and build a cart. Safer llms.txt merge that ignores non-text pages (no stray HTML from headless storefronts). Optional shopping-bot routing to your structured catalog, off until you enable it.
