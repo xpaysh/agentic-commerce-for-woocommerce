@@ -11,6 +11,73 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.3.6] — 2026-06-16
+
+### Added — AI-bot crawl analytics (opt-in, privacy-safe)
+
+- **New `class-xpay-agent-analytics.php`** — records a lightweight, non-personal
+  event whenever a *known AI bot* fetches a front-end URL, so the merchant (and
+  we) can see how AI agents discover and crawl the store, and crucially whether
+  they reach the discovery surfaces (`/llms.txt`, `/agents.md`, `/.well-known/*`,
+  `/sitemap*`). Each event captures only: the matched bot token, a bot class
+  (`realtime` | `training` | `search` | `crawler`), the request path (query
+  string stripped), a coarse `path_type`, the HTTP status, and whether we
+  deflected the bot to the structured catalog. Plus the merchant slug. No human
+  PII, no IPs, no customer or order data.
+- **Zero hot-path cost.** Capture runs on the `shutdown` hook — *after* the
+  response is sent to the visitor — and bails in a handful of cheap string checks
+  for anything that isn't a known AI bot. Humans and non-AI bots cost one
+  user-agent `stripos`; they never touch the buffer, DB, or network. Capture
+  still fires for requests an emitter or the deflector ended with `exit()`,
+  because PHP runs shutdown functions on exit — so discovery-file and deflected
+  hits are counted.
+- **Buffered + batched.** Events accumulate in a single `autoload=off` option
+  with a hard cap (200); a 15-minute WP-Cron job (`xpay_wc_agent_analytics_flush`)
+  drains the buffer and POSTs it as one batch to `…/v1/agent-analytics`. Overflow
+  past the cap is dropped + counted and pulls the next flush forward. An
+  `xpay_wc_agent_analytics_sample_rate` filter caps write load on very busy
+  stores. The merchant's own server never blocks on our backend.
+- **Commerce flow excluded.** `/cart`, `/checkout`, `/my-account`, `/wp-admin`,
+  `/wp-login`, `/wp-json`, `/wp-content`, `/wp-includes`, `/feed` are never
+  recorded.
+- **Aggregate human pageview count** (the bot-vs-human denominator). For
+  non-AI-bot front-end pageviews we keep a single per-day counter — a *number
+  only*, no UA, no path, no per-visit row — so the dashboard can show "AI agents
+  are N% of your store traffic." Classic crawlers (Googlebot/Bingbot) and
+  non-browser agents are excluded (only HTML-accepting browser hits count);
+  high-traffic stores can sample via `xpay_wc_agent_analytics_human_sample_rate`
+  (the inverse weight extrapolates so the count stays unbiased). Flushed in the
+  same batch; stored in a separate `traffic_daily` rollup, never per-visit.
+- **One-line deflection hook** (`class-xpay-deflection.php`): the deflector sets
+  an in-memory `$GLOBALS['xpay_wc_deflected']` flag immediately before its 302 so
+  shutdown capture can mark `deflected=true`. Writes nothing; changes no
+  deflection behaviour.
+
+### Consent & disclosure
+
+- **Gated behind the existing telemetry opt-in** (off by default). Crawl
+  analytics only runs when `Xpay_Telemetry::is_enabled()` is true. A separate
+  `define( 'XPAY_WC_AGENT_ANALYTICS', false )` hard-disables just this subsystem
+  while leaving lifecycle telemetry on.
+- **First-activation consent notice**, **Settings → xpay → Privacy** panel, and
+  the **External services** panel updated to disclose the new endpoint and
+  exactly what it sends. readme.txt **External services** + **Privacy** sections
+  and a ≤300-char **Upgrade Notice** added.
+
+### Backend & dashboard
+
+- **Ingest** (`backend/wc-plugin-setup`): new `POST /v1/agent-analytics` folds a
+  batch into per-`(merchant, day, bot, path_type)` daily counters
+  (`UpdateItem ADD`) in a new `xpay-wc-agent-crawl-{stage}` table (180-day TTL).
+- **Read** (`backend/merchant-setup`): new account-scoped
+  `GET /merchant/agent-crawl?days=` rolls the daily counters into engines, path
+  types, daily trend, discovery-file hit rate and deflection rate. Privy-auth +
+  admin view-as, canonical-slug resolution mirroring the GEO read-layer.
+- **Dashboard** (`xpay-app`): the commerce **Bot Traffic** page now renders real
+  AI crawl activity (summary cards, per-engine table, what-they-crawl
+  breakdown); the home "Bot Traffic (7d)" tile shows live totals + discovery-file
+  hit rate.
+
 ## [0.3.5] — 2026-06-15
 
 ### Added — `/agents.md` agent skill

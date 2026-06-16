@@ -38,6 +38,11 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 		'xpay_wc_telemetry_decided_at',
 		'xpay_wc_telemetry_debug',
 
+		// Agent-discovery analytics buffer
+		'xpay_wc_agent_buf',
+		'xpay_wc_agent_dropped',
+		'xpay_wc_human_daily',
+
 		// Lifecycle
 		'xpay_wc_first_activated_at',
 		'xpay_wc_flush_rewrites',
