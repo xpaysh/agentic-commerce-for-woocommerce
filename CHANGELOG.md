@@ -11,6 +11,34 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.3.7] — 2026-06-20
+
+### Added — partner (agency) attribution
+
+- **New `class-xpay-partner.php`** — resolves an optional partner referral code
+  from (in priority order) the `XPAY_WC_PARTNER_CODE` wp-config constant (the
+  agency bulk-deploy path; baked once into a provisioning template, every client
+  install self-attributes), else the stored option `xpay_wc_partner_code`. The
+  constant wins and renders the settings field read-only. Code charset is
+  sanitised to `[A-Za-z0-9._-]`, capped at 64 chars.
+- **Three ways to set the code, easiest first:** (1) a **referral deep link** —
+  `…/wp-admin/options-general.php?page=agentic-commerce-for-woocommerce&xpay_partner=<code>`
+  is captured on load by `maybe_capture_partner_from_query()` (no typing; no-op
+  if locked or already connected); (2) a small **field on the Connect screen**;
+  (3) the wp-config **constant** for agencies with provisioning automation.
+- **Connect handoff carries attribution.** `handle_connect_start()` appends
+  `partner` plus store-level anti-fraud signals (`sku_count`, `order_count`,
+  `live_gateways`) to the onboard URL. Signals are aggregates only — counts and
+  enabled-gateway ids in live (non-test/sandbox) mode — never any product,
+  customer or order content. Live detection reads each gateway's `testmode` /
+  `sandbox` option; the "which gateways count" policy lives on the backend.
+- **Durable header.** `Xpay_Client::request()` sends `X-Xpay-Partner` on every
+  authenticated backend call, so attribution survives even if the connect param
+  is lost.
+- **Settings UI.** A small secondary "Agency / referral code" card on the
+  Connect screen (`render_partner_field()` + `handle_save_partner`), hidden
+  complexity for solo merchants.
+
 ## [0.3.6] — 2026-06-16
 
 ### Added — AI-bot crawl analytics (opt-in, privacy-safe)
