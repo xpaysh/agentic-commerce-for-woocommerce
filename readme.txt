@@ -35,7 +35,7 @@ Put your WooCommerce catalog inside ChatGPT, Claude, Gemini and Perplexity — b
 
 * **It doesn't touch your checkout.** Stripe / WooPayments / PayPal / Square / whatever you already use — payment runs through them, unchanged. Your payout schedule is unchanged.
 * **It doesn't see your customers.** No buyer names, emails, addresses, IPs, payment cards, order line items, refunds, or PII of any kind passes through xpay. Ever. The plugin is non-custodial.
-* **It doesn't require a new account or contract** to start. Free until your first AI-attributable sale; pricing kicks in after that. [See pricing](https://www.xpay.sh/pricing/?tab=agentic-commerce).
+* **It doesn't require a new account or contract** to start. Free to install and get going — paid plans available as you grow. [See pricing](https://www.xpay.sh/pricing/?tab=agentic-commerce).
 * **It doesn't slow down your site.** The JSON-LD block is tiny and cached; the catalog feed is served from xpay's CDN, not your origin.
 
 = Five-minute install flow =
@@ -124,7 +124,7 @@ Yes. GPLv2-or-later, public repo at [github.com/xpaysh/agentic-commerce-for-wooc
 
 = How much does this cost? =
 
-Free until your first AI-attributable sale. After that, pricing starts at 1% of AI-attributable order value. See [www.xpay.sh/pricing/](https://www.xpay.sh/pricing/?tab=agentic-commerce).
+Free to install and get started. Paid plans are available as you scale — see [www.xpay.sh/pricing/](https://www.xpay.sh/pricing/?tab=agentic-commerce).
 
 = Does xpay work with WooCommerce Subscriptions / WooCommerce Bookings / WooCommerce Memberships? =
 
