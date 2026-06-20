@@ -66,10 +66,12 @@ class Xpay_Settings {
 
 	private function __construct() {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
+		add_action( 'admin_init', array( $this, 'maybe_capture_partner_from_query' ) );
 		add_action( 'admin_post_xpay_wc_connect_start', array( $this, 'handle_connect_start' ) );
 		add_action( 'admin_post_xpay_wc_disconnect', array( $this, 'handle_disconnect' ) );
 		add_action( 'admin_post_xpay_wc_audit', array( $this, 'handle_audit' ) );
 		add_action( 'admin_post_xpay_wc_telemetry', array( $this, 'handle_telemetry_toggle' ) );
+		add_action( 'admin_post_xpay_wc_save_partner', array( $this, 'handle_save_partner' ) );
 		add_action( 'admin_post_xpay_wc_save_capabilities', array( $this, 'handle_save_capabilities' ) );
 		add_action( 'admin_post_xpay_wc_save_payments', array( $this, 'handle_save_payments' ) );
 		add_action( 'admin_post_xpay_wc_save_links', array( $this, 'handle_save_links' ) );
@@ -339,6 +341,45 @@ class Xpay_Settings {
 	}
 
 	// ---- Per-tab save handlers --------------------------------------------------
+
+	/**
+	 * Capture an agency/referral code from a settings-page deep link, e.g. an
+	 * agency shares
+	 * options-general.php?page=agentic-commerce-for-woocommerce&xpay_partner=acme
+	 * — the merchant clicks it and is attributed with zero typing. No-op when an
+	 * installer pinned the code via the XPAY_WC_PARTNER_CODE constant, or once
+	 * connected (attribution is fixed at connect). The value is a non-privileged
+	 * attribution token, so nonce-less GET capture is intentional and safe.
+	 */
+	public function maybe_capture_partner_from_query() {
+		if ( Xpay_Partner::is_locked() || Xpay_Plugin::is_connected() ) {
+			return;
+		}
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			return;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( empty( $_GET['xpay_partner'] ) ) {
+			return;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$code = Xpay_Partner::sanitize( sanitize_text_field( wp_unslash( $_GET['xpay_partner'] ) ) );
+		if ( '' !== $code ) {
+			Xpay_Partner::save_code( $code );
+		}
+	}
+
+	public function handle_save_partner() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
+		}
+		check_admin_referer( 'xpay_wc_save_partner' );
+
+		$code = isset( $_POST['xpay_wc_partner_code'] ) ? sanitize_text_field( wp_unslash( $_POST['xpay_wc_partner_code'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		Xpay_Partner::save_code( $code );
+		wp_safe_redirect( admin_url( 'options-general.php?page=agentic-commerce-for-woocommerce&partner_saved=1' ) );
+		exit;
+	}
 
 	public function handle_save_capabilities() {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
@@ -643,6 +684,36 @@ class Xpay_Settings {
 		echo '<p style="color:#646970;font-size:13px;">' . esc_html__( 'No payment processor change. Payouts continue through your existing WooCommerce gateway.', 'agentic-commerce-for-woocommerce' ) . '</p>';
 		echo '<p style="color:#8c8f94;font-size:12px;margin-top:16px;">' . esc_html__( 'Technical details: publishes /llms.txt, schema.org JSON-LD and an AI-bot robots.txt allowlist, and exposes ACP / UCP / AP2 / MCP endpoints on xpay infrastructure.', 'agentic-commerce-for-woocommerce' ) . '</p>';
 		echo '</div>';
+
+		$this->render_partner_field();
+	}
+
+	/**
+	 * Optional agency/referral code. Hidden complexity for solo merchants
+	 * (small, secondary card), but the attribution hook agencies need. When an
+	 * installer pins XPAY_WC_PARTNER_CODE in wp-config the field is read-only.
+	 */
+	private function render_partner_field() {
+		$code   = Xpay_Partner::code();
+		$locked = Xpay_Partner::is_locked();
+
+		echo '<div class="card" style="padding:16px 20px;max-width:680px;margin-top:16px;">';
+		echo '<h2 style="font-size:14px;margin:0 0 6px;">' . esc_html__( 'Agency / referral code', 'agentic-commerce-for-woocommerce' ) . '</h2>';
+		echo '<p style="color:#646970;font-size:13px;margin-top:0;">' . esc_html__( 'Were you set up by an agency or partner? Enter their referral code so your store is credited to them. Leave blank if you came on your own.', 'agentic-commerce-for-woocommerce' ) . '</p>';
+
+		if ( $locked ) {
+			echo '<p><code>' . esc_html( $code ) . '</code> <span style="color:#646970;font-size:12px;">' . esc_html__( '(set by your installer in wp-config.php)', 'agentic-commerce-for-woocommerce' ) . '</span></p>';
+			echo '</div>';
+			return;
+		}
+
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'xpay_wc_save_partner' );
+		echo '<input type="hidden" name="action" value="xpay_wc_save_partner" />';
+		echo '<input type="text" name="xpay_wc_partner_code" value="' . esc_attr( $code ) . '" class="regular-text" placeholder="' . esc_attr__( 'e.g. agency-name', 'agentic-commerce-for-woocommerce' ) . '" /> ';
+		submit_button( __( 'Save code', 'agentic-commerce-for-woocommerce' ), 'secondary', 'submit', false );
+		echo '</form>';
+		echo '</div>';
 	}
 
 	/**
@@ -670,14 +741,25 @@ class Xpay_Settings {
 		}
 
 		// Note: add_query_arg() urlencodes values internally — do NOT pre-encode.
-		$onboard_url = add_query_arg(
-			array(
-				'site'  => home_url( '/' ),
-				'nonce' => $nonce,
-				'email' => wp_get_current_user()->user_email,
-			),
-			XPAY_WC_ONBOARD_URL
+		$onboard_args = array(
+			'site'  => home_url( '/' ),
+			'nonce' => $nonce,
+			'email' => wp_get_current_user()->user_email,
 		);
+
+		// Partner attribution: if this store was set up by an agency, carry
+		// their referral code plus store-level anti-fraud signals into the
+		// onboard handoff. Counts only — no product/customer/order content.
+		$partner = Xpay_Partner::code();
+		if ( '' !== $partner ) {
+			$signals                       = Xpay_Partner::signals();
+			$onboard_args['partner']       = $partner;
+			$onboard_args['sku_count']     = (int) $signals['sku_count'];
+			$onboard_args['order_count']   = (int) $signals['order_count'];
+			$onboard_args['live_gateways'] = implode( ',', $signals['live_gateways'] );
+		}
+
+		$onboard_url = add_query_arg( $onboard_args, XPAY_WC_ONBOARD_URL );
 
 		// Allow-list the xpay onboarding host so wp_safe_redirect() permits the
 		// off-site hop. This is the WP-native pattern for a known SaaS handoff
@@ -733,6 +815,7 @@ class Xpay_Settings {
 		echo '<li><code>agent-feed.xpay.sh</code> — ' . esc_html__( 'public CDN that hosts your agent-readable catalog feed (product titles, prices, links, images). No customer or order data.', 'agentic-commerce-for-woocommerce' ) . '</li>';
 		echo '<li><code>agent-commerce.xpay.sh</code> — ' . esc_html__( 'hosts the ACP / UCP / AP2 / MCP commerce endpoints agents use to build carts and hand off to your checkout.', 'agentic-commerce-for-woocommerce' ) . '</li>';
 		echo '<li><code>app.xpay.sh</code> — ' . esc_html__( 'your xpay dashboard and the connect flow, opened in a new tab. Not embedded in wp-admin.', 'agentic-commerce-for-woocommerce' ) . '</li>';
+		echo '<li>' . esc_html__( 'Partner attribution (optional): if a referral code is set, it is sent with the connect handoff and on backend calls so the partner who set up your store can be credited. Alongside it we send three store-level totals only — your published product count, completed-order count, and the IDs of your enabled live payment gateways. No product, customer or order details.', 'agentic-commerce-for-woocommerce' ) . '</li>';
 		echo '<li><code>agent-commerce.xpay.sh/v1/agent-analytics</code> — ' . esc_html__( 'optional, opt-in only: anonymous AI-bot crawl counts (which AI crawler fetched which kind of page, the HTTP status, and whether we routed it to your catalog), plus an aggregate daily count of human pageviews (a number only — no UA, no URL, no per-visit data) so you can see the AI-vs-human split. No customer or order data, no IPs. Batched in the background; shares the Privacy opt-in below.', 'agentic-commerce-for-woocommerce' ) . '</li>';
 		echo '</ul>';
 		echo '<p style="font-size:13px;">' . sprintf(

@@ -41,6 +41,16 @@ class Xpay_Client {
 			$args['headers']['Authorization'] = 'Bearer ' . $api_key;
 		}
 
+		// Durable partner attribution: carry the referring agency's code on
+		// every authenticated call so attribution survives even if the connect
+		// handoff param is lost. Empty (no partner) → header omitted.
+		if ( class_exists( 'Xpay_Partner' ) ) {
+			$partner = Xpay_Partner::code();
+			if ( '' !== $partner ) {
+				$args['headers']['X-Xpay-Partner'] = $partner;
+			}
+		}
+
 		if ( null !== $body ) {
 			$args['body'] = wp_json_encode( $body );
 		}

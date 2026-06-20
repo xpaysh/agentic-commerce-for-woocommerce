@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.3.6
+Stable tag: 0.3.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -183,6 +183,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.3.7 =
+Maintenance and reliability polish, plus optional agency/referral attribution for stores set up by a partner.
+
 = 0.3.6 =
 New AI-bot crawl analytics: see which AI crawlers (GPTBot, ClaudeBot, Perplexity…) discover your store and whether they reach your discovery files, on your xpay dashboard. Opt-in, off by default, shares the telemetry consent. Known AI bots only — no human or customer data.
 
@@ -240,6 +243,10 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.3.7 =
+* Maintenance and reliability polish.
+* Optional agency/referral attribution: a store set up by a partner can carry that partner's referral code — captured automatically from a referral link, entered on the Connect screen, or pinned by the installer. Counts only — no product, customer or order data is shared.
 
 = 0.3.5 =
 * **New: `/agents.md` agent skill.** A dedicated, machine-readable skill served at `yourstore.com/agents.md` that tells AI shopping agents (and skill-using assistants) exactly how to connect to your store: browse the live catalog over MCP or REST, look products up, and build a cart that hands the shopper off to your existing checkout. This is purpose-written connect-and-transact instructions — not a copy of `/llms.txt`. Served only once your store is connected; like our other discovery files it skips quietly if you already publish your own `/agents.md`.

@@ -46,6 +46,9 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 		// Lifecycle
 		'xpay_wc_first_activated_at',
 		'xpay_wc_flush_rewrites',
+
+		// Partner (agency) attribution
+		'xpay_wc_partner_code',
 	);
 	foreach ( $xpay_wc_option_keys as $xpay_wc_key ) {
 		delete_option( $xpay_wc_key );

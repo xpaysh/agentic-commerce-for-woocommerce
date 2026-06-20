@@ -6,6 +6,7 @@
 defined( 'ABSPATH' ) || exit;
 
 require_once XPAY_WC_PATH . 'includes/class-xpay-client.php';
+require_once XPAY_WC_PATH . 'includes/class-xpay-partner.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-telemetry.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-consent.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-emitter-probe.php';
