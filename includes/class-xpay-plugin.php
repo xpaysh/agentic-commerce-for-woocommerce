@@ -20,6 +20,7 @@ require_once XPAY_WC_PATH . 'includes/class-xpay-cart.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-webhooks.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-settings.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-widget.php';
+require_once XPAY_WC_PATH . 'includes/class-xpay-storefront-widget.php';
 
 class Xpay_Plugin {
 
@@ -49,6 +50,7 @@ class Xpay_Plugin {
 		Xpay_Agent_Analytics::register();
 		Xpay_Admin_REST::instance();
 		Xpay_Widget::instance();
+		Xpay_Storefront_Widget::instance();
 		if ( is_admin() ) {
 			Xpay_Consent::instance();
 		}
@@ -174,5 +176,53 @@ class Xpay_Plugin {
 
 	public static function api_key() {
 		return (string) get_option( 'xpay_wc_api_key', '' );
+	}
+
+	/**
+	 * Is this merchant entitled to the "AI Storefront Assistant" add-on?
+	 *
+	 * Resolution order:
+	 *  1. XPAY_WC_STOREFRONT_WIDGET wp-config constant (staging/dev override).
+	 *  2. Cached backend entitlement (reflects the add-on purchase incl. free
+	 *     design-partner grants), TTL 6h.
+	 *  3. On backend failure, the local admin toggle xpay_wc_storefront_widget_enabled.
+	 */
+	public static function is_storefront_widget_entitled() {
+		if ( defined( 'XPAY_WC_STOREFRONT_WIDGET' ) ) {
+			return (bool) XPAY_WC_STOREFRONT_WIDGET;
+		}
+		$slug = self::merchant_slug();
+		if ( '' === $slug ) {
+			return false;
+		}
+
+		$cached = get_transient( 'xpay_wc_storefront_entitlement' );
+		if ( false !== $cached ) {
+			return (bool) $cached;
+		}
+
+		$entitled = self::fetch_storefront_entitlement( $slug );
+		set_transient( 'xpay_wc_storefront_entitlement', $entitled ? 1 : 0, 6 * HOUR_IN_SECONDS );
+		return $entitled;
+	}
+
+	private static function fetch_storefront_entitlement( $slug ) {
+		$url = trailingslashit( XPAY_WC_AGENT_COMMERCE_BASE ) . 'widget/entitlement?slug=' . rawurlencode( $slug );
+		$res = wp_remote_get( $url, array( 'timeout' => 4 ) );
+		if ( is_wp_error( $res ) || 200 !== (int) wp_remote_retrieve_response_code( $res ) ) {
+			// Endpoint not reachable yet → fall back to the local admin toggle so
+			// the widget stays controllable.
+			return (bool) get_option( 'xpay_wc_storefront_widget_enabled', 0 );
+		}
+		$body = json_decode( (string) wp_remote_retrieve_body( $res ), true );
+		return ! empty( $body['storefront_widget'] ) || ! empty( $body['entitled'] );
+	}
+
+	/**
+	 * Drop the cached entitlement so a just-purchased add-on lights up without
+	 * waiting for the 6h TTL. Call on settings save / add-on purchase webhook.
+	 */
+	public static function clear_storefront_entitlement_cache() {
+		delete_transient( 'xpay_wc_storefront_entitlement' );
 	}
 }
