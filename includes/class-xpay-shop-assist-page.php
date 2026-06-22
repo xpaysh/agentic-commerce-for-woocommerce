@@ -50,6 +50,8 @@ class Xpay_Shop_Assist_Page {
 
 		// Manual "Sync now" from the settings screen.
 		add_action( 'admin_post_xpay_shop_assist_sync', array( $this, 'handle_manual_sync' ) );
+		// One-click enable everything (storefront widget + shopper page) — no wp-config.
+		add_action( 'admin_post_xpay_ai_enable', array( $this, 'handle_enable' ) );
 		add_action( 'admin_notices', array( $this, 'admin_notice' ) );
 		// Re-evaluate immediately when the local entitlement toggle flips.
 		add_action( 'update_option_xpay_wc_storefront_widget_enabled', array( $this, 'reconcile' ) );
@@ -75,6 +77,26 @@ class Xpay_Shop_Assist_Page {
 		}
 		set_transient( 'xpay_wc_shop_assist_reconciled', 1, HOUR_IN_SECONDS );
 		$this->reconcile();
+	}
+
+	/**
+	 * One-click enable from the settings screen: flips both local toggles
+	 * (storefront widget + shopper page), busts the cached entitlement/config so
+	 * the change shows immediately, and publishes the shopper page — no wp-config
+	 * edits required.
+	 */
+	public function handle_enable() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'agentic-commerce-for-woocommerce' ) );
+		}
+		check_admin_referer( 'xpay_ai_enable' );
+		update_option( 'xpay_wc_storefront_widget_enabled', 1 ); // local entitlement fallback
+		update_option( 'xpay_wc_shop_assist_enabled', 1 );       // local shopper-page enable
+		delete_transient( 'xpay_wc_storefront_entitlement' );    // re-fetch fresh (grant = yes)
+		delete_transient( 'xpay_wc_widget_config' );
+		$this->reconcile();
+		wp_safe_redirect( admin_url( 'options-general.php?page=agentic-commerce-for-woocommerce&xpay_shop_assist=enabled' ) );
+		exit;
 	}
 
 	public function handle_manual_sync() {
@@ -221,13 +243,16 @@ class Xpay_Shop_Assist_Page {
 		if ( ! $screen || false === strpos( (string) $screen->id, 'agentic-commerce-for-woocommerce' ) ) {
 			return;
 		}
-		if ( ! Xpay_Plugin::is_storefront_widget_entitled() ) {
+		// Gate on connection only (NOT entitlement) so the one-click Enable button
+		// always shows — it busts the entitlement cache itself.
+		if ( ! Xpay_Plugin::is_connected() ) {
 			return;
 		}
 
-		if ( isset( $_GET['xpay_shop_assist'] ) && 'synced' === $_GET['xpay_shop_assist'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$flag = isset( $_GET['xpay_shop_assist'] ) ? sanitize_key( wp_unslash( $_GET['xpay_shop_assist'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( 'synced' === $flag || 'enabled' === $flag ) {
 			echo '<div class="notice notice-success is-dismissible"><p>';
-			esc_html_e( 'AI Shopper page synced.', 'agentic-commerce-for-woocommerce' );
+			esc_html_e( 'AI Assistant updated. Clear your page cache and reload the storefront.', 'agentic-commerce-for-woocommerce' );
 			echo '</p></div>';
 		}
 
@@ -235,21 +260,26 @@ class Xpay_Shop_Assist_Page {
 		$live = $page && 'publish' === $page->post_status;
 
 		echo '<div class="notice notice-info"><p><strong>';
-		esc_html_e( 'AI Shopper page', 'agentic-commerce-for-woocommerce' );
+		esc_html_e( 'AI Shopping Assistant', 'agentic-commerce-for-woocommerce' );
 		echo '</strong> — ';
+
 		if ( $live ) {
 			$url = get_permalink( $page->ID );
 			printf(
 				/* translators: %s: page URL. */
-				wp_kses( __( 'live at <a href="%1$s" target="_blank" rel="noopener">%1$s</a>. Add it to your menu to send shoppers there.', 'agentic-commerce-for-woocommerce' ), array( 'a' => array( 'href' => array(), 'target' => array(), 'rel' => array() ) ) ),
+				wp_kses( __( 'storefront widget + full-page shopper live at <a href="%1$s" target="_blank" rel="noopener">%1$s</a>. Add it to your menu.', 'agentic-commerce-for-woocommerce' ), array( 'a' => array( 'href' => array(), 'target' => array(), 'rel' => array() ) ) ),
 				esc_url( $url )
 			);
+			echo ' <a class="button button-secondary" style="margin-left:8px" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=xpay_shop_assist_sync' ), 'xpay_shop_assist_sync' ) ) . '">';
+			esc_html_e( 'Re-sync', 'agentic-commerce-for-woocommerce' );
+			echo '</a>';
 		} else {
-			esc_html_e( 'enable it from your xpay dashboard (Storefront Assistant → full-page shopper), then Sync.', 'agentic-commerce-for-woocommerce' );
+			esc_html_e( 'turn on the on-store chat widget and the full-page shopper in one click.', 'agentic-commerce-for-woocommerce' );
+			echo ' <a class="button button-primary" style="margin-left:8px" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=xpay_ai_enable' ), 'xpay_ai_enable' ) ) . '">';
+			esc_html_e( 'Enable AI Assistant', 'agentic-commerce-for-woocommerce' );
+			echo '</a>';
 		}
-		echo ' <a class="button button-secondary" style="margin-left:8px" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=xpay_shop_assist_sync' ), 'xpay_shop_assist_sync' ) ) . '">';
-		esc_html_e( 'Sync now', 'agentic-commerce-for-woocommerce' );
-		echo '</a></p></div>';
+		echo '</p></div>';
 	}
 
 	/** Absolute embed URL the template iframes. Static so the template can call it. */
