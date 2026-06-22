@@ -99,8 +99,9 @@ class Xpay_Storefront_Widget {
 		}
 		$this->loader_attrs = $attrs;
 
-		// null version → no ?ver= cache-buster on the external loader; footer load.
-		wp_enqueue_script( self::HANDLE, self::LOADER_URL, array(), null, true );
+		// Version-stamp with the plugin version (cache-busts on plugin upgrade);
+		// footer load.
+		wp_enqueue_script( self::HANDLE, self::LOADER_URL, array(), XPAY_WC_VERSION, true );
 	}
 
 	/**
