@@ -11,6 +11,37 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-06-22
+
+### Added — AI Storefront Assistant (chat widget + full-page shopper)
+
+- **On-store AI chat widget.** A glass shopping assistant that loads on every
+  storefront page (`class-xpay-storefront-widget.php`), talks to this store's
+  live commerce catalog, and answers with product cards + add-to-cart and signed
+  24h checkout deeplinks. Variable products open an in-chat variant picker.
+  Entitlement-gated (the "AI Storefront Assistant" add-on); enqueued via
+  `wp_enqueue_script` with per-merchant accent/position/offset.
+- **Full-page AI Shopper page.** Optionally publishes a real, indexable WordPress
+  page (e.g. `/ai-shopper`, `class-xpay-shop-assist-page.php`) that frames the
+  full-screen assistant, with a server-rendered "Powered by xpay" backlink. The
+  page is reconciled idempotently (published when enabled, drafted when not) and
+  never duplicated; the on-page floating bubble is suppressed there.
+- **One-click enable + local fallbacks.** An "Enable AI Assistant" button on the
+  settings screen turns on both surfaces and refreshes entitlement; the
+  `XPAY_WC_STOREFRONT_WIDGET` / `XPAY_WC_SHOP_ASSIST` constants and matching
+  options act as offline fallbacks.
+
+### Added — product FAQ schema
+
+- **Approved product FAQs render as FAQPage JSON-LD** plus a visible PDP section
+  (`class-xpay-schema.php`), so the claims-safe FAQ + return policy approved in
+  the dashboard publishes on the merchant's own product pages.
+
+### Changed
+
+- WordPress.org Plugin Check clean: external loader enqueued (not echoed),
+  all output escaped, version-stamped, `readme.txt` Stable tag aligned to 0.4.0.
+
 ## [0.3.7] — 2026-06-20
 
 ### Added — partner (agency) attribution
