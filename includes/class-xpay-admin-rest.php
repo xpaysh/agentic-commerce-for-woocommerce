@@ -146,6 +146,28 @@ class Xpay_Admin_REST {
 						$executed[] = $action;
 						break;
 
+					case 'set_product_faqs':
+						// Backend pushes the APPROVED per-product FAQ + return policy as
+						// a JSON map keyed by SKU. The schema emitter renders FAQPage
+						// JSON-LD + a visible FAQ section for these products only.
+						$raw   = isset( $params['product_faqs'] ) && is_array( $params['product_faqs'] ) ? $params['product_faqs'] : array();
+						$clean = self::sanitize_product_faqs( $raw );
+						if ( empty( $clean ) ) {
+							delete_option( 'xpay_wc_product_faqs' );
+						} else {
+							$encoded = wp_json_encode( $clean );
+							if ( false !== $encoded ) {
+								update_option( 'xpay_wc_product_faqs', $encoded );
+							}
+						}
+						$executed[] = $action;
+						break;
+
+					case 'clear_product_faqs':
+						delete_option( 'xpay_wc_product_faqs' );
+						$executed[] = $action;
+						break;
+
 					default:
 						$skipped[] = $action;
 				}
@@ -202,6 +224,64 @@ class Xpay_Admin_REST {
 			);
 			if ( count( $clean ) >= self::LLMS_TXT_MAX_SECTIONS ) {
 				break;
+			}
+		}
+		return $clean;
+	}
+
+	/**
+	 * Sanitize the pushed per-product FAQ map: { "<sku>": { faq:[{q,a}], return_policy:{…} } }.
+	 * Caps count + lengths so a hostile/misconfigured backend can't bloat the option.
+	 *
+	 * @param array $raw
+	 * @return array
+	 */
+	private static function sanitize_product_faqs( $raw ) {
+		$clean    = array();
+		$max_skus = 5000;
+		$count    = 0;
+		foreach ( $raw as $sku => $entry ) {
+			if ( $count >= $max_skus ) {
+				break;
+			}
+			$key = sanitize_text_field( (string) $sku );
+			if ( '' === $key || ! is_array( $entry ) ) {
+				continue;
+			}
+			$out = array();
+
+			if ( ! empty( $entry['faq'] ) && is_array( $entry['faq'] ) ) {
+				$faqs = array();
+				foreach ( array_slice( $entry['faq'], 0, 10 ) as $qa ) {
+					if ( ! is_array( $qa ) ) {
+						continue;
+					}
+					$q = isset( $qa['q'] ) ? sanitize_text_field( substr( (string) $qa['q'], 0, 300 ) ) : '';
+					$a = isset( $qa['a'] ) ? sanitize_textarea_field( substr( (string) $qa['a'], 0, 1200 ) ) : '';
+					if ( '' !== $q && '' !== $a ) {
+						$faqs[] = array( 'q' => $q, 'a' => $a );
+					}
+				}
+				if ( $faqs ) {
+					$out['faq'] = $faqs;
+				}
+			}
+
+			if ( ! empty( $entry['return_policy'] ) && is_array( $entry['return_policy'] ) ) {
+				$rp  = $entry['return_policy'];
+				$out['return_policy'] = array(
+					'country'  => isset( $rp['country'] ) ? sanitize_text_field( substr( (string) $rp['country'], 0, 4 ) ) : '',
+					'days'     => isset( $rp['days'] ) ? (int) $rp['days'] : 14,
+					'category' => isset( $rp['category'] ) ? esc_url_raw( (string) $rp['category'] ) : '',
+					'method'   => isset( $rp['method'] ) ? esc_url_raw( (string) $rp['method'] ) : '',
+					'fees'     => isset( $rp['fees'] ) ? esc_url_raw( (string) $rp['fees'] ) : '',
+					'url'      => isset( $rp['url'] ) ? esc_url_raw( (string) $rp['url'] ) : '',
+				);
+			}
+
+			if ( $out ) {
+				$clean[ $key ] = $out;
+				$count++;
 			}
 		}
 		return $clean;

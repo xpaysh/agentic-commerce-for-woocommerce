@@ -710,7 +710,7 @@ class Xpay_Settings {
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( 'xpay_wc_save_partner' );
 		echo '<input type="hidden" name="action" value="xpay_wc_save_partner" />';
-		echo '<input type="text" name="xpay_wc_partner_code" value="' . esc_attr( $code ) . '" class="regular-text" placeholder="' . esc_attr__( 'e.g. agency-name', 'agentic-commerce-for-woocommerce' ) . '" /> ';
+		echo '<input type="text" name="xpay_wc_partner_code" value="' . esc_attr( $code ) . '" class="regular-text" placeholder="' . esc_attr__( 'e.g. 3f9a2c7b', 'agentic-commerce-for-woocommerce' ) . '" /> ';
 		submit_button( __( 'Save code', 'agentic-commerce-for-woocommerce' ), 'secondary', 'submit', false );
 		echo '</form>';
 		echo '</div>';
