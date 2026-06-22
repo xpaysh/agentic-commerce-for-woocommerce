@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.4.0
+Stable tag: 0.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -183,6 +183,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.4.1 =
+Optional Content Engine add-on: when enabled for your store, xpay can publish answer-first comparison/buying-guide pages to your site. Off unless you're subscribed.
+
 = 0.3.7 =
 Maintenance and reliability polish, plus optional agency/referral attribution for stores set up by a partner.
 
@@ -243,6 +246,9 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.4.1 =
+* **New: Content Engine pages.** When your store is subscribed to the Content Engine add-on, xpay can publish answer-first comparison, buying-guide and listicle pages — tuned to the questions AI assistants ask — as real Pages on your own domain (indexable, in your sitemap, human-visible, and discoverable by AI agents). Pages stay in sync automatically: published while subscribed, reverted to draft if you unsubscribe, and we only ever touch pages we created — your own content is never modified. Off by default; nothing publishes unless the add-on is active for your store.
 
 = 0.3.7 =
 * Maintenance and reliability polish.
