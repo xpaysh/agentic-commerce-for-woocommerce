@@ -21,6 +21,7 @@ require_once XPAY_WC_PATH . 'includes/class-xpay-webhooks.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-settings.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-widget.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-storefront-widget.php';
+require_once XPAY_WC_PATH . 'includes/class-xpay-shop-assist-page.php';
 
 class Xpay_Plugin {
 
@@ -51,6 +52,7 @@ class Xpay_Plugin {
 		Xpay_Admin_REST::instance();
 		Xpay_Widget::instance();
 		Xpay_Storefront_Widget::instance();
+		Xpay_Shop_Assist_Page::instance();
 		if ( is_admin() ) {
 			Xpay_Consent::instance();
 		}
@@ -146,6 +148,9 @@ class Xpay_Plugin {
 
 	public static function on_deactivate() {
 		flush_rewrite_rules();
+		if ( class_exists( 'Xpay_Shop_Assist_Page' ) ) {
+			Xpay_Shop_Assist_Page::clear_cron();
+		}
 		if ( class_exists( 'Xpay_Emitter_Probe' ) ) {
 			Xpay_Emitter_Probe::unregister_cron();
 		}

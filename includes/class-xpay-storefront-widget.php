@@ -59,7 +59,7 @@ class Xpay_Storefront_Widget {
 
 		// Saved appearance config (accent + FAB position/offset live in the
 		// loader, so they must be stamped here; the iframe fetches the rest).
-		$cfg      = $this->widget_config( $slug );
+		$cfg      = self::widget_config( $slug );
 		$mode     = ! empty( $cfg['defaultMode'] ) ? $cfg['defaultMode'] : apply_filters( 'xpay_wc_storefront_widget_mode', 'bubble' );
 		$name     = ! empty( $cfg['displayName'] ) ? $cfg['displayName'] : wp_strip_all_tags( get_bloginfo( 'name' ) );
 		$position = ( isset( $cfg['position'] ) && 'left' === $cfg['position'] ) ? 'left' : 'right';
@@ -87,7 +87,7 @@ class Xpay_Storefront_Widget {
 	 * cached 1h. Returns [] on any failure — the loader/iframe fall back to
 	 * defaults, so a missing config never blocks the widget.
 	 */
-	private function widget_config( $slug ) {
+	public static function widget_config( $slug ) {
 		$cached = get_transient( 'xpay_wc_widget_config' );
 		if ( is_array( $cached ) ) {
 			return $cached;
