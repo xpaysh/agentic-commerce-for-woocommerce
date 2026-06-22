@@ -22,6 +22,7 @@ require_once XPAY_WC_PATH . 'includes/class-xpay-settings.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-widget.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-storefront-widget.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-shop-assist-page.php';
+require_once XPAY_WC_PATH . 'includes/class-xpay-content-pages.php';
 
 class Xpay_Plugin {
 
@@ -53,6 +54,7 @@ class Xpay_Plugin {
 		Xpay_Widget::instance();
 		Xpay_Storefront_Widget::instance();
 		Xpay_Shop_Assist_Page::instance();
+		Xpay_Content_Pages::instance();
 		if ( is_admin() ) {
 			Xpay_Consent::instance();
 		}
@@ -151,6 +153,9 @@ class Xpay_Plugin {
 		if ( class_exists( 'Xpay_Shop_Assist_Page' ) ) {
 			Xpay_Shop_Assist_Page::clear_cron();
 		}
+		if ( class_exists( 'Xpay_Content_Pages' ) ) {
+			Xpay_Content_Pages::clear_cron();
+		}
 		if ( class_exists( 'Xpay_Emitter_Probe' ) ) {
 			Xpay_Emitter_Probe::unregister_cron();
 		}
@@ -229,5 +234,49 @@ class Xpay_Plugin {
 	 */
 	public static function clear_storefront_entitlement_cache() {
 		delete_transient( 'xpay_wc_storefront_entitlement' );
+	}
+
+	/**
+	 * Is this merchant entitled to the "Content Engine" add-on? Same resolution
+	 * order as the storefront widget:
+	 *  1. XPAY_WC_CONTENT_ENGINE wp-config constant (staging/dev override).
+	 *  2. Cached backend entitlement (the add-on purchase incl. free grants), 6h.
+	 *  3. On backend failure, the local admin toggle xpay_wc_content_engine_enabled.
+	 *
+	 * NB: read the distinct `content_engine` flag from the entitlement endpoint —
+	 * NOT the generic `entitled` — so a storefront-widget grant never silently
+	 * publishes content pages.
+	 */
+	public static function is_content_engine_entitled() {
+		if ( defined( 'XPAY_WC_CONTENT_ENGINE' ) ) {
+			return (bool) XPAY_WC_CONTENT_ENGINE;
+		}
+		$slug = self::merchant_slug();
+		if ( '' === $slug ) {
+			return false;
+		}
+
+		$cached = get_transient( 'xpay_wc_content_engine_entitlement' );
+		if ( false !== $cached ) {
+			return (bool) $cached;
+		}
+
+		$entitled = self::fetch_content_engine_entitlement( $slug );
+		set_transient( 'xpay_wc_content_engine_entitlement', $entitled ? 1 : 0, 6 * HOUR_IN_SECONDS );
+		return $entitled;
+	}
+
+	private static function fetch_content_engine_entitlement( $slug ) {
+		$url = trailingslashit( XPAY_WC_AGENT_COMMERCE_BASE ) . 'widget/entitlement?slug=' . rawurlencode( $slug );
+		$res = wp_remote_get( $url, array( 'timeout' => 4 ) );
+		if ( is_wp_error( $res ) || 200 !== (int) wp_remote_retrieve_response_code( $res ) ) {
+			return (bool) get_option( 'xpay_wc_content_engine_enabled', 0 );
+		}
+		$body = json_decode( (string) wp_remote_retrieve_body( $res ), true );
+		return ! empty( $body['content_engine'] );
+	}
+
+	public static function clear_content_engine_entitlement_cache() {
+		delete_transient( 'xpay_wc_content_engine_entitlement' );
 	}
 }
