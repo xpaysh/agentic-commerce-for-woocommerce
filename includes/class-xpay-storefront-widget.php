@@ -45,6 +45,14 @@ class Xpay_Storefront_Widget {
 		if ( is_admin() ) {
 			return;
 		}
+		// Never inject the floating bubble on our own full-page shopper — the
+		// chat IS that page, so a FAB would be a duplicate assistant.
+		if ( is_page() ) {
+			$sa_page = (int) get_option( 'xpay_wc_shop_assist_page_id', 0 );
+			if ( $sa_page && get_queried_object_id() === $sa_page ) {
+				return;
+			}
+		}
 		if ( ! Xpay_Plugin::is_connected() ) {
 			return;
 		}
