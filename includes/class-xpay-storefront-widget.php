@@ -20,8 +20,12 @@ defined( 'ABSPATH' ) || exit;
 class Xpay_Storefront_Widget {
 
 	const LOADER_URL = 'https://widget.xpay.sh/v1/storefront.js';
+	const HANDLE     = 'xpay-storefront-loader';
 
 	private static $instance = null;
+
+	/** Data-* attributes to stamp onto the loader tag (set in enqueue()). */
+	private $loader_attrs = null;
 
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -31,7 +35,8 @@ class Xpay_Storefront_Widget {
 	}
 
 	private function __construct() {
-		add_action( 'wp_footer', array( $this, 'inject' ), 50 );
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ) );
+		add_filter( 'script_loader_tag', array( $this, 'filter_loader_tag' ), 10, 2 );
 		add_action( 'admin_notices', array( $this, 'caching_exclusion_notice' ) );
 		// Drop the cached entitlement immediately when the local toggle changes
 		// so the widget appears/disappears without waiting for the 6h TTL.
@@ -39,14 +44,17 @@ class Xpay_Storefront_Widget {
 	}
 
 	/**
-	 * Echo the loader <script> on the storefront when entitled + connected.
+	 * Enqueue the loader (footer) when entitled + connected, and stash the
+	 * data-* attributes for filter_loader_tag() to stamp on. Enqueuing (vs a raw
+	 * wp_footer echo) is the WordPress.org-compliant way to add an external
+	 * script.
 	 */
-	public function inject() {
+	public function enqueue() {
 		if ( is_admin() ) {
 			return;
 		}
-		// Never inject the floating bubble on our own full-page shopper — the
-		// chat IS that page, so a FAB would be a duplicate assistant.
+		// Never load the floating bubble on our own full-page shopper — the chat
+		// IS that page, so a FAB would be a duplicate assistant.
 		if ( is_page() ) {
 			$sa_page = (int) get_option( 'xpay_wc_shop_assist_page_id', 0 );
 			if ( $sa_page && get_queried_object_id() === $sa_page ) {
@@ -73,21 +81,46 @@ class Xpay_Storefront_Widget {
 		$position = ( isset( $cfg['position'] ) && 'left' === $cfg['position'] ) ? 'left' : 'right';
 		$offset_x = isset( $cfg['offsetX'] ) ? max( 0, (int) $cfg['offsetX'] ) : 0;
 		$offset_y = isset( $cfg['offsetY'] ) ? max( 0, (int) $cfg['offsetY'] ) : 0;
-		$accent_a = ! empty( $cfg['accentFrom'] ) ? $cfg['accentFrom'] : '';
-		$accent_b = ! empty( $cfg['accentTo'] ) ? $cfg['accentTo'] : '';
 
-		printf(
-			'<script async src="%s" data-slug="%s" data-track="merchant" data-mode="%s" data-display-name="%s" data-position="%s" data-offset-x="%d" data-offset-y="%d"%s%s></script>' . "\n",
-			esc_url( self::LOADER_URL ),
-			esc_attr( $slug ),
-			esc_attr( $mode ),
-			esc_attr( $name ),
-			esc_attr( $position ),
-			$offset_x,
-			$offset_y,
-			$accent_a ? ' data-accent-from="' . esc_attr( $accent_a ) . '"' : '',
-			$accent_b ? ' data-accent-to="' . esc_attr( $accent_b ) . '"' : ''
+		$attrs = array(
+			'data-slug'         => $slug,
+			'data-track'        => 'merchant',
+			'data-mode'         => $mode,
+			'data-display-name' => $name,
+			'data-position'     => $position,
+			'data-offset-x'     => (string) $offset_x,
+			'data-offset-y'     => (string) $offset_y,
 		);
+		if ( ! empty( $cfg['accentFrom'] ) ) {
+			$attrs['data-accent-from'] = $cfg['accentFrom'];
+		}
+		if ( ! empty( $cfg['accentTo'] ) ) {
+			$attrs['data-accent-to'] = $cfg['accentTo'];
+		}
+		$this->loader_attrs = $attrs;
+
+		// null version → no ?ver= cache-buster on the external loader; footer load.
+		wp_enqueue_script( self::HANDLE, self::LOADER_URL, array(), null, true );
+	}
+
+	/**
+	 * Add `async` + the data-* attributes to our loader's <script> tag. Other
+	 * handles pass through untouched.
+	 */
+	public function filter_loader_tag( $tag, $handle ) {
+		if ( self::HANDLE !== $handle || ! is_array( $this->loader_attrs ) ) {
+			return $tag;
+		}
+		$extra = ' async';
+		foreach ( $this->loader_attrs as $key => $val ) {
+			$extra .= sprintf( ' %s="%s"', esc_attr( $key ), esc_attr( $val ) );
+		}
+		// Literal splice (not preg_replace — attr values may contain $ or \).
+		$needle = '<script ';
+		if ( 0 === strpos( $tag, $needle ) ) {
+			return '<script' . $extra . ' ' . substr( $tag, strlen( $needle ) );
+		}
+		return $tag;
 	}
 
 	/**
