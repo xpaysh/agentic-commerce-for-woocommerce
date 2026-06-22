@@ -104,13 +104,20 @@ class Xpay_Shop_Assist_Page {
 		}
 
 		$cfg     = Xpay_Storefront_Widget::widget_config( $slug );
-		$enabled = ! empty( $cfg['shopAssistEnabled'] );
+		// Enable via the dashboard config OR a local fallback (constant/option) —
+		// mirrors the entitlement resolution so the page is controllable even when
+		// the dashboard config is unreachable or not yet saved.
+		$enabled = ! empty( $cfg['shopAssistEnabled'] ) || self::local_enabled();
 		if ( ! $enabled ) {
 			$this->unpublish( $page );
 			return;
 		}
 
-		$desired_slug  = $this->sanitize_slug( isset( $cfg['shopAssistSlug'] ) ? $cfg['shopAssistSlug'] : '' );
+		$cfg_slug      = isset( $cfg['shopAssistSlug'] ) ? $cfg['shopAssistSlug'] : '';
+		if ( '' === $cfg_slug ) {
+			$cfg_slug = (string) get_option( 'xpay_wc_shop_assist_slug', '' );
+		}
+		$desired_slug  = $this->sanitize_slug( $cfg_slug );
 		$desired_title = ! empty( $cfg['displayName'] ) ? wp_strip_all_tags( $cfg['displayName'] ) : __( 'AI Shopping Assistant', 'agentic-commerce-for-woocommerce' );
 
 		if ( $page ) {
@@ -173,6 +180,18 @@ class Xpay_Shop_Assist_Page {
 			return null;
 		}
 		return $post;
+	}
+
+	/**
+	 * Local enable fallback: the XPAY_WC_SHOP_ASSIST wp-config constant (dev /
+	 * staging override) or the xpay_wc_shop_assist_enabled option. Used when the
+	 * dashboard hasn't (or can't) set shopAssistEnabled.
+	 */
+	private static function local_enabled() {
+		if ( defined( 'XPAY_WC_SHOP_ASSIST' ) ) {
+			return (bool) XPAY_WC_SHOP_ASSIST;
+		}
+		return (bool) get_option( 'xpay_wc_shop_assist_enabled', 0 );
 	}
 
 	private function sanitize_slug( $raw ) {
