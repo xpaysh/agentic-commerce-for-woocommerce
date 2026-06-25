@@ -67,16 +67,61 @@ class Xpay_Cart {
 			$sku       = isset( $line['sku'] ) ? sanitize_text_field( $line['sku'] ) : '';
 			$qty       = isset( $line['qty'] ) ? max( 1, (int) $line['qty'] ) : 1;
 			$variation = isset( $line['variation_id'] ) ? (int) $line['variation_id'] : 0;
+			// Variation attributes (attribute_pa_size, attribute_color, …)
+			// forwarded by the agent-commerce mint when the SKU/variation_id
+			// resolves to a specific variation. WC's add_to_cart() needs this
+			// map as the 4th arg to find the correct variation row; without it
+			// variable products are silently dropped from the cart, which is
+			// what the a live merchant store merchant hit on 2026-06-25.
+			$variation_attrs = isset( $line['attributes'] ) && is_array( $line['attributes'] )
+				? array_map( 'sanitize_text_field', $line['attributes'] )
+				: array();
 
+			// Try SKU → product (could be parent OR variation), then digit fallback.
 			$product_id = wc_get_product_id_by_sku( $sku );
 			if ( ! $product_id && ctype_digit( $sku ) ) {
 				$product_id = (int) $sku;
+			}
+
+			// If the SKU resolved straight to a variation product, swap to the
+			// parent + carry the variation_id forward (agents often pass the
+			// variation SKU with no separate variation_id).
+			if ( $product_id ) {
+				$maybe = wc_get_product( $product_id );
+				if ( $maybe && $maybe->is_type( 'variation' ) ) {
+					if ( $variation === 0 ) {
+						$variation = $product_id;
+					}
+					$product_id = $maybe->get_parent_id();
+				}
+			}
+
+			// Last-resort parent resolution from the variation_id alone.
+			if ( ! $product_id && $variation > 0 ) {
+				$variation_product = wc_get_product( $variation );
+				if ( $variation_product ) {
+					$product_id = (int) $variation_product->get_parent_id();
+				}
 			}
 			if ( ! $product_id ) {
 				continue;
 			}
 
-			$result = WC()->cart->add_to_cart( $product_id, $qty, $variation );
+			// Authoritative attribute resolution: pull them from the actual
+			// variation product, ignoring the agent-supplied map if the live
+			// WC source-of-truth disagrees. The agent payload is a fallback for
+			// "any" attribute variations that don't appear in get_variation_attributes().
+			if ( $variation > 0 ) {
+				$variation_product = wc_get_product( $variation );
+				if ( $variation_product && $variation_product->is_type( 'variation' ) ) {
+					$local_attrs = $variation_product->get_variation_attributes();
+					if ( ! empty( $local_attrs ) ) {
+						$variation_attrs = $local_attrs;
+					}
+				}
+			}
+
+			$result = WC()->cart->add_to_cart( $product_id, $qty, $variation, $variation_attrs );
 			if ( $result ) {
 				++$added;
 			}
