@@ -26,6 +26,20 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
   hash_equals site-token auth, and lands in the response `skipped` array on
   pre-0.4.2 installs — safe for the backend to fire universally.
 
+### Fixed — variable products in agent-minted carts (`class-xpay-cart.php`)
+
+- The cart deeplink handler now passes the variation attribute map
+  (`attribute_pa_size`, `attribute_color`, …) as the 4th argument to
+  `WC()->cart->add_to_cart()`. Without it, WooCommerce silently dropped
+  variable-product lines and the checkout 410'd with "items unavailable" —
+  the exact bug the lordofcbd merchant hit on 2026-06-25.
+- When the agent passes the variation's own SKU (no separate
+  `variation_id`), the handler now swaps to the parent product id and
+  carries the variation id forward automatically.
+- Attribute resolution is authoritative from the live WC variation product
+  via `get_variation_attributes()`; the agent-supplied attributes are used
+  only as a fallback for "any"-typed variation attributes.
+
 ## [0.4.0] — 2026-06-22
 
 ### Added — AI Storefront Assistant (chat widget + full-page shopper)
