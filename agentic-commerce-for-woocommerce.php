@@ -3,7 +3,7 @@
  * Plugin Name:       Agentic Commerce for WooCommerce
  * Plugin URI:        https://www.xpay.sh/merchants/woocommerce/
  * Description:       Make your WooCommerce store visible to ChatGPT, Claude, Gemini and Perplexity — buyers complete checkout on your existing WooCommerce gateway. No theme changes, no replatforming, no new payment processor. By xpay.
- * Version:           0.4.1
+ * Version:           0.4.2
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
@@ -19,7 +19,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'XPAY_WC_VERSION', '0.4.1' );
+define( 'XPAY_WC_VERSION', '0.4.2' );
 define( 'XPAY_WC_FILE', __FILE__ );
 define( 'XPAY_WC_PATH', plugin_dir_path( __FILE__ ) );
 define( 'XPAY_WC_URL', plugin_dir_url( __FILE__ ) );

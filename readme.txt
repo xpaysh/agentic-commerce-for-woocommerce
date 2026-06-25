@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.4.1
+Stable tag: 0.4.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -182,6 +182,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 5. JSON-LD on every product page including BuyAction — view-source proof.
 
 == Upgrade Notice ==
+
+= 0.4.2 =
+Faster propagation: the AI Storefront Assistant's on/off toggle and appearance edits from your xpay dashboard now take effect on your storefront within seconds (previously up to 6 hours).
 
 = 0.4.1 =
 Optional Content Engine add-on: when enabled for your store, xpay can publish answer-first comparison/buying-guide pages to your site. Off unless you're subscribed.

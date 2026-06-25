@@ -110,6 +110,17 @@ class Xpay_Admin_REST {
 						}
 						break;
 
+					case 'clear_storefront_widget_cache':
+						// Flush the two transients that gate the storefront widget so
+						// a backend-side flip (merchant consent toggle, entitlement
+						// change, appearance edit) propagates within seconds instead
+						// of waiting on the 6h/1h TTLs. The next storefront pageview
+						// re-fetches both from the backend with the latest values.
+						delete_transient( 'xpay_wc_storefront_entitlement' );
+						delete_transient( 'xpay_wc_widget_config' );
+						$executed[] = $action;
+						break;
+
 					case 'clear_ucp_profile_cache':
 						// xpay_wc_ucp_profile holds the backend-pushed UCP body.
 						// Deleting it forces Xpay_REST::serve_ucp_profile() to fall

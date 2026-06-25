@@ -11,6 +11,21 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.4.2] — 2026-06-25
+
+### Added — instant cache flush for the AI Storefront Assistant
+
+- New `admin/refresh` action **`clear_storefront_widget_cache`**
+  (`class-xpay-admin-rest.php`). Backend calls it after a merchant flips the
+  master consent toggle, edits the appearance, or has their entitlement
+  changed. Deletes the two transients that gate the storefront widget —
+  `xpay_wc_storefront_entitlement` (6h) and `xpay_wc_widget_config` (1h) —
+  so the next storefront pageview re-reads the truth instead of waiting on
+  the TTL. Reduces propagation latency from up to 6 hours to a few seconds.
+- The action is purely local (no outbound HTTP), follows the existing
+  hash_equals site-token auth, and lands in the response `skipped` array on
+  pre-0.4.2 installs — safe for the backend to fire universally.
+
 ## [0.4.0] — 2026-06-22
 
 ### Added — AI Storefront Assistant (chat widget + full-page shopper)
