@@ -122,19 +122,26 @@ class Xpay_Schema {
 		);
 
 		// GTIN — WC 8.6+ native `global_unique_id` (and legacy plugin variants).
-		// Emitted so Google / Bing / agent crawlers can match this PDP to an offer
-		// in shopping feeds. Length-based @type picks the right schema.org slot.
+		// Emitted so Google / Bing / agent crawlers can match this PDP to an
+		// offer in shopping feeds. Length-keyed `gtin8/12/13/14` slots only
+		// apply to numeric values (real GTIN-N digits). A non-numeric barcode
+		// (e.g. an internal SKU stored in `_barcode` meta) goes to the bare
+		// `gtin` slot — Google Search Console flags `gtinXX` with non-digits.
 		$gtin = $this->gtin_for( $xpay_product );
 		if ( '' !== $gtin ) {
-			$len = strlen( $gtin );
-			if ( 8 === $len ) {
-				$product_node['gtin8'] = $gtin;
-			} elseif ( 12 === $len ) {
-				$product_node['gtin12'] = $gtin;
-			} elseif ( 13 === $len ) {
-				$product_node['gtin13'] = $gtin;
-			} elseif ( 14 === $len ) {
-				$product_node['gtin14'] = $gtin;
+			if ( ctype_digit( $gtin ) ) {
+				$len = strlen( $gtin );
+				if ( 8 === $len ) {
+					$product_node['gtin8'] = $gtin;
+				} elseif ( 12 === $len ) {
+					$product_node['gtin12'] = $gtin;
+				} elseif ( 13 === $len ) {
+					$product_node['gtin13'] = $gtin;
+				} elseif ( 14 === $len ) {
+					$product_node['gtin14'] = $gtin;
+				} else {
+					$product_node['gtin'] = $gtin;
+				}
 			} else {
 				$product_node['gtin'] = $gtin;
 			}

@@ -11,6 +11,59 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.4.4] — 2026-06-27
+
+Adversarial-review patch for 0.4.3 before the 24h SVN propagation
+reaches merchant sites. Three issues found, three fixed.
+
+### Fixed — GDPR-aware attribution cookie (`class-xpay-attribution.php`)
+
+- The attribution cookie `_xpay_ref` is now OFF by default for stores
+  whose WooCommerce base country is in the EU/UK (GDPR/CNIL/PECR
+  scope). The WC session continues to carry attribution for the
+  shopping-journey window (~48h); only the 30-day cross-session
+  persistence requires explicit opt-in.
+- New `xpay_wc_attribution_cookie_enabled` option lets a merchant flip
+  the default either way.
+- New `xpay_wc_attribution_should_set_cookie` filter for CMP integrations
+  (Cookiebot / Iubenda / Complianz / etc.) to gate per-request.
+- 30-country list covers all EU members + EEA (IS/LI/NO) + UK.
+
+### Fixed — empty `widget_config` poisoned the consent AND-gate (`class-xpay-storefront-widget.php`)
+
+- `widget_config()` was caching an empty `[]` result on any backend
+  failure (timeout / 5xx / parse miss) for the full hour. Combined
+  with 0.4.3's new `widgetEnabled` AND-gate, this silently disabled
+  the widget on every working merchant's site until the hour expired.
+- Now only the successful 200-with-object response is cached for an
+  hour; failures use a 60-second breaker so a brief backend blip
+  doesn't lock the widget out for the full hour.
+
+### Fixed — checkout thank-you delayed by up to 8s (`class-xpay-order-events.php`)
+
+- The outbound POST for the order-attribution payload was firing
+  synchronously on `woocommerce_payment_complete` and friends, blocking
+  the shopper's "Processing payment…" page for up to 8 seconds (the
+  HTTP timeout) per order, three times pre-dedupe in the worst case.
+- The work now dispatches via a `wp_schedule_single_event` cron job
+  that fires ~immediately via WP-Cron loopback. Checkout returns fast;
+  the POST happens in the background.
+- Enqueue path stamps an in-flight sentinel (`queued:<epoch>`) BEFORE
+  scheduling so the three hooks all collapse to a single dispatched
+  job — no more triple-fire pre-dedupe race.
+- Timeout tightened from 8s to 5s in the dispatcher (we're already
+  off the shopper's critical path; no value in waiting longer).
+- Transport failure now clears the in-flight sentinel so a later
+  status flip can retry instead of being eternally blocked.
+
+### Fixed — non-numeric GTIN routed to length-keyed slot (`class-xpay-schema.php`)
+
+- A merchant whose `_barcode`/`_gtin` meta holds an internal alphanumeric
+  ID (e.g. `"ABC-1234567890"`) was being emitted as `"gtin14": "…"` and
+  flagged by Google Search Console on every PDP. Non-numeric values
+  now go to the bare `gtin` slot; only true GTIN-N digit strings get
+  the length-keyed `gtin8/12/13/14` slots.
+
 ## [0.4.3] — 2026-06-27
 
 ### Added — agent-attributed orders (`class-xpay-order-events.php`)

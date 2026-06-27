@@ -137,15 +137,25 @@ class Xpay_Storefront_Widget {
 		$base = defined( 'XPAY_WC_MERCHANT_API' ) ? XPAY_WC_MERCHANT_API : 'https://nehl6uu58j.execute-api.us-east-1.amazonaws.com';
 		$url  = trailingslashit( $base ) . 'merchant/widget-config/public/' . rawurlencode( $slug );
 		$res  = wp_remote_get( $url, array( 'timeout' => 4 ) );
-		$cfg  = array();
-		if ( ! is_wp_error( $res ) && 200 === (int) wp_remote_retrieve_response_code( $res ) ) {
-			$decoded = json_decode( (string) wp_remote_retrieve_body( $res ), true );
-			if ( is_array( $decoded ) ) {
-				$cfg = $decoded;
-			}
+
+		// Distinguish a real success (status 200 + JSON object) from a
+		// transient failure (network timeout, 5xx, garbage body). Only cache
+		// the result on real success — otherwise a 60s breaker keeps the
+		// pageview lightweight without pinning a stale empty result for the
+		// full hour. v0.4.3 regression: an empty cached `cfg` collides with
+		// the new `widgetEnabled` AND-gate and silently disables a working
+		// merchant's widget until the hour expires.
+		if ( is_wp_error( $res ) || 200 !== (int) wp_remote_retrieve_response_code( $res ) ) {
+			set_transient( 'xpay_wc_widget_config', array(), MINUTE_IN_SECONDS );
+			return array();
 		}
-		set_transient( 'xpay_wc_widget_config', $cfg, HOUR_IN_SECONDS );
-		return $cfg;
+		$decoded = json_decode( (string) wp_remote_retrieve_body( $res ), true );
+		if ( ! is_array( $decoded ) ) {
+			set_transient( 'xpay_wc_widget_config', array(), MINUTE_IN_SECONDS );
+			return array();
+		}
+		set_transient( 'xpay_wc_widget_config', $decoded, HOUR_IN_SECONDS );
+		return $decoded;
 	}
 
 	/**

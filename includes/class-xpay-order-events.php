@@ -45,6 +45,8 @@ class Xpay_Order_Events {
 		return self::$instance;
 	}
 
+	const SCHEDULED_HOOK = 'xpay_wc_dispatch_order_event';
+
 	private function __construct() {
 		// Three hooks point at the same handler — the dedupe meta makes
 		// double-fires safe:
@@ -59,9 +61,40 @@ class Xpay_Order_Events {
 		//                                          Completed; some HPOS code
 		//                                          paths). Filters on the new
 		//                                          status inside on_status_changed().
-		add_action( 'woocommerce_payment_complete', array( $this, 'on_event' ), 20, 1 );
-		add_action( 'woocommerce_order_status_completed', array( $this, 'on_event' ), 20, 1 );
+		add_action( 'woocommerce_payment_complete', array( $this, 'enqueue_event' ), 20, 1 );
+		add_action( 'woocommerce_order_status_completed', array( $this, 'enqueue_event' ), 20, 1 );
 		add_action( 'woocommerce_order_status_changed', array( $this, 'on_status_changed' ), 20, 4 );
+
+		// Async dispatcher — runs ~immediately via WP-Cron loopback so the
+		// 4-8s outbound POST never blocks the checkout thank-you page.
+		add_action( self::SCHEDULED_HOOK, array( $this, 'on_event' ), 10, 1 );
+	}
+
+	/**
+	 * Fast enqueue: stamp an in-flight sentinel + schedule the real handler.
+	 * Stamping FIRST prevents the three hooks (payment_complete +
+	 * order_status_completed + order_status_changed) from each enqueuing a
+	 * separate cron job for the same order.
+	 */
+	public function enqueue_event( $order_id ) {
+		if ( ! (bool) get_option( 'xpay_wc_order_events_enabled', 1 ) ) {
+			return;
+		}
+		$order = wc_get_order( $order_id );
+		if ( ! $order instanceof WC_Order ) {
+			return;
+		}
+		// In-flight or already sent — short-circuit. The sentinel ('queued')
+		// is overwritten with the unix epoch on successful send.
+		if ( $order->get_meta( self::SENT_META_KEY, true ) ) {
+			return;
+		}
+		$order->update_meta_data( self::SENT_META_KEY, 'queued:' . time() );
+		$order->save();
+
+		if ( ! wp_next_scheduled( self::SCHEDULED_HOOK, array( $order_id ) ) ) {
+			wp_schedule_single_event( time(), self::SCHEDULED_HOOK, array( $order_id ) );
+		}
 	}
 
 	/**
@@ -73,7 +106,7 @@ class Xpay_Order_Events {
 		if ( 'completed' !== $to_status && 'processing' !== $to_status ) {
 			return;
 		}
-		$this->on_event( $order_id );
+		$this->enqueue_event( $order_id );
 	}
 
 	public function on_event( $order_id ) {
@@ -93,9 +126,11 @@ class Xpay_Order_Events {
 			return;
 		}
 
-		// Idempotency at the plugin layer — even before the backend gets the
-		// condition-check rejection, don't waste the network call.
-		if ( $order->get_meta( self::SENT_META_KEY, true ) ) {
+		// Idempotency at the plugin layer. Anything OTHER than 'queued:*'
+		// means a previous run already sent (or was sent and we recorded the
+		// epoch). Queued = our own enqueue stamp = OK to proceed.
+		$sent_at = (string) $order->get_meta( self::SENT_META_KEY, true );
+		if ( '' !== $sent_at && 0 !== strpos( $sent_at, 'queued:' ) ) {
 			return;
 		}
 
@@ -109,19 +144,23 @@ class Xpay_Order_Events {
 			return;
 		}
 
+		// Tight timeout because we're already in the async dispatcher — the
+		// payment-complete UX has long since returned. Failure here just
+		// means we don't stamp the meta and a later status flip will retry.
 		$response = Xpay_Client::post(
 			'/v1/merchants/' . rawurlencode( $slug ) . '/orders',
 			$payload,
-			8
+			5
 		);
 
 		// Xpay_Client::post returns array on 2xx, WP_Error on transport
 		// failure, or the decoded body on 4xx/5xx. Treat anything non-WP_Error
 		// as "backend received it"; the backend's idempotent rejection is OK.
 		if ( is_wp_error( $response ) ) {
-			// Don't stamp the meta on transport failure — let the next status
-			// flip (or a manual retry) re-fire. Future enhancement: schedule a
-			// WP-Cron retry instead of relying on status flips.
+			// Don't stamp the meta on transport failure — clear the queued
+			// sentinel so a later status flip (or manual replay) can re-fire.
+			$order->delete_meta_data( self::SENT_META_KEY );
+			$order->save();
 			return;
 		}
 
