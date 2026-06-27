@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.4.3
+Stable tag: 0.4.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -183,6 +183,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.4.4 =
+Recommended patch over 0.4.3: checkout no longer waits on our attribution POST (now async), the consent gate no longer caches empty backend responses, and the AI attribution cookie defaults OFF for EU/UK stores (GDPR).
+
 = 0.4.3 =
 AI-attributed orders: orders from shoppers referred by ChatGPT, Perplexity, Claude, Gemini, Copilot etc. now show in your xpay dashboard with revenue split by source. Strictly non-PII. Includes the 0.4.2 fixes.
 
@@ -252,6 +255,12 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.4.4 =
+* **Fixed: checkout no longer waits on our attribution POST.** The thank-you page now returns immediately; the outbound order summary is sent in the background via WP-Cron. Previously could block the shopper for up to 8 seconds if our backend was slow.
+* **Fixed: storefront-widget consent gate no longer caches empty backend responses.** A brief backend timeout would silently disable a working widget for a full hour. Now only successful responses are cached for an hour; failures cap at 60 seconds.
+* **Fixed: AI attribution cookie defaults OFF for EU/UK stores.** GDPR/CNIL/PECR scope. The WC session still carries attribution for the shopping-journey window (~48h); the 30-day cross-session cookie requires explicit opt-in via the `xpay_wc_attribution_cookie_enabled` option or the `xpay_wc_attribution_should_set_cookie` filter (for CMP integrations).
+* **Fixed: non-numeric barcodes were routed to length-keyed GTIN slots.** A store with an internal alphanumeric ID in `_barcode`/`_gtin` meta would be flagged by Google Search Console. Non-digit values now go to the bare `gtin` slot.
 
 = 0.4.3 =
 * **New: AI-referred orders are now attributed and reported.** When a shopper completes checkout after being referred by an AI assistant — whether through one of our links (sidecar, MCP, chat widget) or via a Referer / `utm_source` from ChatGPT, Perplexity, Claude, Gemini, Copilot, Meta AI, You.com, DeepSeek, Grok, Phind, Poe, Mistral, HuggingChat, Kagi or DuckDuckGo AI — the order shows up in your xpay dashboard's attributed-orders feed with revenue split by source. First-touch attribution carried in a first-party cookie (30 days, no third-party tracking).

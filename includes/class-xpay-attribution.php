@@ -87,8 +87,65 @@ class Xpay_Attribution {
 			return;
 		}
 
-		$this->write_cookie( $candidate );
+		// SESSION is always the primary store — functional, GDPR-exempt under
+		// CNIL "strictly necessary" reasoning since the merchant uses it for
+		// order-attribution reporting on their own checkout.
 		$this->write_session( $candidate );
+
+		// COOKIE is a 30-day persistence layer; it carries attribution across
+		// sessions but is NON-ESSENTIAL under GDPR/CNIL. Default OFF for EU
+		// base countries unless the merchant explicitly opts in via filter or
+		// the `xpay_wc_attribution_cookie_enabled` option. Non-EU stores keep
+		// the original behaviour (cookie ON by default).
+		if ( $this->should_set_cookie( $candidate ) ) {
+			$this->write_cookie( $candidate );
+		}
+	}
+
+	/**
+	 * Resolve cookie consent. Returns true iff the store opts in.
+	 *
+	 * Decision order:
+	 *   1. `xpay_wc_attribution_should_set_cookie` filter (merchant override).
+	 *   2. `xpay_wc_attribution_cookie_enabled` option (admin toggle, if set).
+	 *   3. Default: ON for non-EU base countries, OFF for EU base countries.
+	 *
+	 * This is intentionally conservative — for EU stores the WC session
+	 * (~48h) still provides attribution within a single shopping journey;
+	 * only the cross-session (30-day) memory is dropped without consent.
+	 */
+	private function should_set_cookie( $candidate ) {
+		$option = get_option( 'xpay_wc_attribution_cookie_enabled', null );
+		if ( null !== $option ) {
+			$resolved = (bool) $option;
+		} else {
+			$resolved = ! $this->is_eu_base_country();
+		}
+		/**
+		 * Filter the attribution-cookie decision per shopper.
+		 *
+		 * @param bool  $resolved Whether to write the _xpay_ref cookie.
+		 * @param array $candidate The detected attribution record.
+		 */
+		return (bool) apply_filters( 'xpay_wc_attribution_should_set_cookie', $resolved, $candidate );
+	}
+
+	/**
+	 * EU + UK base country list (CNIL/GDPR/PECR scope). Static — not worth a
+	 * remote lookup; the merchant's WC base country only changes when they
+	 * relocate.
+	 */
+	private function is_eu_base_country() {
+		if ( ! function_exists( 'WC' ) || ! WC()->countries ) {
+			return false;
+		}
+		$base = strtoupper( (string) WC()->countries->get_base_country() );
+		$eu = array(
+			'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR',
+			'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL',
+			'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'GB', 'IS', 'LI', 'NO',
+		);
+		return in_array( $base, $eu, true );
 	}
 
 	/**
