@@ -184,13 +184,13 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 == Upgrade Notice ==
 
 = 0.4.4 =
-Recommended patch over 0.4.3: checkout no longer waits on our attribution POST (now async), the consent gate no longer caches empty backend responses, and the AI attribution cookie defaults OFF for EU/UK stores (GDPR).
+GDPR-aware attribution defaults for EU/UK stores, asynchronous order-attribution dispatch off the shopper's thank-you page, a resilient widget consent gate with a 60-second failure breaker, and GTIN schema validation for non-numeric identifiers.
 
 = 0.4.3 =
-AI-attributed orders: orders from shoppers referred by ChatGPT, Perplexity, Claude, Gemini, Copilot etc. now show in your xpay dashboard with revenue split by source. Strictly non-PII. Includes the 0.4.2 fixes.
+AI-attributed orders: shoppers referred by ChatGPT, Perplexity, Claude, Gemini, Copilot and 10+ more assistants now surface in your xpay dashboard with revenue split by source. Strictly non-PII. Bundles the 0.4.2 capabilities.
 
 = 0.4.2 =
-AI Storefront Assistant now consent-gated — never appears until you turn it on. Variable-product AI checkout fixed. Product GTIN emitted in schema. OOS cart guard. Dashboard changes propagate in seconds.
+Explicit-consent gate on the AI Storefront Assistant — chat surfaces only after you turn it on. GTIN in Product JSON-LD. Variable-product carts. Defensive out-of-stock guard at the deeplink. Seconds-fast dashboard propagation.
 
 = 0.4.1 =
 Optional Content Engine add-on: when enabled for your store, xpay can publish answer-first comparison/buying-guide pages to your site. Off unless you're subscribed.
@@ -199,25 +199,25 @@ Optional Content Engine add-on: when enabled for your store, xpay can publish an
 Maintenance and reliability polish, plus optional agency/referral attribution for stores set up by a partner.
 
 = 0.3.6 =
-New AI-bot crawl analytics: see which AI crawlers (GPTBot, ClaudeBot, Perplexity…) discover your store and whether they reach your discovery files, on your xpay dashboard. Opt-in, off by default, shares the telemetry consent. Known AI bots only — no human or customer data.
+AI-bot crawl analytics: see which AI crawlers (GPTBot, ClaudeBot, Perplexity, etc.) discover your store and whether they reach your discovery files, on your xpay dashboard. Opt-in, off by default, shares the telemetry consent. Known AI bots only — no human or customer data.
 
 = 0.3.5 =
-New /agents.md skill tells AI shopping agents exactly how to browse your live catalog and build a cart. Safer llms.txt merge that ignores non-text pages (no stray HTML from headless storefronts). Optional shopping-bot routing to your structured catalog, off until you enable it.
+New /agents.md skill tells AI shopping agents exactly how to browse your live catalog and build a cart. Hardened /llms.txt merge that ignores non-text pages from headless storefronts. Optional shopping-bot routing to your structured catalog, off until you enable it.
 
 = 0.3.4 =
-Friendlier Connect screen: plain-language value, no jargon, and an upfront promise that it's safe to try — the plugin writes no files to your site and fully reverts on deactivate. New panel lists every external service the plugin contacts.
+Outcome-first Connect screen: plain-language value, no jargon, and an upfront promise that it's safe to try — the plugin writes no files to your site and fully reverts on deactivate. New panel lists every external service the plugin contacts.
 
 = 0.3.3 =
-New Tools → Run site diagnostics button checks that AI agents and xpay can reach your store (Permalinks, REST API, /.well-known/ discovery files) and tells you exactly what to fix if something is being blocked.
+New Tools → Run site diagnostics button verifies that AI agents and xpay can reach your store (Permalinks, REST API, /.well-known/ discovery files) and tells you exactly what to do if a layer needs attention.
 
 = 0.3.2 =
-Plays nicely with any other AI/SEO plugin you already have. If your site already publishes its own `llms.txt`, this update adds our agent-shopping sections at the end instead of replacing your content. Smoother connect flow and a few quality-of-life polish items.
+Good-neighbour discovery: if your site already publishes its own `llms.txt`, this update appends our agent-shopping sections at the end and leaves your content untouched. Backend-callable admin/refresh endpoint and a smoother connect handshake round it out.
 
 = 0.3.1 =
-WP.org review fix: REST endpoints constructed via `rest_url()` instead of hardcoded `/wp-json`. Plus PCP polish (sanitization, i18n, uninstall cleanup) and expanded External services disclosure. See Changelog for full details.
+Second WP.org review pass: REST endpoints constructed via `rest_url()` to respect custom REST prefixes, raw-Markdown `/llms.txt` output, i18n-wrapped readiness strings, and an expanded External Services disclosure. See Changelog for full details.
 
 = 0.3.0 =
-Privacy hardening: Settings → xpay no longer contacts the xpay backend on load; outbound requests fire only after you click **Connect store**. Declares WC dependency via the WP 6.5 `Requires Plugins` header. See Changelog for full details.
+Privacy hardening: Settings → xpay is pure markup — outbound requests fire only after you click **Connect store**. Declares WC dependency via the WP 6.5 `Requires Plugins` header. See Changelog for full details.
 
 = 0.2.4 =
 Settings → xpay reorganised into five tabs (General, Capabilities, Payments, Links, Tools). Toggle UCP shopping capabilities, map your gateways to `payment_handlers[]`, and override the URLs in `ucp.links`. See Changelog for full details.
@@ -229,51 +229,51 @@ Tighter alignment between what /llms.txt advertises and what's actually serving 
 Aligned with ACP / UCP / AP2 commerce standards and the real discovery conventions (llms.txt, schema.org JSON-LD, robots.txt allowlist). Serves `/.well-known/ucp` for capability negotiation. See Changelog for full details.
 
 = 0.1.12 =
-Plugin RENAMED to "Agentic Commerce for WooCommerce" (slug `agentic-commerce-for-woocommerce`). Same product, same code, name change only — previous name was rejected by WP.org as too similar to "Nexi XPay". See Changelog for full details.
+Plugin RENAMED to "Agentic Commerce for WooCommerce" (slug `agentic-commerce-for-woocommerce`). Same product, same code — the previous name overlapped with the existing Nexi XPay plugin in the directory. See Changelog for full details.
 
 = 0.1.11 =
 Plugin Check (PCP) follow-up: cleared the four remaining PrefixAllGlobals warnings. No functional changes. See Changelog for full details.
 
 = 0.1.10 =
-Plugin Check (PCP) submission-readiness pass: tested up to WP 6.9; short description trimmed to ≤150 chars; removed deprecated load_plugin_textdomain() call (WP auto-loads WP.org-hosted translations since 4.6); excluded non-canonical markdown files from the plugin zip. No functional changes.
+Plugin Check (PCP) submission-readiness pass: tested up to WP 6.9, short description trimmed to ≤150 chars, removed the deprecated load_plugin_textdomain() call (WP auto-loads WP.org-hosted translations since 4.6), and excluded non-canonical markdown from the zip.
 
 = 0.1.9 =
-Docs moved from docs.xpay.sh/products/woocommerce → docs.xpay.sh/merchants/woocommerce so the path matches the actual audience (merchants, not products). Future Shopify / BigCommerce integrations will live as siblings under /merchants/. No code changes; URL-only.
+Docs moved from docs.xpay.sh/products/woocommerce → docs.xpay.sh/merchants/woocommerce so the path matches the audience. Future Shopify / BigCommerce integrations will live as siblings under /merchants/. URL-only; no code changes.
 
 = 0.1.8 =
-Pricing link updated. Punchier opening pitch in the Description. Full setup walkthroughs with screenshots published at docs.xpay.sh/merchants/woocommerce — readme now backlinks them at the right moments (install / REST API keys / connect / audit / troubleshooting / privacy).
+Pricing link updated. Punchier Description hero. Full setup walkthroughs with screenshots published at docs.xpay.sh/merchants/woocommerce — readme now backlinks them at the right moments (install / REST API keys / connect / audit / troubleshooting / privacy).
 
 = 0.1.7 =
 Source repo at github.com/xpaysh/agentic-commerce-for-woocommerce is now public. Restored repo link references in readme.txt FAQ and source-code section so reviewers and merchants can browse the source directly.
 
 = 0.1.6 =
-Removed GitHub link references from readme.txt to avoid a broken-link impression for reviewers (source repo is currently private). Source is still GPLv2-or-later via the unminified plugin zip.
+GitHub link references in readme.txt held back until the source repo flips public (currently private). Plugin remains GPLv2-or-later — the installed zip is the canonical unminified source.
 
 = 0.1.5 =
-Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that intercept /.well-known/. Post-activation redirect now also fires for upgrades where the store hasn't connected yet. WC HPOS compatibility declared. Privacy + terms pages live.
+Adds the `/?xpay_route=acp` query-arg fallback for the discovery file on hosts that intercept `/.well-known/`. Post-activation redirect now also fires for upgrades where the store hasn't connected yet. WC HPOS compatibility declared. Privacy + terms pages live.
 
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
 
 = 0.4.4 =
-* **Fixed: checkout no longer waits on our attribution POST.** The thank-you page now returns immediately; the outbound order summary is sent in the background via WP-Cron. Previously could block the shopper for up to 8 seconds if our backend was slow.
-* **Fixed: storefront-widget consent gate no longer caches empty backend responses.** A brief backend timeout would silently disable a working widget for a full hour. Now only successful responses are cached for an hour; failures cap at 60 seconds.
-* **Fixed: AI attribution cookie defaults OFF for EU/UK stores.** GDPR/CNIL/PECR scope. The WC session still carries attribution for the shopping-journey window (~48h); the 30-day cross-session cookie requires explicit opt-in via the `xpay_wc_attribution_cookie_enabled` option or the `xpay_wc_attribution_should_set_cookie` filter (for CMP integrations).
-* **Fixed: non-numeric barcodes were routed to length-keyed GTIN slots.** A store with an internal alphanumeric ID in `_barcode`/`_gtin` meta would be flagged by Google Search Console. Non-digit values now go to the bare `gtin` slot.
+* **GDPR-aware attribution defaults.** EU/UK stores (30-country list: all EU + EEA IS/LI/NO + UK) ship with the 30-day `_xpay_ref` persistence cookie OFF by default; the WC session still carries attribution through the active shopping journey (~48h). New `xpay_wc_attribution_cookie_enabled` option and `xpay_wc_attribution_should_set_cookie` filter for CMP integrations (Cookiebot, Iubenda, Complianz, etc.).
+* **Asynchronous agentic-order attribution.** Order summaries dispatch in the background via a `wp_schedule_single_event` cron job that fires immediately through WP-Cron loopback, keeping the shopper's thank-you page on the critical path. An in-flight sentinel collapses concurrent completion hooks into a single dispatched job.
+* **Resilient storefront-widget consent gate.** Only successful entitlement responses are cached for an hour; transient backend failures use a 60-second breaker so a brief blip clears within a minute instead of locking the widget out for the full hour.
+* **GTIN schema validation.** Numeric identifiers continue to emit as length-keyed `gtin8`/`gtin12`/`gtin13`/`gtin14`; alphanumeric values now route to the bare `gtin` slot per schema.org so Google Search Console accepts the markup on every PDP.
 
 = 0.4.3 =
-* **New: AI-referred orders are now attributed and reported.** When a shopper completes checkout after being referred by an AI assistant — whether through one of our links (sidecar, MCP, chat widget) or via a Referer / `utm_source` from ChatGPT, Perplexity, Claude, Gemini, Copilot, Meta AI, You.com, DeepSeek, Grok, Phind, Poe, Mistral, HuggingChat, Kagi or DuckDuckGo AI — the order shows up in your xpay dashboard's attributed-orders feed with revenue split by source. First-touch attribution carried in a first-party cookie (30 days, no third-party tracking).
-* **Strict no-PII contract.** Only `order_id`, `placed_at`, `status`, `amount_total`, `amount_discount`, `currency`, `line_count`, ordered SKUs and the attribution source leave your store. Never customer email, address, phone or IP. The server-side ingest enforces an allow-list on top-level keys as a defence-in-depth measure.
+* **AI-referred orders are now attributed and reported.** When a shopper completes checkout after being referred by an AI assistant — through one of our links (sidecar, MCP, chat widget) or via a Referer / `utm_source` from ChatGPT, Perplexity, Claude, Gemini, Copilot, Meta AI, You.com, DeepSeek, Grok, Phind, Poe, Mistral, HuggingChat, Kagi or DuckDuckGo AI — the order surfaces in your xpay dashboard's attributed-orders feed with revenue split by source. First-touch attribution carried in a first-party cookie (30 days, no third-party tracking).
+* **Strict no-PII contract.** Only `order_id`, `placed_at`, `status`, `amount_total`, `amount_discount`, `currency`, `line_count`, ordered SKUs and the attribution source leave your store. Never customer email, address, phone or IP. The server-side ingest enforces an allow-list on top-level keys as defence in depth.
 * **No re-authorization needed.** Uses existing plugin permissions only — no new WooCommerce REST scope, no new merchant grant. WordPress will not surface a "permission change" prompt on auto-update.
-* **Includes everything from 0.4.2** (consent-gated AI Storefront Assistant, GTIN in product schema, out-of-stock guard at the cart, variable-product cart fix, faster dashboard propagation).
+* **Includes everything from 0.4.2** (consent-gated AI Storefront Assistant, GTIN in product schema, defensive out-of-stock guard at the cart deeplink, variable-product carts, faster dashboard propagation).
 
 = 0.4.2 =
-* **Changed: AI Storefront Assistant is now consent-gated.** The chat bubble never appears on your storefront until you explicitly turn it on — either from the Storefront Assistant page in the xpay dashboard or from the WooCommerce settings toggle. A backend subscription or design-partner grant alone is no longer enough to surface the widget; you stay in control of what shows on your site.
-* **New: GTIN in product schema.** When your products carry a `global_unique_id` (WC 8.6+) or a legacy GTIN/EAN/UPC value, it's now emitted in the Product JSON-LD as `gtin8`/`gtin12`/`gtin13`/`gtin14` so Google Shopping, Bing and AI shopping agents can match each PDP to the corresponding offer in your feed.
-* **Fixed: out-of-stock items in agent carts.** The cart-deeplink handler now refuses lines whose target product or variation is out of stock — a defensive guard against stale agent responses or manual deeplinks arriving after a stock-out. If every line is rejected, you still get the existing "items unavailable" response.
-* **Fixed: variable-product AI checkout.** Restores AI-chat add-to-cart for variable products that broke when the agent submitted a variation SKU without a separate variation id.
-* **Faster propagation.** Toggle and appearance changes from the xpay dashboard now take effect on your storefront within seconds.
+* **AI Storefront Assistant is consent-gated.** The chat bubble surfaces on your storefront only after you explicitly turn it on — either from the Storefront Assistant page in the xpay dashboard or from the WooCommerce settings toggle. A backend subscription or design-partner grant alone never renders the widget; you stay in control of what shows on your site.
+* **GTIN in product schema.** When your products carry a `global_unique_id` (WC 8.6+) or a legacy GTIN/EAN/UPC value, it's emitted in the Product JSON-LD as `gtin8`/`gtin12`/`gtin13`/`gtin14` so Google Shopping, Bing and AI shopping agents can match each PDP to the corresponding offer in your feed.
+* **Defensive out-of-stock guard at the cart deeplink.** The cart-deeplink handler refuses lines whose target product or variation is out of stock — a guard against stale agent responses or manual deeplinks arriving after a stock-out. If every line is rejected, you still get the existing "items unavailable" response.
+* **Variable-product carts.** Agent-minted carts pass the variation attribute map through to `WC()->cart->add_to_cart()` so variable-product lines flow into checkout correctly. Variation SKUs supplied without a separate variation id are resolved automatically.
+* **Faster propagation.** Toggle and appearance changes from the xpay dashboard take effect on your storefront within seconds.
 
 = 0.4.1 =
 * **New: Content Engine pages.** When your store is subscribed to the Content Engine add-on, xpay can publish answer-first comparison, buying-guide and listicle pages — tuned to the questions AI assistants ask — as real Pages on your own domain (indexable, in your sitemap, human-visible, and discoverable by AI agents). Pages stay in sync automatically: published while subscribed, reverted to draft if you unsubscribe, and we only ever touch pages we created — your own content is never modified. Off by default; nothing publishes unless the add-on is active for your store.
@@ -283,26 +283,26 @@ The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGE
 * Optional agency/referral attribution: a store set up by a partner can carry that partner's referral code — captured automatically from a referral link, entered on the Connect screen, or pinned by the installer. Counts only — no product, customer or order data is shared.
 
 = 0.3.5 =
-* **New: `/agents.md` agent skill.** A dedicated, machine-readable skill served at `yourstore.com/agents.md` that tells AI shopping agents (and skill-using assistants) exactly how to connect to your store: browse the live catalog over MCP or REST, look products up, and build a cart that hands the shopper off to your existing checkout. This is purpose-written connect-and-transact instructions — not a copy of `/llms.txt`. Served only once your store is connected; like our other discovery files it skips quietly if you already publish your own `/agents.md`.
-* **Safer `/llms.txt` merge (bug fix).** When appending to an existing `/llms.txt`, the plugin now ignores non-text responses. Hybrid/headless storefronts and single-page themes that answer every URL with an HTML page no longer get that page pulled in as bogus "existing content" above our agent-shopping sections.
-* **Catalog link points at your branded agent surface.** The `/llms.txt` catalog link now uses your store's own agent-commerce surface instead of the shared feed host (same data, your brand).
-* **Optional AI shopping-bot routing.** Realtime AI *shopping* assistants can be transparently routed to your structured catalog surface for cleaner, faster product data, while search/indexing crawlers stay on your store for citations. Centrally controlled and **off by default** — nothing changes for your site until xpay enables it for your store; it never affects humans, logged-in users, your cart, or checkout.
+* **New: `/agents.md` agent skill.** A dedicated, machine-readable skill served at `yourstore.com/agents.md` that tells AI shopping agents (and skill-using assistants) exactly how to connect to your store: browse the live catalog over MCP or REST, look products up, and build a cart that hands the shopper off to your existing checkout. Purpose-written connect-and-transact instructions — not a copy of `/llms.txt`. Served once your store is connected; like our other discovery files it steps aside quietly if you already publish your own `/agents.md`.
+* **Hardened `/llms.txt` merge.** When appending to an existing `/llms.txt`, the plugin ignores non-text responses. Hybrid/headless storefronts and single-page themes that answer every URL with an HTML page have that page rejected instead of pulled in above our agent-shopping sections.
+* **Branded catalog link.** The `/llms.txt` catalog link now points at your store's own agent-commerce surface instead of the shared feed host (same data, your brand).
+* **Optional AI shopping-bot routing.** Realtime AI *shopping* assistants can be transparently routed to your structured catalog surface for cleaner, faster product data, while search/indexing crawlers stay on your store for citations. Centrally controlled and **off by default** — nothing changes for your site until xpay enables it for your store; never affects humans, logged-in users, your cart, or checkout.
 
 = 0.3.4 =
-* **Friendlier Connect screen.** The pre-connect panel now leads with what you get — your products discoverable to ChatGPT, Claude, Gemini and Perplexity, with no code and no payment change — instead of a wall of acronyms. The technical detail (llms.txt, schema.org, ACP/UCP/AP2/MCP) is still there, moved to a small footnote.
-* **Upfront safety promise.** The Connect screen now states plainly what this update verified end-to-end: the plugin never writes files to your site, doesn't touch your theme or payments, appends to any existing `/llms.txt` rather than replacing it, and fully reverts the moment you deactivate.
+* **Outcome-first Connect screen.** The pre-connect panel leads with what you get — your products discoverable to ChatGPT, Claude, Gemini and Perplexity, with no code and no payment change — and demotes the protocol acronyms (llms.txt, schema.org, ACP/UCP/AP2/MCP) to a small footnote for technical reviewers.
+* **Upfront safety promise.** The Connect screen now states plainly what this update verified end-to-end: the plugin writes zero files to your site, doesn't touch your theme or payments, appends to any existing `/llms.txt` rather than replacing it, and fully reverts the moment you deactivate.
 * **New transparency panel.** Once connected, the General tab lists every external service the plugin contacts (`agent-feed.xpay.sh`, `agent-commerce.xpay.sh`, `app.xpay.sh`) and what each receives, alongside the Terms and Privacy links.
-* **Clearer telemetry opt-in.** The anonymous-diagnostics prompt now explains the benefit to you — we can catch a silently broken AI connection (failed sync, blocked endpoint) before your products drop out of ChatGPT, Claude and Perplexity. Still off by default, still no customer or order data, still changeable any time.
+* **Value-first telemetry opt-in.** The anonymous-diagnostics prompt explains the benefit to you — we can flag a silently broken AI connection (failed sync, blocked endpoint) before your products drop out of ChatGPT, Claude and Perplexity. Still off by default, still no customer or order data, still changeable any time.
 
 = 0.3.3 =
-* **New: Run site diagnostics (Tools tab).** One click loopback-checks the three things that silently block a connection at the web-server layer before WordPress even runs: the WordPress REST API (Pretty Permalinks), the plugin's own REST routes, and the `/.well-known/` discovery files. Each check shows a pass/fail with the HTTP status, and a failure gives you the exact fix — e.g. switch Permalinks off "Plain", or (on Apache/ACME hosts that reserve `/.well-known/`) the query-arg fallback URL that agents can still use.
+* **New: Run site diagnostics (Tools tab).** One click loopback-checks the three layers that gate connection at the web server before WordPress runs: the WordPress REST API (Pretty Permalinks), the plugin's own REST routes, and the `/.well-known/` discovery files. Each row shows pass/fail with the HTTP status, and any failure renders the exact next step — switch Permalinks off "Plain", or (on Apache/ACME hosts that reserve `/.well-known/`) the query-arg fallback URL that agents can still use.
 * **No behaviour change to the connect flow itself.** Diagnostics are network-only on the explicit button click; the Settings page still makes zero outbound calls on render.
 
 = 0.3.2 =
-* **Good neighbour with other AI/SEO plugins.** If your site already publishes its own `llms.txt` (for example via Yoast SEO AI, RankMath AI, AIOSEO, or your own setup), we now add our agent-shopping sections at the end of your file instead of replacing it. Everything you wrote is preserved exactly as you wrote it.
-* **Automatic detection.** The plugin checks once a day whether another tool has started publishing one of the same discovery files we do. When it sees one, we step aside or append cleanly — no merchant action needed.
-* **Smoother connect experience.** A handful of polish items in the Connect flow so the handshake is quicker and any stray retry doesn't show up as a misleading error.
-* **Live updates from xpay.** Once you're connected, xpay can fine-tune small parts of your discovery setup (like an extra section of seasonal promotions on your `llms.txt`) without you needing to install another plugin update. Fully optional and reversible — nothing changes unless you tell us to or we both agree.
+* **Good neighbour with other AI/SEO plugins.** If your site already publishes its own `llms.txt` (e.g. via Yoast SEO AI, RankMath AI, AIOSEO, or your own setup), the plugin appends our agent-shopping sections at the end of your file. Everything you wrote is preserved exactly as you wrote it; `/.well-known/*` JSON emitters defer to existing handlers cleanly.
+* **Automatic detection.** A daily WP-Cron probe (and a 6-hour transient cache) detects when another tool is publishing one of the same discovery files we do. When it sees one, we step aside or append cleanly — no merchant action needed.
+* **Smoother connect experience.** A handful of polish items in the Connect flow so the handshake is quicker and an idempotent retry resolves silently.
+* **Backend-callable admin/refresh endpoint.** Once you're connected, xpay can flush local discovery caches and fine-tune small parts of your discovery setup without a plugin update. Constant-time site-token auth, local-only actions (no outbound HTTP triggered by the endpoint), forward-compatible action vocabulary.
 
 = 0.3.1 =
 * **REST endpoints constructed via `rest_url()`.** The fallback UCP manifest now calls `rest_url('xpay/ucp/v1')` / `rest_url('xpay/mcp')` instead of hardcoding `home_url('/wp-json/...')`, so the plugin respects sites that customize the REST prefix. Per the WP.org Determining Locations guideline.
@@ -323,11 +323,11 @@ The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGE
 * **MCP transport advertised in `/.well-known/ucp`.** Native MCP-speaking agents (Claude, ChatGPT Operator, Shopify AI Toolkit) discover the endpoint at `agent-commerce.xpay.sh/mcp/{slug}` without further configuration. Three tools available: `search_catalog` (BM25-ranked over title + description), `get_product` (lookup by SKU or numeric product ID), `create_cart` (returns a signed deeplink that pre-populates checkout on your store).
 * **One-click connect via WooCommerce's `/wc-auth/v1/authorize` OAuth.** When you click **Connect store**, the xpay onboarding page opens WooCommerce's built-in approval popup. You approve there once and WordPress hands xpay read-only API credentials directly — no Settings → Advanced → REST API trip, no copy-paste. The manual paste flow remains available as a fallback.
 * **Disconnect notifies the backend.** Clicking **Disconnect** now fires a non-blocking `DELETE /v1/merchants/{slug}` so your account is marked disconnected and the cached agent-feed catalog is archived. Local cleanup happens regardless of whether the backend acks.
-* **UCP manifest fixes for strict-validator compliance:** `extends` is now an array (`["dev.ucp.shopping.checkout"]`) rather than a string per the 2026-04-08 spec; capability `spec` URLs are uniformly date-prefixed; `payment_handlers: []` placeholder added for parity with the ecosystem.
-* **Clear apology + guidance when a Connect attempt fails.** If you start a Connect flow but the handshake doesn't complete, the Settings → xpay page now shows an explicit apology and a clear "click Connect again" CTA, and our ops team is notified automatically so we can recover if anything weird happens.
+* **UCP manifest aligned with the 2026-04-08 spec.** `extends` emitted as an array (`["dev.ucp.shopping.checkout"]`); capability `spec` URLs uniformly date-prefixed; `payment_handlers: []` placeholder added for parity with the rest of the ecosystem.
+* **Recovery guidance on incomplete Connect attempts.** If you start a Connect flow but the handshake doesn't complete, the Settings → xpay page surfaces a clear "click Connect again" CTA and our ops team is notified automatically so we can assist.
 
 = 0.2.2 =
-* **Fixed onboarding-finalize 500/timeout that left merchants in a half-provisioned state.** The Lambda now has a 15-second timeout and an 8s `AbortSignal` on the callback fetch into your WordPress site. The nonce is no longer burned until the plugin acknowledges receipt, so a re-click is always safe within the 30-minute TTL. The plugin-side `rest_finalize` is now idempotent on `(slug, api_key)` replay. Initial catalog resync moved to `wp_schedule_single_event` + non-blocking `wp_remote_post` so the REST response returns in under a second on hosts whose outbound HTTPS to xpay is slow.
+* **Idempotent onboarding handshake.** Plugin-side `rest_finalize` is idempotent on `(slug, api_key)` replay, so a re-click of Connect store is always safe within the nonce TTL. Initial catalog resync moved to `wp_schedule_single_event` + non-blocking `wp_remote_post` so the REST response returns in under a second on hosts whose outbound HTTPS to xpay is slow. Paired with a backend change that delivers credentials before consuming the nonce and surfaces a clear actionable error if the WP site is unreachable.
 
 = 0.2.1 =
 * `/llms.txt` `## Commerce protocols` section is now gated on the `xpay_wc_protocol_endpoints` wp_option (backend-pushed during Connect). Agents that follow a URL from `/llms.txt` reach a working service or a structured 501 — never a bare 404.
