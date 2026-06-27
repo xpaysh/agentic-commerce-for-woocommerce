@@ -121,6 +121,17 @@ class Xpay_Cart {
 				}
 			}
 
+			// Stock guard — refuse OOS items at the cart layer too. The agent surface
+			// already filters by `in_stock !== false` (storefront-track.ts), but a
+			// stale agent cache or a manual deeplink can still arrive after the
+			// merchant marks something out of stock — and an OOS line on the cart
+			// page is a worse UX than silently dropping it. The "None available"
+			// branch below still fires if every line is rejected.
+			$stock_target = $variation > 0 ? wc_get_product( $variation ) : wc_get_product( $product_id );
+			if ( $stock_target && ! $stock_target->is_in_stock() ) {
+				continue;
+			}
+
 			$result = WC()->cart->add_to_cart( $product_id, $qty, $variation, $variation_attrs );
 			if ( $result ) {
 				++$added;

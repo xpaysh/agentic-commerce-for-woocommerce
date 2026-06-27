@@ -17,6 +17,8 @@ require_once XPAY_WC_PATH . 'includes/class-xpay-admin-rest.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-robots.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-schema.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-cart.php';
+require_once XPAY_WC_PATH . 'includes/class-xpay-attribution.php';
+require_once XPAY_WC_PATH . 'includes/class-xpay-order-events.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-webhooks.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-settings.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-widget.php';
@@ -45,6 +47,8 @@ class Xpay_Plugin {
 		Xpay_Robots::instance();
 		Xpay_Schema::instance();
 		Xpay_Cart::instance();
+		Xpay_Attribution::instance();
+		Xpay_Order_Events::instance();
 		Xpay_Webhooks::instance();
 		Xpay_Settings::instance();
 		Xpay_Emitter_Probe::register_cron();
@@ -189,13 +193,23 @@ class Xpay_Plugin {
 	}
 
 	/**
-	 * Is this merchant entitled to the "AI Storefront Assistant" add-on?
+	 * Should the AI Storefront Assistant render on this storefront?
 	 *
-	 * Resolution order:
-	 *  1. XPAY_WC_STOREFRONT_WIDGET wp-config constant (staging/dev override).
-	 *  2. Cached backend entitlement (reflects the add-on purchase incl. free
-	 *     design-partner grants), TTL 6h.
-	 *  3. On backend failure, the local admin toggle xpay_wc_storefront_widget_enabled.
+	 * Two layers, both required (a merchant/a live merchant store 2026-06-25 incident: a
+	 * backend pre-grant alone surfaced the chat bubble on a live store with no
+	 * merchant notification — never again).
+	 *
+	 *   ENTITLEMENT  — is this merchant on a plan / pre-grant that includes the
+	 *                  add-on? Cached backend lookup with a local-toggle fallback
+	 *                  on API failure. TTL 6h.
+	 *
+	 *   CONSENT      — has the merchant explicitly opted in? Backend
+	 *                  widgetConfig.widgetEnabled (set via xpay-app dashboard) OR
+	 *                  the local wp-admin toggle xpay_wc_storefront_widget_enabled
+	 *                  (manual opt-in counts as consent).
+	 *
+	 * The wp-config constant XPAY_WC_STOREFRONT_WIDGET still hard-overrides both
+	 * layers for staging/dev.
 	 */
 	public static function is_storefront_widget_entitled() {
 		if ( defined( 'XPAY_WC_STOREFRONT_WIDGET' ) ) {
@@ -206,11 +220,31 @@ class Xpay_Plugin {
 			return false;
 		}
 
+		if ( ! self::resolve_storefront_entitlement( $slug ) ) {
+			return false;
+		}
+
+		// Local toggle = explicit consent (merchant flipped a switch in wp-admin).
+		if ( (bool) get_option( 'xpay_wc_storefront_widget_enabled', 0 ) ) {
+			return true;
+		}
+		// Backend dashboard consent — set via xpay-app's Storefront Assistant page.
+		$cfg = class_exists( 'Xpay_Storefront_Widget' )
+			? Xpay_Storefront_Widget::widget_config( $slug )
+			: array();
+		return ! empty( $cfg['widgetEnabled'] );
+	}
+
+	/**
+	 * Read-only entitlement lookup with the existing 6h transient + local-toggle
+	 * fallback. Split out so {@see is_storefront_widget_entitled()} can layer
+	 * consent on top without duplicating the cache logic.
+	 */
+	private static function resolve_storefront_entitlement( $slug ) {
 		$cached = get_transient( 'xpay_wc_storefront_entitlement' );
 		if ( false !== $cached ) {
 			return (bool) $cached;
 		}
-
 		$entitled = self::fetch_storefront_entitlement( $slug );
 		set_transient( 'xpay_wc_storefront_entitlement', $entitled ? 1 : 0, 6 * HOUR_IN_SECONDS );
 		return $entitled;
