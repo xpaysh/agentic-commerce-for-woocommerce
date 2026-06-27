@@ -11,7 +11,93 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
-## [0.4.2] — 2026-06-25
+## [0.4.3] — 2026-06-27
+
+### Added — agent-attributed orders (`class-xpay-order-events.php`)
+
+- New `Xpay_Order_Events` class hooks `woocommerce_payment_complete` and
+  `woocommerce_order_status_completed`. On either fire, the plugin POSTs a
+  NON-PII summary of the order to `agent-commerce.xpay.sh/v1/merchants/{slug}/orders`
+  so the xpay merchant dashboard can show "agent-attributed orders this week"
+  and revenue split by AI source. Payload contains: order_id (WC's own),
+  placed_at, status, amount_total, amount_discount, currency, line_count,
+  ordered SKUs, source, and an optional source_detail/ref block.
+- Hard rule: **never email / address / phone / IP / customer_id**. The
+  payload shape matches the server-side `ALLOWED_TOP_KEYS` allow-list; any
+  unknown key the plugin sends gets stripped before persistence.
+- Idempotent — plugin stamps `_xpay_order_event_sent_at` meta after the
+  first 2xx; backend rejects duplicate `(merchant, placed_at#order_id)` via
+  PutItem conditional check. Status flips don't double-fire.
+- Toggleable via `xpay_wc_order_events_enabled` option (default true). One
+  switch if anything goes wrong.
+
+### Added — inbound attribution classifier (`class-xpay-attribution.php`)
+
+- New `Xpay_Attribution` class runs on `template_redirect` and classifies
+  each PDP visit by five signals in priority order:
+  1. `?xpay_ref=<surface>` — deterministic stamp from links we control
+     (sidecar / MCP / widget); highest confidence.
+  2. `?utm_source=…` matched against a ruleset; high confidence
+     (ChatGPT desktop reliably passes `utm_source=chatgpt.com`).
+  3. `Referer` host suffix match — covers Perplexity, Claude, Gemini,
+     Copilot, Meta AI, You.com, DeepSeek, Grok, Phind, Poe, Mistral,
+     HuggingChat, Kagi, DuckDuckGo AI.
+  4. `User-Agent` fingerprint for in-app embeds (OAI-SearchBot,
+     PerplexityBot, ClaudeBot, etc.).
+  5. Empty referrer + cross-site `Sec-Fetch-Site` + direct PDP landing →
+     low-confidence heuristic.
+- First-touch cookie `_xpay_ref` (30d, JSON, HttpOnly, SameSite=Lax) +
+  WC-session mirror so cookie-blockers still attribute. Higher-confidence
+  later signals can replace lower; same-or-lower never displaces.
+- On `woocommerce_checkout_create_order` (priority 5, ahead of
+  `Xpay_Cart::tag_order`), the resolved record is copied onto the order as
+  `_xpay_ref_inbound` meta. `Xpay_Order_Events` reads it on payment
+  complete.
+- Default ruleset is seeded from the
+  [MalteBerlin/LLM-Referrer](https://github.com/MalteBerlin/LLM-Referrer)
+  list plus GA4's May-2026 native "AI Assistant" channel definition (16
+  source hosts + 5 UTM sources + 7 UA fingerprints). Future revs will
+  fetch a remote, refreshable ruleset.
+
+### Compatibility
+
+- No re-authorization required — uses only the existing site_token + plugin
+  api_key, standard WC action hooks, request superglobals, and a first-party
+  cookie. WordPress will not flag a permission change on auto-update from
+  any 0.4.x install.
+
+### Carried over from 0.4.2 (never SVN-published, folded into this release)
+
+## [0.4.2] — 2026-06-27
+
+### Changed — explicit-consent gate on the AI Storefront Assistant (`class-xpay-plugin.php`)
+
+- `is_storefront_widget_entitled()` now requires BOTH layers to be true before the
+  chat bubble can render: (1) backend entitlement (plan or design-partner grant)
+  AND (2) explicit merchant consent — either the dashboard `widgetConfig.widgetEnabled`
+  flag set via xpay-app, or the local wp-admin toggle. Pre-grant entitlement
+  ALONE no longer surfaces the widget. Fixes the lordofcbd 2026-06-25 case where
+  a grant allowlist auto-rendered the chat without operator notification.
+- Behaviour unchanged when the merchant has flipped the local wp-admin toggle —
+  that counts as manual consent.
+
+### Added — GTIN emitted in Product JSON-LD (`class-xpay-schema.php`)
+
+- Product schema now includes `gtin8` / `gtin12` / `gtin13` / `gtin14` / `gtin`
+  (length-keyed) sourced from WC 8.6+ `global_unique_id` with legacy fallbacks
+  (`_gtin`, `_barcode`, `_ean`, `_upc`). Lets Google Shopping, Bing, and
+  agent crawlers match a PDP to its offer in shopping feeds — improves the
+  Agent-Readiness `catalog_feed_quality` signal and shopping-result eligibility.
+
+### Fixed — out-of-stock items rejected at the cart deeplink (`class-xpay-cart.php`)
+
+- Cart-deeplink handler now skips lines whose target product/variation is out
+  of stock instead of forwarding them to WC's `add_to_cart` (where they'd
+  either silently drop or push a "no longer available" notice into the cart).
+  The agent surface already filters in_stock, but a stale agent cache or a
+  manual deeplink can arrive after the merchant marks a SKU OOS — covered
+  defensively now. If every line is rejected, the existing "None available"
+  410 response fires.
 
 ### Added — instant cache flush for the AI Storefront Assistant
 

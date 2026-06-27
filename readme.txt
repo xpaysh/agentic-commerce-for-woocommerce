@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.4.2
+Stable tag: 0.4.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -183,8 +183,11 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.4.3 =
+AI-attributed orders: orders from shoppers referred by ChatGPT, Perplexity, Claude, Gemini, Copilot etc. now show in your xpay dashboard with revenue split by source. Strictly non-PII. Includes the 0.4.2 fixes.
+
 = 0.4.2 =
-Faster propagation: the AI Storefront Assistant's on/off toggle and appearance edits from your xpay dashboard now take effect on your storefront within seconds (previously up to 6 hours).
+AI Storefront Assistant now consent-gated — never appears until you turn it on. Variable-product AI checkout fixed. Product GTIN emitted in schema. OOS cart guard. Dashboard changes propagate in seconds.
 
 = 0.4.1 =
 Optional Content Engine add-on: when enabled for your store, xpay can publish answer-first comparison/buying-guide pages to your site. Off unless you're subscribed.
@@ -249,6 +252,19 @@ Adds /?xpay_route=acp query-arg fallback for the discovery file on hosts that in
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.4.3 =
+* **New: AI-referred orders are now attributed and reported.** When a shopper completes checkout after being referred by an AI assistant — whether through one of our links (sidecar, MCP, chat widget) or via a Referer / `utm_source` from ChatGPT, Perplexity, Claude, Gemini, Copilot, Meta AI, You.com, DeepSeek, Grok, Phind, Poe, Mistral, HuggingChat, Kagi or DuckDuckGo AI — the order shows up in your xpay dashboard's attributed-orders feed with revenue split by source. First-touch attribution carried in a first-party cookie (30 days, no third-party tracking).
+* **Strict no-PII contract.** Only `order_id`, `placed_at`, `status`, `amount_total`, `amount_discount`, `currency`, `line_count`, ordered SKUs and the attribution source leave your store. Never customer email, address, phone or IP. The server-side ingest enforces an allow-list on top-level keys as a defence-in-depth measure.
+* **No re-authorization needed.** Uses existing plugin permissions only — no new WooCommerce REST scope, no new merchant grant. WordPress will not surface a "permission change" prompt on auto-update.
+* **Includes everything from 0.4.2** (consent-gated AI Storefront Assistant, GTIN in product schema, out-of-stock guard at the cart, variable-product cart fix, faster dashboard propagation).
+
+= 0.4.2 =
+* **Changed: AI Storefront Assistant is now consent-gated.** The chat bubble never appears on your storefront until you explicitly turn it on — either from the Storefront Assistant page in the xpay dashboard or from the WooCommerce settings toggle. A backend subscription or design-partner grant alone is no longer enough to surface the widget; you stay in control of what shows on your site.
+* **New: GTIN in product schema.** When your products carry a `global_unique_id` (WC 8.6+) or a legacy GTIN/EAN/UPC value, it's now emitted in the Product JSON-LD as `gtin8`/`gtin12`/`gtin13`/`gtin14` so Google Shopping, Bing and AI shopping agents can match each PDP to the corresponding offer in your feed.
+* **Fixed: out-of-stock items in agent carts.** The cart-deeplink handler now refuses lines whose target product or variation is out of stock — a defensive guard against stale agent responses or manual deeplinks arriving after a stock-out. If every line is rejected, you still get the existing "items unavailable" response.
+* **Fixed: variable-product AI checkout.** Restores AI-chat add-to-cart for variable products that broke when the agent submitted a variation SKU without a separate variation id.
+* **Faster propagation.** Toggle and appearance changes from the xpay dashboard now take effect on your storefront within seconds.
 
 = 0.4.1 =
 * **New: Content Engine pages.** When your store is subscribed to the Content Engine add-on, xpay can publish answer-first comparison, buying-guide and listicle pages — tuned to the questions AI assistants ask — as real Pages on your own domain (indexable, in your sitemap, human-visible, and discoverable by AI agents). Pages stay in sync automatically: published while subscribed, reverted to draft if you unsubscribe, and we only ever touch pages we created — your own content is never modified. Off by default; nothing publishes unless the add-on is active for your store.

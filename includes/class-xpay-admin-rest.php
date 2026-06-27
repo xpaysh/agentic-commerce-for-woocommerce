@@ -121,6 +121,75 @@ class Xpay_Admin_REST {
 						$executed[] = $action;
 						break;
 
+					case 'diagnose_order_events':
+						// Self-test the order-attribution pipeline. Reports plugin-
+						// side state (connection, option, hook registrations, latest
+						// order meta) and optionally replays the last completed
+						// order's on_event() so we can observe the outbound POST
+						// result without waiting on a new shopper.
+						//
+						// Params:
+						//   replay      bool  — also fire on_event for the latest
+						//                       completed order (clears the
+						//                       _xpay_order_event_sent_at meta first
+						//                       so the dedupe doesn't short-circuit).
+						$report = array(
+							'is_connected'                => class_exists( 'Xpay_Plugin' ) && Xpay_Plugin::is_connected(),
+							'merchant_slug'               => function_exists( 'get_option' ) ? get_option( 'xpay_wc_merchant_slug', '' ) : '',
+							'api_key_length'              => strlen( (string) get_option( 'xpay_wc_api_key', '' ) ),
+							'order_events_enabled_option' => (bool) get_option( 'xpay_wc_order_events_enabled', 1 ),
+							'hooks'                       => array(
+								'woocommerce_payment_complete'      => has_action( 'woocommerce_payment_complete' ),
+								'woocommerce_order_status_completed' => has_action( 'woocommerce_order_status_completed' ),
+								'woocommerce_order_status_changed'  => has_action( 'woocommerce_order_status_changed' ),
+							),
+						);
+
+						$latest = wc_get_orders( array(
+							'limit'   => 1,
+							'orderby' => 'date',
+							'order'   => 'DESC',
+							'status'  => array( 'completed', 'processing' ),
+							'return'  => 'objects',
+						) );
+						if ( ! empty( $latest ) && $latest[0] instanceof WC_Order ) {
+							$latest_order = $latest[0];
+							$report['latest_order'] = array(
+								'id'         => $latest_order->get_id(),
+								'status'     => $latest_order->get_status(),
+								'total'      => (string) $latest_order->get_total(),
+								'currency'   => $latest_order->get_currency(),
+								'placed_at'  => $latest_order->get_date_created() ? $latest_order->get_date_created()->date( 'c' ) : null,
+								'meta_sent_at' => $latest_order->get_meta( '_xpay_order_event_sent_at', true ) ?: null,
+								'meta_source'  => $latest_order->get_meta( '_xpay_source', true ) ?: null,
+								'meta_inbound' => $latest_order->get_meta( '_xpay_ref_inbound', true ) ?: null,
+							);
+
+							if ( ! empty( $params['replay'] ) && class_exists( 'Xpay_Order_Events' ) ) {
+								// Clear the dedupe meta so on_event posts even though
+								// we may have already attempted on a prior trigger.
+								$latest_order->delete_meta_data( '_xpay_order_event_sent_at' );
+								$latest_order->save();
+
+								$t0 = microtime( true );
+								Xpay_Order_Events::instance()->on_event( $latest_order->get_id() );
+								$ms = (int) round( ( microtime( true ) - $t0 ) * 1000 );
+
+								// Reload to see if the sent-at meta got stamped (i.e. POST succeeded).
+								$reloaded = wc_get_order( $latest_order->get_id() );
+								$report['replay'] = array(
+									'duration_ms'           => $ms,
+									'sent_at_after_replay'  => $reloaded ? ( $reloaded->get_meta( '_xpay_order_event_sent_at', true ) ?: null ) : null,
+									'success'               => $reloaded && $reloaded->get_meta( '_xpay_order_event_sent_at', true ) ? true : false,
+								);
+							}
+						}
+
+						$executed[] = $action;
+						$report_holder = isset( $report_holder ) ? $report_holder : array();
+						$report_holder['diagnose_order_events'] = $report;
+						break;
+
 					case 'clear_ucp_profile_cache':
 						// xpay_wc_ucp_profile holds the backend-pushed UCP body.
 						// Deleting it forces Xpay_REST::serve_ucp_profile() to fall
@@ -190,15 +259,17 @@ class Xpay_Admin_REST {
 			}
 		}
 
-		return rest_ensure_response(
-			array(
-				'ok'             => true,
-				'plugin_version' => XPAY_WC_VERSION,
-				'executed'       => $executed,
-				'skipped'        => $skipped,
-				'errors'         => $errors,
-			)
+		$payload = array(
+			'ok'             => true,
+			'plugin_version' => XPAY_WC_VERSION,
+			'executed'       => $executed,
+			'skipped'        => $skipped,
+			'errors'         => $errors,
 		);
+		if ( isset( $report_holder ) && is_array( $report_holder ) ) {
+			$payload['reports'] = $report_holder;
+		}
+		return rest_ensure_response( $payload );
 	}
 
 	const LLMS_TXT_MAX_SECTIONS    = 20;

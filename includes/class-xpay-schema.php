@@ -121,6 +121,25 @@ class Xpay_Schema {
 			),
 		);
 
+		// GTIN — WC 8.6+ native `global_unique_id` (and legacy plugin variants).
+		// Emitted so Google / Bing / agent crawlers can match this PDP to an offer
+		// in shopping feeds. Length-based @type picks the right schema.org slot.
+		$gtin = $this->gtin_for( $xpay_product );
+		if ( '' !== $gtin ) {
+			$len = strlen( $gtin );
+			if ( 8 === $len ) {
+				$product_node['gtin8'] = $gtin;
+			} elseif ( 12 === $len ) {
+				$product_node['gtin12'] = $gtin;
+			} elseif ( 13 === $len ) {
+				$product_node['gtin13'] = $gtin;
+			} elseif ( 14 === $len ) {
+				$product_node['gtin14'] = $gtin;
+			} else {
+				$product_node['gtin'] = $gtin;
+			}
+		}
+
 		$rating_count = $xpay_product->get_rating_count();
 		if ( $rating_count > 0 ) {
 			$product_node['aggregateRating'] = array(
@@ -180,6 +199,29 @@ class Xpay_Schema {
 	 * @param array|null $override Per-product policy (merchant-approved) to prefer.
 	 * @return array|null
 	 */
+	/**
+	 * Resolve the product's GTIN from WC 8.6+ native field or legacy meta_data.
+	 * Returns digits only (numeric GTINs only — anything else gets the bare
+	 * `gtin` slot via the caller's length fallback). Empty string if unset.
+	 *
+	 * @param WC_Product $product
+	 * @return string
+	 */
+	private function gtin_for( $product ) {
+		$keys = array( 'global_unique_id', '_global_unique_id', '_gtin', '_barcode', '_ean', '_upc', 'gtin', 'barcode' );
+		foreach ( $keys as $key ) {
+			$val = $product->get_meta( $key, true );
+			if ( ! is_string( $val ) || '' === $val ) {
+				continue;
+			}
+			$val = trim( $val );
+			if ( '' !== $val ) {
+				return $val;
+			}
+		}
+		return '';
+	}
+
 	private function merchant_return_policy_node( $url, $override = null ) {
 		$cfg = is_array( $override ) && $override
 			? $override
