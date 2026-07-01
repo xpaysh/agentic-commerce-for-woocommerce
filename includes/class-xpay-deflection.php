@@ -174,6 +174,21 @@ class Xpay_Deflection {
 				break;
 			}
 		}
+		// Exact-match fetchers (bare/ambiguous UAs). Gemini's user-triggered fetch
+		// is the literal "Google" — matched with strict equality so we never
+		// deflect Googlebot / Google-Extended / APIs-Google (substring "Google"),
+		// which stay on origin for SEO + citations.
+		if ( ! $matched ) {
+			$exact = ( isset( $policy['deflectAgentsExact'] ) && is_array( $policy['deflectAgentsExact'] ) ) ? $policy['deflectAgentsExact'] : array();
+			$ua_trimmed = trim( $ua );
+			foreach ( $exact as $token ) {
+				$token = trim( (string) $token );
+				if ( '' !== $token && $ua_trimmed === $token ) {
+					$matched = true;
+					break;
+				}
+			}
+		}
 		if ( ! $matched ) {
 			return;
 		}
