@@ -11,6 +11,34 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-07-10
+
+### Added — Help search engines find your articles
+
+- Your blog's sitemap is now reachable on your own domain
+  (`yourstore.com/blog/sitemap.xml`), and its address is added to your
+  `robots.txt` automatically — so Google and other search engines discover and
+  index your xpay articles faster. Only active when the blog feature is turned on,
+  and it adds to your `robots.txt` without changing anything already there.
+
+## [0.5.0] — 2026-07-08
+
+### Added — Publish your xpay articles on your own domain
+
+- Your xpay Content Agent articles can now appear at `yourstore.com/blog` — on
+  your own domain instead of a separate subdomain — so the pages build your
+  site's authority and are more likely to be cited by AI answer engines. xpay
+  renders the pages and serves them under your URL; nothing is copied into or
+  changed on your site.
+- **Off until you turn it on.** The feature only activates for your store after
+  you opt in, and only for the articles xpay created for you.
+- **Your own content always wins.** If you already have a blog or any page at
+  that address, or you publish your own post there, we leave it completely alone
+  and show yours. We only fill in pages that would otherwise not exist.
+- **Can't break your store.** If anything ever goes wrong on our side, your
+  store simply shows its normal page — checkout and everything else are never
+  affected.
+
 ## [0.4.4] — 2026-06-27
 
 ### Added — GDPR-aware attribution defaults (`class-xpay-attribution.php`)

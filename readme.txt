@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.4.4
+Stable tag: 0.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -255,6 +255,12 @@ Adds the `/?xpay_route=acp` query-arg fallback for the discovery file on hosts t
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.5.1 =
+* **Help search engines find your articles.** Your blog's sitemap is now reachable on your own domain (yourstore.com/blog/sitemap.xml), and its address is added to your robots.txt automatically — so Google and other search engines discover and index your xpay articles faster. Only active when the blog feature is turned on, and it adds to your robots.txt without changing anything already there.
+
+= 0.5.0 =
+* **Publish your xpay articles on your own domain.** Your Content Agent articles can now appear at yourstore.com/blog — on your own domain instead of a separate subdomain — so the pages build your site's authority and are more likely to be cited by AI answer engines. Off until you turn it on; only the articles xpay created for you; your own content always wins if you already have a page at that address.
 
 = 0.4.4 =
 * **GDPR-aware attribution defaults.** EU/UK stores (30-country list: all EU + EEA IS/LI/NO + UK) ship with the 30-day `_xpay_ref` persistence cookie OFF by default; the WC session still carries attribution through the active shopping journey (~48h). New `xpay_wc_attribution_cookie_enabled` option and `xpay_wc_attribution_should_set_cookie` filter for CMP integrations (Cookiebot, Iubenda, Complianz, etc.).
