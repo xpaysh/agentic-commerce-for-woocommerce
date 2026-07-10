@@ -278,14 +278,22 @@ class Xpay_Agent_Analytics {
 			// into shutdown within the same PHP process.
 			$deflected = ! empty( $GLOBALS['xpay_wc_deflected'] );
 
+			// Did WE reverse-proxy this hit to the apex blog from our renderer?
+			// Xpay_Blog_Proxy sets this in-memory immediately before its exit.
+			$bp             = isset( $GLOBALS['xpay_wc_blog_proxied'] ) && is_array( $GLOBALS['xpay_wc_blog_proxied'] ) ? $GLOBALS['xpay_wc_blog_proxied'] : null;
+			$blog_proxied   = $bp ? 1 : 0;
+			$bp_cache_hit   = ( $bp && ! empty( $bp['cache_hit'] ) ) ? 1 : 0;
+
 			$event = array(
-				'ts'        => time(),
-				'ua_bot'    => substr( self::matched_token( $ua ), 0, 48 ),
-				'bot_class' => $bot_class,
-				'path'      => substr( $path, 0, 256 ),
-				'path_type' => self::classify_path( $path ),
-				'status'    => $status,
-				'deflected' => $deflected ? 1 : 0,
+				'ts'          => time(),
+				'ua_bot'      => substr( self::matched_token( $ua ), 0, 48 ),
+				'bot_class'   => $bot_class,
+				'path'        => substr( $path, 0, 256 ),
+				'path_type'   => self::classify_path( $path ),
+				'status'      => $status,
+				'deflected'   => $deflected ? 1 : 0,
+				'blog_proxied' => $blog_proxied,
+				'bp_cache_hit' => $bp_cache_hit,
 			);
 
 			self::buffer( $event );

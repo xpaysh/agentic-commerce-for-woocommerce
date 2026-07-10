@@ -11,6 +11,7 @@ require_once XPAY_WC_PATH . 'includes/class-xpay-telemetry.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-consent.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-emitter-probe.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-deflection.php';
+require_once XPAY_WC_PATH . 'includes/class-xpay-blog-proxy.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-agent-analytics.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-rest.php';
 require_once XPAY_WC_PATH . 'includes/class-xpay-admin-rest.php';
@@ -53,6 +54,7 @@ class Xpay_Plugin {
 		Xpay_Settings::instance();
 		Xpay_Emitter_Probe::register_cron();
 		Xpay_Deflection::register();
+		Xpay_Blog_Proxy::register();
 		Xpay_Agent_Analytics::register();
 		Xpay_Admin_REST::instance();
 		Xpay_Widget::instance();
@@ -165,6 +167,9 @@ class Xpay_Plugin {
 		}
 		if ( class_exists( 'Xpay_Deflection' ) ) {
 			Xpay_Deflection::unregister_cron();
+		}
+		if ( class_exists( 'Xpay_Blog_Proxy' ) ) {
+			Xpay_Blog_Proxy::unregister_cron();
 		}
 		if ( class_exists( 'Xpay_Agent_Analytics' ) ) {
 			Xpay_Agent_Analytics::unregister_cron();
