@@ -143,10 +143,15 @@ class Xpay_Order_Events {
 			return;
 		}
 
+		// Bound BOTH the count AND the wall-clock. Each on_event() is a blocking
+		// POST (up to 5s); without a time budget an unresponsive backend could
+		// pin a WP-Cron worker for 15×5s. Stop at 20s elapsed and let the next
+		// daily sweep pick up the remainder — nothing is lost, just deferred.
 		$dispatched = 0;
+		$started    = microtime( true );
 		foreach ( $orders as $order ) {
-			if ( $dispatched >= 25 ) {
-				break; // bounded per run — the next sweep picks up the rest.
+			if ( $dispatched >= 15 || ( microtime( true ) - $started ) > 20 ) {
+				break;
 			}
 			if ( ! $order instanceof WC_Order ) {
 				continue;
@@ -193,11 +198,27 @@ class Xpay_Order_Events {
 			wp_schedule_single_event( time(), self::SCHEDULED_HOOK, array( $order_id ) );
 		}
 
-		// Belt-and-braces: also dispatch inline on `shutdown`, after the response
-		// has been flushed to the shopper. If WP-Cron does fire, on_event()'s own
-		// idempotency check makes the second run a no-op. If it never fires, this
-		// is the only thing that sends the event at all.
-		$this->queue_for_shutdown( $order_id );
+		// Belt-and-braces: also dispatch inline on `shutdown`, but ONLY on SAPIs
+		// where we can flush the response to the shopper FIRST. If we can't
+		// early-flush, the inline POST would run while the checkout connection is
+		// still open and add up to 5s to the shopper's thank-you page — so on
+		// those SAPIs we rely solely on WP-Cron + the daily reconcile sweep (the
+		// event still sends, just not inline).
+		if ( self::can_early_flush() ) {
+			$this->queue_for_shutdown( $order_id );
+		}
+	}
+
+	/**
+	 * True only when the current SAPI can return the response to the client
+	 * BEFORE PHP shutdown runs. PHP-FPM exposes fastcgi_finish_request();
+	 * LiteSpeed's LSAPI exposes litespeed_finish_request() (the fastcgi alias was
+	 * removed from php-src). Apache mod_php / CGI / plain FastCGI expose NEITHER,
+	 * so on those the client waits for the whole request including shutdown — we
+	 * must not run a blocking POST there.
+	 */
+	private static function can_early_flush() {
+		return function_exists( 'fastcgi_finish_request' ) || function_exists( 'litespeed_finish_request' );
 	}
 
 	/**
@@ -239,9 +260,13 @@ class Xpay_Order_Events {
 	 * event this is a cheap no-op.
 	 */
 	public function dispatch_shutdown_queue() {
+		// Flush the response to the shopper before the blocking POST. queue_for_
+		// shutdown() only ran if one of these exists (see can_early_flush()), so on
+		// every SAPI that reaches here the connection is closed first.
 		if ( function_exists( 'fastcgi_finish_request' ) ) {
-			// Response is already flushed on FPM; be explicit for the other SAPIs.
-			@fastcgi_finish_request(); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			fastcgi_finish_request();
+		} elseif ( function_exists( 'litespeed_finish_request' ) ) {
+			litespeed_finish_request();
 		}
 		foreach ( $this->shutdown_queue as $order_id ) {
 			$this->on_event( $order_id );
@@ -263,9 +288,15 @@ class Xpay_Order_Events {
 	 * plus a fallback for the stacks that FORGET to register theirs — any
 	 * transition on an order that has a paid date but was never sent.
 	 *
-	 * Cancelled / refunded / failed still never fire: they're not in the paid
-	 * list, and the fallback only triggers on an order that actually recorded
-	 * payment. Idempotency stays with the SENT_META_KEY sentinel.
+	 * ⛔ The `get_date_paid()` fallback MUST exclude terminal-negative statuses.
+	 * A refunded/cancelled/failed order KEEPS its date_paid — WooCommerce does not
+	 * clear it on refund — so without the guard below, a refund transition would
+	 * fire an event that reports the FULL amount_total with status=refunded. If
+	 * that were the first successful send (e.g. the original POST failed and
+	 * cleared the sentinel, or an order predates this plugin version), the backend
+	 * would store it as refunded "revenue". `wc_get_is_paid_statuses()` never
+	 * contains these, but the fallback fires on ANY $to_status, so it must be
+	 * filtered here explicitly.
 	 */
 	public function on_status_changed( $order_id, $from_status, $to_status ) {
 		$paid_statuses = function_exists( 'wc_get_is_paid_statuses' ) ? wc_get_is_paid_statuses() : array( 'processing', 'completed' );
@@ -275,10 +306,15 @@ class Xpay_Order_Events {
 			|| 'processing' === $to_status;
 
 		if ( ! $fire ) {
-			$order = wc_get_order( $order_id );
-			$fire  = $order instanceof WC_Order
-				&& $order->get_date_paid()
-				&& ! $order->get_meta( self::SENT_META_KEY, true );
+			// Money-not-collected / not-a-sale states. The date_paid fallback must
+			// never fire on these even though a refunded order still has a paid date.
+			$negative = array( 'refunded', 'cancelled', 'failed', 'trash', 'pending', 'checkout-draft', 'on-hold' );
+			if ( ! in_array( $to_status, $negative, true ) ) {
+				$order = wc_get_order( $order_id );
+				$fire  = $order instanceof WC_Order
+					&& $order->get_date_paid()
+					&& ! $order->get_meta( self::SENT_META_KEY, true );
+			}
 		}
 
 		if ( $fire ) {

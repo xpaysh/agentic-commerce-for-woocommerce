@@ -21,6 +21,18 @@
 
   if (typeof window.XpayAttr === 'undefined' || !window.XpayAttr.endpoint) return;
 
+  // Locale-aware "is this a product page path?" — mirror of the server's
+  // is_deep_product_landing(). Kept in sync deliberately.
+  function isDeepProductPath(path) {
+    if (!path) return false;
+    var bases = ['product', 'produit', 'produits', 'producto', 'productos', 'produkt', 'prodotto', 'produto'];
+    var segs = path.toLowerCase().split('/');
+    for (var i = 0; i < segs.length; i++) {
+      if (bases.indexOf(segs[i]) !== -1) return true;
+    }
+    return false;
+  }
+
   try {
     // Once per tab-session. A shopper browsing 12 PDPs sends one beacon, not 12.
     if (window.sessionStorage && sessionStorage.getItem('_xpay_ref_sent')) return;
@@ -33,11 +45,17 @@
       landing: window.location.pathname || ''
     };
 
-    // Nothing to classify: no stamp, no utm, no referrer. The only remaining
-    // signal would be the direct-deep-PDP heuristic, which the server can still
-    // evaluate from `landing` — so only skip when there is truly nothing to say.
+    // A real, attributable signal: a stamp, a utm, or a referrer we can classify.
     var hasSignal = payload.xpay_ref || payload.utm_source || payload.referrer;
-    var couldBeHeuristic = !payload.referrer && payload.landing;
+
+    // The direct-deep-PDP heuristic. ⛔ Gate it to no-referrer landings on a
+    // PRODUCT path only. Without this it fires for EVERY direct visitor (bookmark,
+    // type-in, homepage, category) — a large population, each of which would then
+    // trigger an uncached WP-boot REST hit. Mirrors is_deep_product_landing() on
+    // the server; locale-aware so /produit/ /producto/ etc. also count.
+    var couldBeHeuristic = !payload.referrer && isDeepProductPath(payload.landing);
+
+    // Nothing to say → don't wake the origin at all.
     if (!hasSignal && !couldBeHeuristic) return;
 
     var body = JSON.stringify(payload);

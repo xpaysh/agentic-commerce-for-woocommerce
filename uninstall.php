@@ -42,6 +42,7 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 		'xpay_wc_agent_buf',
 		'xpay_wc_agent_dropped',
 		'xpay_wc_human_daily',
+		'xpay_wc_ip_salt',
 
 		// Lifecycle
 		'xpay_wc_first_activated_at',

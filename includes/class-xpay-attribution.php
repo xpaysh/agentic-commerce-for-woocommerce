@@ -89,6 +89,35 @@ class Xpay_Attribution {
 	}
 
 	/**
+	 * Kill switch for the JS beacon + its REST endpoint, independent of a plugin
+	 * release. Off automatically on a disconnected store (no point classifying if
+	 * we can't report), and hard-disableable via
+	 * `define( 'XPAY_WC_ATTRIBUTION_BEACON', false )` or the filter below.
+	 */
+	private static function beacon_enabled() {
+		if ( defined( 'XPAY_WC_ATTRIBUTION_BEACON' ) && false === XPAY_WC_ATTRIBUTION_BEACON ) {
+			return false;
+		}
+		$connected = ! class_exists( 'Xpay_Plugin' ) || Xpay_Plugin::is_connected();
+		return (bool) apply_filters( 'xpay_wc_attribution_beacon_enabled', $connected );
+	}
+
+	/** Per-IP throttle for the public classify endpoint. ~30 hits / 5 min / IP. */
+	private function beacon_rate_ok() {
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		if ( '' === $ip ) {
+			return true; // can't key it — don't block legitimate traffic behind a broken proxy.
+		}
+		$key   = 'xpay_cls_' . md5( $ip );
+		$count = (int) get_transient( $key );
+		if ( $count >= 30 ) {
+			return false;
+		}
+		set_transient( $key, $count + 1, 5 * MINUTE_IN_SECONDS );
+		return true;
+	}
+
+	/**
 	 * WP Rocket: keep ONE cache entry for a stamped URL and pass `xpay_ref`
 	 * through to JS, instead of serving the cached page with the param swallowed.
 	 *
@@ -114,7 +143,12 @@ class Xpay_Attribution {
 	 * filemtime changes whenever the file does, version bump or not.
 	 */
 	public function enqueue_beacon() {
-		if ( is_admin() ) {
+		if ( is_admin() || ! self::beacon_enabled() ) {
+			return;
+		}
+		// Don't add the REST hit to the cart/checkout critical path — attribution
+		// is already resolved by the time a shopper reaches those pages.
+		if ( function_exists( 'is_cart' ) && ( is_cart() || is_checkout() ) ) {
 			return;
 		}
 		$file = XPAY_WC_PATH . self::SCRIPT_REL;
@@ -143,6 +177,9 @@ class Xpay_Attribution {
 	}
 
 	public function register_rest() {
+		if ( ! self::beacon_enabled() ) {
+			return; // no endpoint on a disconnected/disabled store — shrinks the attack surface.
+		}
 		register_rest_route(
 			self::REST_NAMESPACE,
 			self::REST_ROUTE,
@@ -168,9 +205,16 @@ class Xpay_Attribution {
 	 */
 	public function rest_classify( $request ) {
 		// Same-origin only. A cross-site caller has no business seeding a
-		// shopper's attribution record.
+		// shopper's attribution record. (Header-based, so not a hard control
+		// against non-browsers — the throttle below is the real DoS guard.)
 		if ( ! $this->is_same_origin( $request ) ) {
 			return new WP_REST_Response( null, 403 );
+		}
+
+		// Per-IP throttle: the endpoint is unauthenticated and each accepted
+		// match can mint a WC session row, so cap how fast one caller can drive it.
+		if ( ! $this->beacon_rate_ok() ) {
+			return new WP_REST_Response( null, 429 );
 		}
 
 		$raw = (string) $request->get_body();
@@ -571,25 +615,40 @@ class Xpay_Attribution {
 	 * fix does nothing. WooCommerce's own Store API works around this the same
 	 * way: initialize the session explicitly.
 	 *
-	 * We then force the session cookie, because for a brand-new guest WC doesn't
-	 * emit one until the cart has contents — and a shopper landing from ChatGPT
-	 * has an empty cart. No cookie, no session to carry attribution to checkout.
+	 * ⛔⛔ COST OF FORCING A SESSION COOKIE. Minting `wp_woocommerce_session_*` for
+	 * a visitor who had no cart does two expensive things: (1) Cloudflare APO,
+	 * Varnish and LiteSpeed all BYPASS their edge cache for any request carrying
+	 * that cookie, so every subsequent pageview by that visitor pulls from origin;
+	 * (2) it writes a row to `wp_woocommerce_sessions`. Both are fine for a
+	 * genuine AI referral (small, high-value population). They are NOT fine for
+	 * the low-confidence direct-deep-PDP heuristic, which fires for ordinary
+	 * bookmark / type-in / dark-referrer traffic — a large population that would
+	 * then all become uncacheable. So: only MINT a session (+ force the cookie)
+	 * for a real match (stamp / utm / referer / ua). For the low-confidence
+	 * heuristic we record ONLY if a session already exists — never create one.
+	 * (The deterministic order-time signal for that case is WC core's own
+	 * `source_type=typein` + entry_path, captured with zero cache/cookie cost.)
 	 */
 	private function write_session( $record ) {
 		if ( ! function_exists( 'WC' ) ) {
 			return;
 		}
 
-		if ( ! WC()->session && method_exists( WC(), 'initialize_session' ) ) {
+		$is_low = isset( $record['confidence'] ) && 'low' === $record['confidence'];
+
+		// Only bootstrap a brand-new session for a genuine (non-heuristic) match.
+		if ( ! WC()->session && ! $is_low && method_exists( WC(), 'initialize_session' ) ) {
 			WC()->initialize_session();
 		}
 		if ( ! WC()->session ) {
-			return;
+			return; // low-confidence with no existing session → nothing durable, by design.
 		}
 
 		WC()->session->set( self::SESSION_KEY, $record );
 
-		if ( method_exists( WC()->session, 'set_customer_session_cookie' ) ) {
+		// Force the cache-busting cookie ONLY for a real match. Never for the
+		// heuristic — see the cache-cost note above.
+		if ( ! $is_low && method_exists( WC()->session, 'set_customer_session_cookie' ) ) {
 			WC()->session->set_customer_session_cookie( true );
 		}
 	}
