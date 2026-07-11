@@ -50,6 +50,7 @@ class Xpay_Plugin {
 		Xpay_Cart::instance();
 		Xpay_Attribution::instance();
 		Xpay_Order_Events::instance();
+		Xpay_Order_Events::register_cron();
 		Xpay_Webhooks::instance();
 		Xpay_Settings::instance();
 		Xpay_Emitter_Probe::register_cron();
@@ -173,6 +174,9 @@ class Xpay_Plugin {
 		}
 		if ( class_exists( 'Xpay_Agent_Analytics' ) ) {
 			Xpay_Agent_Analytics::unregister_cron();
+		}
+		if ( class_exists( 'Xpay_Order_Events' ) ) {
+			Xpay_Order_Events::unregister_cron();
 		}
 		// Belt-and-suspenders is_enabled() guard — see on_activate() above.
 		if ( class_exists( 'Xpay_Telemetry' ) && Xpay_Telemetry::is_enabled() ) {

@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.5.1
+Stable tag: 0.5.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -256,6 +256,12 @@ Adds the `/?xpay_route=acp` query-arg fallback for the discovery file on hosts t
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
 
+= 0.5.2 =
+* **See the orders AI agents actually place.** WooCommerce's built-in Agentic Checkout records a session ID on every order an AI agent completes through it. We now read that ID, so those orders show up in your dashboard as confirmed agent orders instead of being lumped in with everything else. This applies to new orders from now on — it can't reach back and re-label past ones.
+* **Attribution that survives page caching.** If your store runs a page cache (WP Rocket, LiteSpeed and friends), the cached HTML is served before our code gets a chance to look at where the shopper came from — so referrals from ChatGPT and other assistants were being missed. We now also read WooCommerce's own order-source data, which is recorded in the shopper's browser and isn't affected by caching.
+* **Orders paid by bank transfer, cheque or cash on delivery are no longer skipped.** Previously only orders that reached "Processing" or "Completed" were reported. Stores using offline payments, or shipping plugins with their own custom statuses (La Poste, for example), were missing roughly a fifth of their orders.
+* **Order reporting no longer depends on a visitor arriving.** Order events were queued for WordPress's scheduler, which only runs when someone next loads a page — so on a quiet store an order could sit unsent for hours, or never send. Orders now dispatch straight after checkout, and a daily catch-up re-sends anything that slipped through the past week. Only runs on stores connected to xpay.
+
 = 0.5.1 =
 * **Help search engines find your articles.** Your blog's sitemap is now reachable on your own domain (yourstore.com/blog/sitemap.xml), and its address is added to your robots.txt automatically — so Google and other search engines discover and index your xpay articles faster. Only active when the blog feature is turned on, and it adds to your robots.txt without changing anything already there.
 
@@ -271,6 +277,8 @@ The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGE
 = 0.4.3 =
 * **AI-referred orders are now attributed and reported.** When a shopper completes checkout after being referred by an AI assistant — through one of our links (sidecar, MCP, chat widget) or via a Referer / `utm_source` from ChatGPT, Perplexity, Claude, Gemini, Copilot, Meta AI, You.com, DeepSeek, Grok, Phind, Poe, Mistral, HuggingChat, Kagi or DuckDuckGo AI — the order surfaces in your xpay dashboard's attributed-orders feed with revenue split by source. First-touch attribution carried in a first-party cookie (30 days, no third-party tracking).
 * **Strict no-PII contract.** Only `order_id`, `placed_at`, `status`, `amount_total`, `amount_discount`, `currency`, `line_count`, ordered SKUs and the attribution source leave your store. Never customer email, address, phone or IP. The server-side ingest enforces an allow-list on top-level keys as defence in depth.
+
+As of 0.5.2 an attributed order may also carry: the WooCommerce Agentic Checkout session and provider ID (present only on orders an AI agent completed through WooCommerce's own agentic checkout), and WooCommerce's own order-source context — the channel type (`utm`/`organic`/`referral`/`typein`/`admin`), the device type, and the *path* of the page the shopper first landed on. The landing value is the path only: the host, query string and fragment are stripped before it leaves your store, so no tokens or personal data can ride along. Still never sent: customer email, address, phone, or IP.
 * **No re-authorization needed.** Uses existing plugin permissions only — no new WooCommerce REST scope, no new merchant grant. WordPress will not surface a "permission change" prompt on auto-update.
 * **Includes everything from 0.4.2** (consent-gated AI Storefront Assistant, GTIN in product schema, defensive out-of-stock guard at the cart deeplink, variable-product carts, faster dashboard propagation).
 

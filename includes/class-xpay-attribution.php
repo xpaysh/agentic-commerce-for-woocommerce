@@ -173,15 +173,13 @@ class Xpay_Attribution {
 			}
 		}
 
-		// 3. Referer host match.
+		// 3. Referer host match - the same matcher Xpay_Order_Events runs WC core's
+		// captured referrer through, so both paths classify identically.
 		$referer = isset( $_SERVER['HTTP_REFERER'] ) ? sanitize_url( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '';
 		if ( $referer ) {
-			$host = $this->host_of( $referer );
-			$path = $this->path_of( $referer );
-			foreach ( $ruleset['hosts'] as $pattern => $source ) {
-				if ( $this->host_matches( $pattern, $host, $path ) ) {
-					return $this->record( $source, 'high', 'referer' );
-				}
+			$match = self::match_referrer( $referer );
+			if ( $match ) {
+				return $this->record( $match, 'high', 'referer' );
 			}
 		}
 
@@ -311,14 +309,42 @@ class Xpay_Attribution {
 		WC()->session->set( self::SESSION_KEY, $record );
 	}
 
-	private function host_of( $url ) {
+	private static function host_of( $url ) {
 		$h = wp_parse_url( $url, PHP_URL_HOST );
 		return is_string( $h ) ? strtolower( $h ) : '';
 	}
 
-	private function path_of( $url ) {
+	private static function path_of( $url ) {
 		$p = wp_parse_url( $url, PHP_URL_PATH );
 		return is_string( $p ) ? $p : '';
+	}
+
+	/**
+	 * Match a referrer URL against the host ruleset. Returns the source name
+	 * ('chatgpt', 'perplexity', ...) or null when nothing matches.
+	 *
+	 * Public + static so Xpay_Order_Events can run WooCommerce core's captured
+	 * referrer (`_wc_order_attribution_referrer`) through the SAME matcher at
+	 * order-event time, instead of duplicating the rules. One ruleset, one
+	 * matcher, two callers - plugin and order-event classify identically.
+	 */
+	public static function match_referrer( $url ) {
+		$url = (string) $url;
+		if ( '' === $url ) {
+			return null;
+		}
+		$host = self::host_of( $url );
+		if ( '' === $host ) {
+			return null;
+		}
+		$path    = self::path_of( $url );
+		$ruleset = self::instance()->ruleset();
+		foreach ( $ruleset['hosts'] as $pattern => $source ) {
+			if ( self::host_matches( $pattern, $host, $path ) ) {
+				return $source;
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -326,19 +352,19 @@ class Xpay_Attribution {
 	 * Suffix match so `chat.openai.com` and `openai.com/share/...` both attribute
 	 * to the same source without needing to enumerate every subdomain.
 	 */
-	private function host_matches( $pattern, $host, $path ) {
+	private static function host_matches( $pattern, $host, $path ) {
 		$pattern = strtolower( $pattern );
 		if ( false !== strpos( $pattern, '/' ) ) {
 			list( $p_host, $p_path ) = explode( '/', $pattern, 2 );
-			if ( ! $this->host_suffix( $p_host, $host ) ) {
+			if ( ! self::host_suffix( $p_host, $host ) ) {
 				return false;
 			}
 			return 0 === strpos( ltrim( $path, '/' ), ltrim( $p_path, '/' ) );
 		}
-		return $this->host_suffix( $pattern, $host );
+		return self::host_suffix( $pattern, $host );
 	}
 
-	private function host_suffix( $pattern, $host ) {
+	private static function host_suffix( $pattern, $host ) {
 		if ( $pattern === $host ) {
 			return true;
 		}
