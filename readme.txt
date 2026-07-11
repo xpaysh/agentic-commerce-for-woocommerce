@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.5.2
+Stable tag: 0.5.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -146,7 +146,7 @@ This plugin connects to the following xpay-operated services to deliver its core
 
 4. **agent-commerce.xpay.sh/v1/events** — Optional anonymous lifecycle telemetry. Disabled by default; only contacted if you explicitly opt in via the first-activation admin notice or **Settings → xpay → Privacy**. Full payload disclosure in the Privacy section.
 
-8. **agent-commerce.xpay.sh/v1/agent-analytics** — Optional anonymous AI-bot crawl analytics. Disabled by default; shares the same opt-in as item 4 (and respects a separate `define( 'XPAY_WC_AGENT_ANALYTICS', false )` hard-off). When enabled, the plugin counts requests from *known AI bots only* (e.g. GPTBot, ChatGPT-User, ClaudeBot, PerplexityBot, Google-Extended) — recording the bot name, a coarse page type (home/product/category/discovery-file/sitemap/other), the HTTP status, and whether we routed the bot to your structured catalog. It also sends an aggregate daily count of human pageviews (a number only — no user-agent, no URLs, no per-visit data) as the AI-vs-human denominator. Events are buffered locally and sent in the background by WP-Cron, never on a page load. Cart, checkout, account, admin and REST paths are never recorded. No per-visit human data, no IP addresses, no customer, order, or personal data.
+8. **agent-commerce.xpay.sh/v1/agent-analytics** — Optional anonymous AI-bot crawl analytics. Disabled by default; shares the same opt-in as item 4 (and respects a separate `define( 'XPAY_WC_AGENT_ANALYTICS', false )` hard-off). When enabled, the plugin counts requests from *known AI bots only* (e.g. GPTBot, ChatGPT-User, ClaudeBot, PerplexityBot, Google-Extended) — recording the bot name, a coarse page type (home/product/category/discovery-file/sitemap/other), the HTTP status, and whether we routed the bot to your structured catalog. It also sends an aggregate daily count of human pageviews (a number only — no user-agent, no URLs, no per-visit data) as the AI-vs-human denominator. Since 0.5.3 a bot event also carries a salted, one-way hash of the *bot's* IP address (so two hits from the same crawler can be counted as one visitor). The salt is unique to your store and is regenerated every day, so the hash cannot be linked across days or across stores, and the address itself is never stored or transmitted. This applies to AI bots only — a human visitor's IP is never read, hashed or sent. Events are buffered locally and sent in the background by WP-Cron, never on a page load. Cart, checkout, account, admin and REST paths are never recorded. No per-visit human data, no customer, order, or personal data.
 
 5. **audit.xpay.sh** — Merchant-facing audit dashboard. The plugin emits a link to `audit.xpay.sh/{your-slug}` on the Settings page so you can review the live agent-readiness score xpay computed from your catalog; the plugin itself does not fetch from this host. Opening the link from your browser sends standard browser headers to xpay.
 6. **auth.xpay.sh** — Public OAuth-protected-resource discovery target. The plugin publishes `auth.xpay.sh` as the `authorization_servers[0]` entry in `/.well-known/oauth-protected-resource` (an RFC 9728 metadata document AI agents fetch to learn where to obtain a token). The plugin does not contact this host server-to-server; it is referenced for agent-side discovery only.
@@ -165,7 +165,7 @@ xpay is built non-custodially: we never see your customers, your orders, or any 
 
 * **Optionally sent if you opt in to anonymous telemetry** (default OFF): lifecycle event names tagged with your site URL, plugin version, WP version, WC version, PHP version, locale. No customer data, no order data, no customer PII.
 
-* **Optionally sent if you opt in (default OFF), as part of the same telemetry consent — AI-bot crawl analytics**: for requests from *known AI bots only*, the bot name, a coarse page type (home/product/category/discovery-file/sitemap/other), the HTTP status, and whether the bot was routed to your structured catalog — tagged with your site URL. Also sent: an aggregate daily count of human pageviews (a number only — the AI-vs-human denominator). Never recorded: per-visit human data, IP addresses, query strings, cart/checkout/account/admin/REST paths, or any customer, order, or personal data. Hard-disable just this (while keeping lifecycle telemetry) with `define( 'XPAY_WC_AGENT_ANALYTICS', false );`.
+* **Optionally sent if you opt in (default OFF), as part of the same telemetry consent — AI-bot crawl analytics**: for requests from *known AI bots only*, the bot name, a coarse page type (home/product/category/discovery-file/sitemap/other), the HTTP status, and whether the bot was routed to your structured catalog — tagged with your site URL. Also sent: an aggregate daily count of human pageviews (a number only — the AI-vs-human denominator). Also sent for *AI-bot* hits only: a salted one-way hash of the bot's IP (per-store salt, rotated daily — not the address, and not linkable across days or stores). Never recorded: per-visit human data, human IP addresses, query strings, cart/checkout/account/admin/REST paths, or any customer, order, or personal data. Hard-disable just this (while keeping lifecycle telemetry) with `define( 'XPAY_WC_AGENT_ANALYTICS', false );`.
 
 * **Opt out of anonymous telemetry**: **Settings → xpay → Privacy → Turn off**. Or define `XPAY_WC_TELEMETRY` to `false` in `wp-config.php` for a system-wide hard disable that overrides any UI choice.
 
@@ -255,6 +255,13 @@ Adds the `/?xpay_route=acp` query-arg fallback for the discovery file on hosts t
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.5.3 =
+* **AI referrals are now detected even when your pages are cached.** If your store runs a page cache, the cached HTML is served before our code runs — so a shopper arriving from ChatGPT looked identical to someone typing your address in. Detection now also happens in the browser and reports back to a page that is never cached, which is how WooCommerce's own order-source tracking works. Referrals from AI assistants stop silently disappearing.
+* **Works with WP Rocket out of the box.** Our referral tag no longer gets swallowed by WP Rocket's cache, and it does not create a second cached copy of the page.
+* **A "likely AI (unconfirmed)" signal, kept honest.** Some AI apps (ChatGPT's iOS app, the Atlas browser) send no clue at all — Atlas even identifies itself as ordinary Chrome, so no rule can ever spot it for certain. Where an order arrives with no referrer straight onto a deep product page, we now flag it as *possible* AI influence and show it separately. It is never counted as confirmed AI revenue.
+* **Fixed: Google crawls could have been mislabelled as AI traffic.** Gemini's fetcher identifies itself as exactly "Google", which is also the start of "Googlebot" — we now require an exact match, so your ordinary Google search crawling is never misreported as an AI referral.
+* **Better AI-crawler reporting.** Repeat visits from the same crawler can now be grouped into sessions, using a salted daily hash of the bot's address (never a person's, and never the address itself). Added lmarena.ai and komo.ai; removed a rule that could never match anything.
 
 = 0.5.2 =
 * **See the orders AI agents actually place.** WooCommerce's built-in Agentic Checkout records a session ID on every order an AI agent completes through it. We now read that ID, so those orders show up in your dashboard as confirmed agent orders instead of being lumped in with everything else. This applies to new orders from now on — it can't reach back and re-label past ones.

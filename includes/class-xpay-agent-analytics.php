@@ -38,6 +38,7 @@ class Xpay_Agent_Analytics {
 	const BUFFER_OPTION   = 'xpay_wc_agent_buf';      // array of buffered events (autoload off)
 	const DROPPED_OPTION  = 'xpay_wc_agent_dropped';  // counter of events dropped at cap
 	const HUMAN_OPTION    = 'xpay_wc_human_daily';    // map of YYYY-MM-DD => human pageview count (the bot-vs-human denominator)
+	const IP_SALT_OPTION  = 'xpay_wc_ip_salt';        // { day, salt } — rotates daily (autoload off)
 	const FLUSH_HOOK      = 'xpay_wc_agent_analytics_flush';
 	const SCHEDULE_NAME   = 'xpay_wc_15min';
 	const BUFFER_HARD_CAP = 200;   // max events held between flushes; overflow is dropped + counted
@@ -294,6 +295,13 @@ class Xpay_Agent_Analytics {
 				'deflected'   => $deflected ? 1 : 0,
 				'blog_proxied' => $blog_proxied,
 				'bp_cache_hit' => $bp_cache_hit,
+				// A salted, truncated one-way hash — NEVER the IP itself. Without
+				// it, ip_hash is NULL on 100% of `wp`-surface rows and agent
+				// sessionization is impossible on the merchant's own origin (we
+				// can only sessionize on the sidecar today). The salt is
+				// per-store AND rotates daily, so a hash is not linkable across
+				// stores or across days.
+				'ip_hash'     => self::ip_hash(),
 			);
 
 			self::buffer( $event );
@@ -307,6 +315,43 @@ class Xpay_Agent_Analytics {
 	 * "ChatGPT-User", not the whole UA string). Falls back to '' (shouldn't
 	 * happen — caller only invokes this after classify_bot matched).
 	 */
+	/**
+	 * Salted, truncated one-way hash of the visitor's IP — a coarse
+	 * unique-session signal. The raw IP is never stored, never buffered, and
+	 * never leaves the store.
+	 *
+	 * Privacy properties, deliberately stronger than a plain hash:
+	 *   - the salt is generated PER STORE, so the same visitor on two xpay
+	 *     merchants produces two unrelated hashes;
+	 *   - the salt ROTATES DAILY, so a hash cannot be correlated across days —
+	 *     it supports "how many distinct agents visited today" and nothing more
+	 *     durable than that.
+	 *
+	 * Returns '' when no IP is available; the ingest stores NULL for that.
+	 */
+	private static function ip_hash() {
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		$ip = filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
+		if ( '' === $ip ) {
+			return '';
+		}
+		return substr( hash( 'sha256', self::ip_salt() . '|' . $ip ), 0, 16 );
+	}
+
+	/** Per-store, daily-rotating salt. Autoload off — read only on capture. */
+	private static function ip_salt() {
+		$today  = gmdate( 'Y-m-d' );
+		$stored = get_option( self::IP_SALT_OPTION );
+
+		if ( is_array( $stored ) && isset( $stored['day'], $stored['salt'] ) && $stored['day'] === $today && '' !== $stored['salt'] ) {
+			return (string) $stored['salt'];
+		}
+
+		$salt = wp_generate_password( 32, false, false );
+		update_option( self::IP_SALT_OPTION, array( 'day' => $today, 'salt' => $salt ), false );
+		return $salt;
+	}
+
 	private static function matched_token( $ua ) {
 		foreach ( self::bot_map() as $token => $class ) {
 			if ( false !== stripos( $ua, $token ) ) {
