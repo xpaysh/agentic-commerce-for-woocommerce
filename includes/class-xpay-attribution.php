@@ -61,7 +61,7 @@ class Xpay_Attribution {
 	const REST_NAMESPACE = 'xpay/v1';
 	const REST_ROUTE     = '/classify';
 	const SCRIPT_HANDLE  = 'xpay-attribution';
-	const SCRIPT_REL     = 'assets/js/xpay-attribution.js';
+	const SCRIPT_REL     = 'js/xpay-attribution.js';
 	const MAX_BEACON_BYTES = 2048;
 
 	private function __construct() {
