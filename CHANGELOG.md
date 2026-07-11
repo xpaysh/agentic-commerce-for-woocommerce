@@ -11,6 +11,56 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.5.3] — 2026-07-11
+
+### Added — AI referrals detected even when your pages are cached
+
+- Detection now also happens in the shopper's browser and reports back to an
+  endpoint that is never cached (the same approach WooCommerce core uses for its
+  own order-source tracking), so referrals from ChatGPT and other assistants are
+  captured on full-page-cached stores instead of being missed. Works with WP
+  Rocket out of the box, and the referral tag creates no second cached copy of a
+  page.
+
+### Added — A separate "likely AI (unconfirmed)" signal, kept honest
+
+- Some AI apps (ChatGPT's iOS app, the Atlas browser) send no identifying clue —
+  Atlas even presents as ordinary Chrome. Where an order arrives with no referrer
+  straight onto a deep product page, it is flagged as *possible* AI influence and
+  shown separately. It is never counted as confirmed AI revenue.
+
+### Improved — AI-crawler reporting and matching
+
+- Repeat visits from the same crawler can be grouped into sessions using a salted
+  daily hash of the crawler's address (never a person's, and never the address
+  itself). Gemini's fetcher (which identifies as exactly `Google`) is matched
+  exactly, so ordinary Google search crawling is never misreported as an AI
+  referral. Added `lmarena.ai` and `komo.ai`.
+
+## [0.5.2] — 2026-07-11
+
+### Added — See the orders AI agents actually place
+
+- WooCommerce's built-in Agentic Checkout records a session id on every order an
+  AI agent completes through it; xpay now reads that id, so those orders show up
+  as confirmed agent orders. Applies to new orders from now on.
+
+### Added — Attribution that survives page caching
+
+- xpay now also reads WooCommerce's own order-source data, which is recorded in
+  the shopper's browser and isn't affected by page caches — so referrals from AI
+  assistants are captured on cached stores.
+
+### Ships — Broader and more reliable order capture
+
+- Orders paid by bank transfer, cheque or cash on delivery, and orders fulfilled
+  through custom order statuses (e.g. La Poste), are now reported instead of being
+  skipped.
+- Order reporting dispatches straight after checkout and a daily catch-up
+  re-sends anything that slipped through the past week, so reporting no longer
+  depends on a visitor happening to load a page. Runs only on connected stores,
+  and never adds latency to the shopper's checkout.
+
 ## [0.5.1] — 2026-07-10
 
 ### Added — Help search engines find your articles
