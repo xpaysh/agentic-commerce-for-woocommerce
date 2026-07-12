@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.5.3
+Stable tag: 0.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -30,6 +30,7 @@ Put your WooCommerce catalog inside ChatGPT, Claude, Gemini and Perplexity — b
 * **Allows the right bots** — GPTBot, ChatGPT-User, OAI-SearchBot, ClaudeBot, Claude-User, Claude-SearchBot, PerplexityBot, Perplexity-User, Google-Extended, Applebot-Extended and CCBot. Never overrides your existing robots.txt rules.
 * **Cart deep-link** — AI agents create a one-click "Buy" link that pre-fills your existing WooCommerce cart and lands the buyer on your existing checkout. Orders are tagged with `_xpay_agent_attribution` so you can attribute AI-driven revenue in your existing reporting.
 * **Live inventory** — webhook-driven catalog refresh on every product / stock change (debounced 30s), plus an hourly safety-net poll.
+* **Product FAQs and return policy** — for products you approve in your xpay dashboard, the plugin publishes `FAQPage` and `MerchantReturnPolicy` JSON-LD answering the commerce questions AI shoppers ask (delivery, returns, variants). Optionally it can also show those answers to your shoppers as a block on the product page — **off unless you turn it on** in your dashboard. Placement is a WooCommerce product tab, the classic product-summary hook, or an `[xpay-faq]` shortcode you place yourself.
 
 = What it doesn't do =
 
@@ -91,7 +92,19 @@ No. Payment runs through your existing WooCommerce gateway (Stripe / WooPayments
 
 = What if I already have Yoast SEO / Rank Math emitting Product schema? =
 
-xpay detects the existing schema at runtime and only adds the bits it's missing — typically `BuyAction` on product pages and `ItemList` on the homepage. No duplicate schema is emitted.
+xpay detects the existing schema at runtime and only adds the bits it's missing — typically `BuyAction` on product pages and `ItemList` on the homepage. No duplicate schema is emitted. The same applies to FAQ schema: where xpay can see that another plugin has already published a `FAQPage` on a product page, it stands down rather than adding a competing one.
+
+= Does the plugin change how my product pages look? =
+
+Almost nothing xpay adds is visible to shoppers — JSON-LD, discovery files and robots rules all sit in the page source. The one exception is the **product FAQ block**: for products you approve in your xpay dashboard, xpay can show those questions and answers on the product page itself.
+
+**On a new install it is off**, and you switch it on from your xpay dashboard. **If your store is already showing the block** (earlier versions displayed it automatically for any approved product, with no way to say no), it keeps showing — this release does not rip it off your live product pages. What changes is that you can now turn it **off**, which you previously could not.
+
+Approving a FAQ and displaying it are separate decisions. With the block off, the answers are still published as `FAQPage` schema for AI shoppers and search engines — you just don't render them on the page.
+
+Developers: `add_filter( 'xpay_wc_faq_visible', '__return_false' );` disables the block from your own code, whatever the dashboard says.
+
+When it's on, you choose where it goes: a WooCommerce **product tab** (works with Elementor and other page builders), the classic position under the product summary, or an `[xpay-faq]` shortcode you place yourself.
 
 = What does the plugin send to xpay's servers, and when? =
 
@@ -185,6 +198,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.6.0 =
+Control over the on-page product-FAQ block, which previously had no off switch. It now also renders on page-builder themes, as a product tab or an [xpay-faq] shortcode, with headings in your own language. Page caches are cleared when FAQs change.
+
 = 0.4.4 =
 GDPR-aware attribution defaults for EU/UK stores, asynchronous order-attribution dispatch off the shopper's thank-you page, a resilient widget consent gate with a 60-second failure breaker, and GTIN schema validation for non-numeric identifiers.
 
@@ -257,6 +273,14 @@ Adds the `/?xpay_route=acp` query-arg fallback for the discovery file on hosts t
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.6.0 =
+* **The on-page FAQ block is now yours to control.** For products you approve, xpay publishes FAQ schema that AI shoppers and search engines read. Until now it *also* injected a visible FAQ section into your product pages, with no way to say no — **that switch now exists**, in your xpay dashboard. New installs start with the block off. Stores already displaying it keep displaying it (this release doesn't strip it off your live pages) and can now turn it off. Either way the schema is unaffected: approving a FAQ publishes the answers to AI shoppers; showing them to your own shoppers is a separate decision, and it's yours. Developers can force it off with `add_filter( 'xpay_wc_faq_visible', '__return_false' );`.
+* **The FAQ block works on page-builder themes.** It can now render as a WooCommerce **product tab**, which Elementor and similar builders display — previously it hung off a hook those themes never call, so stores built with them saw nothing at all. There's also an `[xpay-faq]` shortcode if you want to place it exactly where you like. Classic themes keep the original placement.
+* **FAQ answers show in your own language.** The section heading arrives with the FAQ content instead of being hardcoded English, so a French store gets a French heading. It's now called "Additional questions" rather than "Frequently asked questions" — these answer the commerce facts (delivery, returns, variants) that your own product FAQ usually doesn't.
+* **FAQ changes appear immediately on cached stores.** If you run LiteSpeed, WP Rocket, WP Super Cache or W3 Total Cache, the cached copy of a product page was served before our code ran — so an updated FAQ stayed invisible until the cache happened to expire. Product pages are now cleared from the cache whenever their FAQ changes.
+* **Non-returnable products no longer advertise a return window.** A product marked as non-returnable was still emitting a 14-day return window in its schema, contradicting its own FAQ text. The return category, method and fees you set are now used as given.
+* **One FAQPage per page.** Where xpay can see that another plugin (Rank Math, a dedicated FAQ plugin) already publishes FAQ schema on a product page, it stands down instead of adding a competing one.
 
 = 0.5.3 =
 * **AI referrals are now detected even when your pages are cached.** If your store runs a page cache, the cached HTML is served before our code runs — so a shopper arriving from ChatGPT looked identical to someone typing your address in. Detection now also happens in the browser and reports back to a page that is never cached, which is how WooCommerce's own order-source tracking works. Referrals from AI assistants stop silently disappearing.

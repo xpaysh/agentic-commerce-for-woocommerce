@@ -11,6 +11,100 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-07-12
+
+### Added — merchant control over the visible product-FAQ block
+
+- New `xpay_wc_faq_visible` option, **default OFF on new installs**, gating the
+  shopper-facing FAQ section on the PDP. Shipped in 0.4.0 completely ungated: any product
+  with a pushed FAQ entry got UI injected into the merchant's storefront, so approving a
+  FAQ in the dashboard (which reads as "publish the schema") silently opted the merchant
+  into on-page UI they never agreed to. Pushing the FAQ data and painting it on the page
+  are now two separate decisions. (Stores already displaying the block keep it across the
+  upgrade — see Migration — but can now switch it off, which they previously could not.)
+- New `xpay_wc_faq_visible` filter, so a site owner can force the block off from their own
+  code regardless of what the dashboard says: `add_filter( 'xpay_wc_faq_visible', '__return_false' )`.
+  The switch is ours to set; the storefront is theirs to veto.
+- The switch is **backend-owned**: written only by the `set_product_faqs` push
+  (`faq_visible`), with no merchant-facing setting in wp-admin. FAQs are approved in the
+  xpay dashboard, so that is where the consent to display them is captured — and it means
+  a store can be turned on or off without a WP.org release or a plugin update.
+- JSON-LD is unaffected by the switch. With the block off, `FAQPage` is still emitted for
+  agents and search engines.
+
+### Added — placement that works on page-builder themes
+
+- `woocommerce_product_tabs` registration renders the FAQ as a **product tab**. Elementor's
+  Product Tabs widget honours the filter; it never fires
+  `woocommerce_after_single_product_summary`, which is why the 0.4.0 block was invisible on
+  hello-elementor and royal-elementor-kit while rendering fine on classic themes.
+- `[xpay-faq]` shortcode for deliberate placement (`faq_placement=shortcode`).
+- `xpay_wc_faq_placement`: `auto` (default) | `tab` | `hook` | `shortcode`. `auto` registers
+  both the tab and the classic hook — not a theme sniff: WooCommerce outputs tabs at priority
+  10 of `woocommerce_after_single_product_summary` and our hook sits at 15, so on a classic
+  theme the tab has already claimed the render and the hook stands down. On Elementor only
+  the tab fires. Exactly one path ever renders.
+
+### Added — heading in the merchant's language
+
+- The heading rides the pushed payload (`faq_heading`), sanitized and capped at 120 chars.
+  The backend knows each merchant's locale; the plugin doesn't. Carrying the string means a
+  French store is not waiting on a WP.org release *plus* a merchant plugin update to stop
+  seeing an English `<h2>` over French answers — which a-merchant-store.example did for weeks.
+- Renamed "Frequently asked questions" → **"Additional questions"**. Merchants often have
+  their own FAQ in the product description; ours answers the *commerce* facts (delivery,
+  returns, price framing, variants) that theirs typically doesn't.
+
+### Fixed — page caches made every push invisible
+
+- `set_product_faqs` / `clear_product_faqs` now purge the full-page cache for each affected
+  product permalink: LiteSpeed (`LiteSpeed_Cache_API::purge_post` + `litespeed_purge_post`),
+  WP Rocket (`rocket_clean_post`), WP Super Cache (`wp_cache_post_change`), W3 Total Cache
+  (`w3tc_flush_post`), and `clean_post_cache` (which is also what Cloudflare APO and several
+  caching plugins hang their purge off). Each guarded by `function_exists`/`class_exists`.
+- Proven on a live merchant store 2026-07-12: the push returned `{ok:true, executed:["set_product_faqs"]}`
+  and PHP rendered the new French FAQ, while LiteSpeed kept serving the stale English HTML on
+  the plain URL — only a cache-busting query string revealed the update. "The plugin returned
+  200" never meant "the page changed". Same root cause as the WP Rocket attribution bug.
+
+### Fixed — `return_policy.category` was ignored
+
+- `merchant_return_policy_node()` hardcoded `MerchantReturnFiniteReturnWindow`, so a product
+  pushed as `MerchantReturnNotPermitted` still emitted a 14-day return window in schema while
+  its own FAQ text correctly said it could not be returned. The pushed `category`, `method`
+  and `fees` are now honoured, and `merchantReturnDays` / `returnMethod` / `returnFees` are
+  omitted for a non-returnable policy rather than emitting an incoherent node.
+
+### Fixed — one `FAQPage` per page
+
+- Stand down instead of emitting a competing `FAQPage` when the page already carries one from
+  a merchant FAQ plugin or a Rank Math FAQ block. Detects both `"@type":"FAQPage"` and the
+  graph form `"@type":["WebPage","FAQPage"]`, ignoring our own emissions.
+- Best-effort, and fails **open**: detection reads the output buffer, and nothing buffers
+  `wp_head`, so on a host without `output_buffering` we can't see prior output and we emit.
+  A duplicate `FAQPage` is a structured-data warning; a missing one costs the merchant the
+  agent visibility they pay us for. The readme is worded to match ("where xpay can see…") —
+  it must not promise a guarantee this heuristic can't make.
+
+### Fixed — housekeeping
+
+- `uninstall.php` now removes `xpay_wc_product_faqs`, `xpay_wc_llms_txt_extra_sections` and the
+  three new FAQ display options. The first two were leaking on uninstall.
+- Regenerated `languages/*.pot`, which was stale (47 strings, last built at 0.1.2) and declared
+  `X-Domain: xpay-for-woocommerce` — not the plugin's actual `agentic-commerce-for-woocommerce`
+  text domain, so no translation shipped against it could ever have loaded. Now 159 strings on
+  the correct domain.
+
+### Migration
+
+- One-time seed on upgrade from < 0.6.0: a store that already has approved FAQs pushed to it
+  keeps rendering the block (`xpay_wc_faq_visible = 1`); every other store, and every fresh
+  install, starts OFF. Without this, stores displaying the block today would lose it the moment
+  they auto-update and not get it back until the next backend push. Keyed on local state rather
+  than a merchant allowlist — this is public GPL on WP.org and customer names have no place in
+  it; the two coincide, since FAQs are only pushed to entitled merchants. After the seed the
+  backend is the only writer.
+
 ## [0.5.3] — 2026-07-11
 
 ### Added — AI referrals detected even when your pages are cached

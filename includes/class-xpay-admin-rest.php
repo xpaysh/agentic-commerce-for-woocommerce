@@ -229,7 +229,13 @@ class Xpay_Admin_REST {
 					case 'set_product_faqs':
 						// Backend pushes the APPROVED per-product FAQ + return policy as
 						// a JSON map keyed by SKU. The schema emitter renders FAQPage
-						// JSON-LD + a visible FAQ section for these products only.
+						// JSON-LD for these products, and — only when faq_visible is on —
+						// a shopper-facing FAQ block too.
+						//
+						// The three display params are optional and each is only written
+						// when present, so a push that carries just `product_faqs` (every
+						// caller before 0.6.0) leaves the display config untouched.
+						$prior = self::product_faq_skus();
 						$raw   = isset( $params['product_faqs'] ) && is_array( $params['product_faqs'] ) ? $params['product_faqs'] : array();
 						$clean = self::sanitize_product_faqs( $raw );
 						if ( empty( $clean ) ) {
@@ -240,11 +246,43 @@ class Xpay_Admin_REST {
 								update_option( 'xpay_wc_product_faqs', $encoded );
 							}
 						}
+
+						// Visible, shopper-facing block. Default OFF, server-owned: this
+						// is the only writer. Rendering UI on a merchant's storefront is
+						// their call, and it's made in the xpay dashboard where they
+						// approve the FAQs — not inferred from the fact that data exists.
+						if ( isset( $params['faq_visible'] ) ) {
+							update_option( 'xpay_wc_faq_visible', self::truthy( $params['faq_visible'] ) ? 1 : 0 );
+						}
+						if ( isset( $params['faq_placement'] ) ) {
+							$placement = sanitize_key( (string) $params['faq_placement'] );
+							if ( in_array( $placement, array( 'auto', 'tab', 'hook', 'shortcode' ), true ) ) {
+								update_option( 'xpay_wc_faq_placement', $placement );
+							}
+						}
+						// Heading rides the payload because the backend knows the
+						// merchant's locale — a French store shouldn't wait on a WP.org
+						// release plus a plugin update to stop seeing an English heading.
+						if ( isset( $params['faq_heading'] ) ) {
+							$heading = sanitize_text_field( (string) $params['faq_heading'] );
+							$heading = mb_substr( $heading, 0, self::FAQ_MAX_HEADING_LEN );
+							if ( '' === $heading ) {
+								delete_option( 'xpay_wc_faq_heading' );
+							} else {
+								update_option( 'xpay_wc_faq_heading', $heading );
+							}
+						}
+
+						// Every product whose FAQ changed, plus every product that HAD one
+						// and no longer does (its block must come down).
+						self::purge_product_caches( array_unique( array_merge( $prior, array_keys( $clean ) ) ) );
 						$executed[] = $action;
 						break;
 
 					case 'clear_product_faqs':
+						$prior = self::product_faq_skus();
 						delete_option( 'xpay_wc_product_faqs' );
+						self::purge_product_caches( $prior );
 						$executed[] = $action;
 						break;
 
@@ -275,6 +313,98 @@ class Xpay_Admin_REST {
 	const LLMS_TXT_MAX_SECTIONS    = 20;
 	const LLMS_TXT_MAX_HEADING_LEN = 200;
 	const LLMS_TXT_MAX_BODY_LEN    = 4096;
+	const FAQ_MAX_HEADING_LEN      = 120;
+
+	/** Accepts JSON true/false as well as the 1/0/"true" a hand-rolled caller might send. */
+	private static function truthy( $v ) {
+		if ( is_bool( $v ) ) {
+			return $v;
+		}
+		if ( is_numeric( $v ) ) {
+			return (int) $v > 0;
+		}
+		return in_array( strtolower( trim( (string) $v ) ), array( 'true', 'yes', 'on', '1' ), true );
+	}
+
+	/** SKUs (or numeric ids) currently carrying a pushed FAQ entry. */
+	private static function product_faq_skus() {
+		$raw     = (string) get_option( 'xpay_wc_product_faqs', '' );
+		$decoded = $raw ? json_decode( $raw, true ) : array();
+		return is_array( $decoded ) ? array_keys( $decoded ) : array();
+	}
+
+	/**
+	 * Purge the full-page cache for the products we just changed.
+	 *
+	 * Without this, a successful push is INVISIBLE. Full-page caches (LiteSpeed, WP
+	 * Rocket, WP Super Cache, W3TC, Cloudflare APO) serve stored HTML *before* PHP
+	 * runs, so our option write lands, the emitter renders the new FAQ, and the
+	 * shopper still gets the old page. Proven on a live merchant store 2026-07-12: the push
+	 * returned ok/executed, PHP rendered the new French FAQ, and LiteSpeed kept
+	 * serving the stale English HTML on the plain URL — only a cache-busting query
+	 * string revealed the update. "The plugin returned 200" never meant "the page
+	 * changed", and that was true of every push we make, not just FAQs.
+	 *
+	 * Every integration is guarded: we call into a caching plugin only if it's here.
+	 * Purging is best-effort by design — a cache we don't know about is a stale page,
+	 * not a failed request, so nothing below is allowed to throw the push.
+	 *
+	 * @param array $keys SKUs and/or numeric product ids.
+	 */
+	private static function purge_product_caches( $keys ) {
+		if ( empty( $keys ) || ! function_exists( 'wc_get_product_id_by_sku' ) ) {
+			return;
+		}
+
+		$ids = array();
+		foreach ( $keys as $key ) {
+			$key = (string) $key;
+			if ( '' === $key ) {
+				continue;
+			}
+			$id = (int) wc_get_product_id_by_sku( $key );
+			if ( ! $id && ctype_digit( $key ) ) {
+				// The emitter falls back to the numeric id when there's no SKU match,
+				// so the purge has to resolve keys the same way the renderer does.
+				$id = (int) $key;
+			}
+			if ( $id > 0 ) {
+				$ids[ $id ] = true;
+			}
+		}
+		if ( empty( $ids ) ) {
+			return;
+		}
+
+		foreach ( array_keys( $ids ) as $id ) {
+			// WordPress object cache. Core fires the `clean_post_cache` action from
+			// inside here, which is also what Cloudflare APO and several caching
+			// plugins hang their own purge off — so this does double duty.
+			clean_post_cache( $id );
+
+			// LiteSpeed. Both surfaces: the API class on current builds, the action
+			// hook on older ones. a live merchant store is the store this whole fix exists for.
+			if ( class_exists( 'LiteSpeed_Cache_API' ) && method_exists( 'LiteSpeed_Cache_API', 'purge_post' ) ) {
+				LiteSpeed_Cache_API::purge_post( $id );
+			}
+			do_action( 'litespeed_purge_post', $id );
+
+			// WP Rocket — same plugin that was swallowing our order attribution.
+			if ( function_exists( 'rocket_clean_post' ) ) {
+				rocket_clean_post( $id );
+			}
+
+			// WP Super Cache.
+			if ( function_exists( 'wp_cache_post_change' ) ) {
+				wp_cache_post_change( $id );
+			}
+
+			// W3 Total Cache.
+			if ( function_exists( 'w3tc_flush_post' ) ) {
+				w3tc_flush_post( $id );
+			}
+		}
+	}
 
 	/**
 	 * Normalise + bound backend-pushed sections so we never store unbounded

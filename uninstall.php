@@ -50,6 +50,14 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 		// Partner (agency) attribution
 		'xpay_wc_partner_code',
+
+		// Backend-pushed content: approved product FAQs + how they're displayed,
+		// and the extra llms.txt sections.
+		'xpay_wc_product_faqs',
+		'xpay_wc_faq_visible',
+		'xpay_wc_faq_placement',
+		'xpay_wc_faq_heading',
+		'xpay_wc_llms_txt_extra_sections',
 	);
 	foreach ( $xpay_wc_option_keys as $xpay_wc_key ) {
 		delete_option( $xpay_wc_key );

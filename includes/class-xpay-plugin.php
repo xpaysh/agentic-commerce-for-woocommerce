@@ -78,7 +78,51 @@ class Xpay_Plugin {
 		// Version changed — re-flush rewrite rules so any added or removed
 		// discovery routes take effect without requiring a deactivate/reactivate.
 		update_option( 'xpay_wc_flush_rewrites', 1 );
+
+		$this->seed_faq_visibility( $stored );
+
 		update_option( 'xpay_wc_installed_version', XPAY_WC_VERSION );
+	}
+
+	/**
+	 * One-time seed of the visible-FAQ switch, for stores upgrading from < 0.6.0.
+	 *
+	 * 0.6.0 puts the shopper-facing FAQ block behind `xpay_wc_faq_visible`, default
+	 * OFF, owned by the backend. Without this seed, a store that has the block today
+	 * would lose it the moment it auto-updates and not get it back until our next
+	 * push — a window where their PDPs silently change. So we carry the existing
+	 * state across the upgrade: a store with approved FAQs already pushed to it keeps
+	 * rendering them, and nobody else acquires storefront UI they never had.
+	 *
+	 * Deliberately keyed on local state, not on a merchant allowlist — this plugin is
+	 * public GPL on WP.org and customer names have no business being in it. The two
+	 * coincide: FAQs are only ever pushed to entitled merchants, so "has approved FAQs"
+	 * IS the entitled set.
+	 *
+	 * Runs once. After this, the backend's `set_product_faqs` push is the only writer,
+	 * and it can turn any store on or off with no plugin release.
+	 */
+	private function seed_faq_visibility( $stored_version ) {
+		// Fresh installs (no prior version recorded) start OFF, full stop.
+		if ( ! $stored_version ) {
+			return;
+		}
+		if ( version_compare( (string) $stored_version, '0.6.0', '>=' ) ) {
+			return;
+		}
+		// Never overwrite a value the backend has already pushed.
+		if ( null !== get_option( 'xpay_wc_faq_visible', null ) ) {
+			return;
+		}
+		$faqs = (string) get_option( 'xpay_wc_product_faqs', '' );
+		if ( '' === $faqs || '[]' === $faqs || '{}' === $faqs ) {
+			return;
+		}
+		$decoded = json_decode( $faqs, true );
+		if ( ! is_array( $decoded ) || empty( $decoded ) ) {
+			return;
+		}
+		update_option( 'xpay_wc_faq_visible', 1 );
 	}
 
 	public function maybe_redirect_after_activation() {

@@ -22,13 +22,90 @@ class Xpay_Schema {
 		return self::$instance;
 	}
 
+	/** Guards against rendering the visible FAQ twice when several paths are live. */
+	private $faq_rendered = false;
+
 	private function __construct() {
 		// Late-priority head hook so we land after Yoast/Rank Math.
 		add_action( 'wp_head', array( $this, 'render' ), 99 );
-		// Visible FAQ section on the product page (required to back the FAQPage
-		// JSON-LD per Google policy, and useful for shoppers). Priority 15 puts it
-		// after the summary, before related products (20).
-		add_action( 'woocommerce_after_single_product_summary', array( $this, 'render_visible_faq' ), 15 );
+
+		// The visible FAQ block is shopper-facing UI on the merchant's storefront,
+		// so it stays OFF until we're explicitly told to render it (see faq_visible()).
+		// The JSON-LD is unaffected by this switch — pushing FAQ data and painting it
+		// on the page are two separate decisions.
+		//
+		// Placement (see faq_placement()):
+		//   tab       — woocommerce_product_tabs. Fires wherever tabs render, which
+		//               includes Elementor's Product Tabs widget. This is what makes
+		//               builder themes work at all.
+		//   hook      — woocommerce_after_single_product_summary @15 (0.4.0 behaviour).
+		//               Classic themes only; Elementor templates never fire it.
+		//   auto      — register BOTH. Not a theme sniff: tabs output at priority 10 of
+		//               after_single_product_summary, so on a classic theme the tab has
+		//               already claimed the render by the time our @15 hook runs and it
+		//               stands down. On Elementor only the tab fires. Exactly one wins.
+		//   shortcode — neither; the merchant places [xpay-faq] themselves.
+		$placement = $this->faq_placement();
+		if ( $this->faq_visible() ) {
+			if ( 'tab' === $placement || 'auto' === $placement ) {
+				add_filter( 'woocommerce_product_tabs', array( $this, 'register_faq_tab' ) );
+			}
+			if ( 'hook' === $placement || 'auto' === $placement ) {
+				add_action( 'woocommerce_after_single_product_summary', array( $this, 'render_visible_faq' ), 15 );
+			}
+		}
+
+		add_shortcode( 'xpay-faq', array( $this, 'shortcode' ) );
+	}
+
+	/**
+	 * Is the visible, shopper-facing FAQ block switched on for this store?
+	 *
+	 * DEFAULT OFF. The flag is written only by the backend's `set_product_faqs`
+	 * push (Xpay_Admin_REST) — there is deliberately no merchant-facing checkbox:
+	 * FAQs are approved in the xpay dashboard, so that's where the consent to show
+	 * them on-page is captured too. Keeping the control server-side also means we
+	 * can turn a store on or off without a WP.org release or a plugin update.
+	 */
+	private function faq_visible() {
+		$on = (bool) (int) get_option( 'xpay_wc_faq_visible', 0 );
+
+		/**
+		 * Last word on whether xpay renders anything shopper-facing on this store.
+		 *
+		 * The switch itself is dashboard-owned, but the site owner must always be able
+		 * to stop us painting on their storefront from their own code, without waiting
+		 * on us. `add_filter( 'xpay_wc_faq_visible', '__return_false' );` does that.
+		 *
+		 * @param bool $on Whether the visible FAQ block renders.
+		 */
+		return (bool) apply_filters( 'xpay_wc_faq_visible', $on );
+	}
+
+	/** Where the visible block renders. Backend-pushed; 'auto' covers both theme families. */
+	private function faq_placement() {
+		$p = (string) get_option( 'xpay_wc_faq_placement', 'auto' );
+		return in_array( $p, array( 'auto', 'tab', 'hook', 'shortcode' ), true ) ? $p : 'auto';
+	}
+
+	/**
+	 * Heading for the visible block.
+	 *
+	 * Carried on the pushed payload, because the backend already knows the merchant's
+	 * locale and we refuse to gate a French store's French heading on a WP.org release
+	 * plus a merchant plugin update. The translated string below is the fallback for
+	 * stores we've pushed nothing to.
+	 *
+	 * "Additional questions", not "Frequently asked questions": merchants often have
+	 * their own FAQ in the product description already. Ours answers the commerce facts
+	 * — delivery, returns, price framing, variants — that theirs typically doesn't.
+	 */
+	private function faq_heading() {
+		$pushed = (string) get_option( 'xpay_wc_faq_heading', '' );
+		if ( '' !== $pushed ) {
+			return $pushed;
+		}
+		return __( 'Additional questions', 'agentic-commerce-for-woocommerce' );
 	}
 
 	/**
@@ -171,7 +248,11 @@ class Xpay_Schema {
 		// FAQPage — a separate top-level node (never part of Product), so it always
 		// survives the conflict path. Only emitted for APPROVED products (those with
 		// a pushed FAQ entry). Mirrors the visible section rendered on the page.
-		if ( ! empty( $entry['faq'] ) && is_array( $entry['faq'] ) ) {
+		//
+		// Stand down if the page already has one: a merchant FAQ plugin or a RankMath
+		// FAQ block gets to keep it. Two competing FAQPage nodes on one URL is a
+		// structured-data error, and theirs describes content the shopper can see.
+		if ( ! empty( $entry['faq'] ) && is_array( $entry['faq'] ) && ! $this->already_emitted_faq_schema() ) {
 			$faq_node = $this->faq_page_node( $entry['faq'] );
 			if ( $faq_node ) {
 				$this->print_jsonld( $faq_node );
@@ -244,15 +325,32 @@ class Xpay_Schema {
 
 		$country = isset( $cfg['country'] ) ? $cfg['country'] : WC()->countries->get_base_country();
 		$days    = isset( $cfg['days'] ) ? (int) $cfg['days'] : 14;
-		$node    = array(
-			'@context'              => 'https://schema.org/',
-			'@type'                 => 'MerchantReturnPolicy',
-			'applicableCountry'     => $country ? $country : 'FR',
-			'returnPolicyCategory'  => 'https://schema.org/MerchantReturnFiniteReturnWindow',
-			'merchantReturnDays'    => $days,
-			'returnMethod'          => 'https://schema.org/ReturnByMail',
-			'returnFees'            => 'https://schema.org/FreeReturn',
+
+		// Honour the pushed category instead of asserting a finite window for every
+		// product. A product we push as MerchantReturnNotPermitted was rendering a
+		// 14-day return window here while its own FAQ text correctly said it couldn't
+		// be returned — we were contradicting ourselves in machine-readable schema.
+		$category = ! empty( $cfg['category'] ) ? (string) $cfg['category'] : 'https://schema.org/MerchantReturnFiniteReturnWindow';
+		$method   = ! empty( $cfg['method'] ) ? (string) $cfg['method'] : 'https://schema.org/ReturnByMail';
+		$fees     = ! empty( $cfg['fees'] ) ? (string) $cfg['fees'] : 'https://schema.org/FreeReturn';
+
+		$node = array(
+			'@context'             => 'https://schema.org/',
+			'@type'                => 'MerchantReturnPolicy',
+			'applicableCountry'    => $country ? $country : 'FR',
+			'returnPolicyCategory' => $category,
 		);
+
+		// merchantReturnDays / returnMethod / returnFees only mean anything for a
+		// policy that actually accepts returns. Emitting "0 days, free, by mail"
+		// alongside MerchantReturnNotPermitted is incoherent, and Google flags it.
+		if ( 'https://schema.org/MerchantReturnNotPermitted' !== $category ) {
+			if ( 'https://schema.org/MerchantReturnFiniteReturnWindow' === $category ) {
+				$node['merchantReturnDays'] = $days;
+			}
+			$node['returnMethod'] = $method;
+			$node['returnFees']   = $fees;
+		}
 
 		// Link to the store's actual policy page if one is configured / discoverable.
 		$policy_url = ! empty( $cfg['url'] ) ? $cfg['url'] : '';
@@ -303,26 +401,113 @@ class Xpay_Schema {
 	}
 
 	/**
-	 * Visible FAQ block on the product page — backs the FAQPage JSON-LD (Google
-	 * requires the schema's content to be visible) and helps shoppers. Only renders
-	 * for products the merchant approved (those with a pushed FAQ entry).
+	 * The approved FAQ list for the product being viewed, or null when there's
+	 * nothing to render (not a PDP, no pushed entry, or already rendered by
+	 * another placement on this request).
+	 *
+	 * @return array|null
 	 */
-	public function render_visible_faq() {
-		if ( ! is_product() ) {
-			return;
+	private function faq_for_current_product() {
+		if ( $this->faq_rendered || ! is_product() ) {
+			return null;
 		}
 		$product = wc_get_product( get_the_ID() );
 		if ( ! $product instanceof WC_Product ) {
-			return;
+			return null;
 		}
 		$entry = $this->faq_entry_for( $product );
 		if ( empty( $entry['faq'] ) || ! is_array( $entry['faq'] ) ) {
+			return null;
+		}
+		return $entry['faq'];
+	}
+
+	/**
+	 * Register the FAQ as a WooCommerce product tab.
+	 *
+	 * This is the placement that reaches builder themes: Elementor's Product Tabs
+	 * widget honours `woocommerce_product_tabs`, whereas it never fires
+	 * `woocommerce_after_single_product_summary` — which is why the 0.4.0 block was
+	 * invisible on hello-elementor and royal-elementor-kit while rendering fine on
+	 * classic goya.
+	 *
+	 * @param array $tabs
+	 * @return array
+	 */
+	public function register_faq_tab( $tabs ) {
+		if ( null === $this->faq_for_current_product() ) {
+			return $tabs;
+		}
+		$tabs['xpay_faq'] = array(
+			'title'    => $this->faq_heading(),
+			'priority' => 25, // after Description (10) / Additional information (20), before Reviews (30).
+			'callback' => array( $this, 'render_faq_tab_panel' ),
+		);
+		return $tabs;
+	}
+
+	/** Tab panel body. WooCommerce renders a panel for every tab, so this always runs. */
+	public function render_faq_tab_panel() {
+		$this->render_faq_list( $this->faq_heading(), false );
+	}
+
+	/**
+	 * `[xpay-faq]` — deliberate placement by the merchant, e.g. dropped into an
+	 * Elementor template where they want the block to sit.
+	 *
+	 * Honoured ONLY under placement='shortcode', which is what makes "exactly one
+	 * placement is live" true by construction. Were it to render under 'auto' or
+	 * 'tab' as well, a shortcode sitting in the product description would render
+	 * inside the Description panel — which WooCommerce outputs *before* our FAQ
+	 * panel — and we'd either duplicate the block or leave an empty FAQ tab behind
+	 * it. Opting into the shortcode means opting out of the automatic placements.
+	 */
+	public function shortcode( $atts ) {
+		if ( ! $this->faq_visible() || 'shortcode' !== $this->faq_placement() ) {
+			return '';
+		}
+		$atts    = shortcode_atts( array( 'heading' => '' ), $atts, 'xpay-faq' );
+		$heading = '' !== $atts['heading'] ? (string) $atts['heading'] : $this->faq_heading();
+		ob_start();
+		$this->render_faq_list( $heading, true );
+		return ob_get_clean();
+	}
+
+	/**
+	 * Visible FAQ block on the product page — backs the FAQPage JSON-LD (Google
+	 * requires the schema's content to be visible) and helps shoppers. Only renders
+	 * for products the merchant approved (those with a pushed FAQ entry).
+	 *
+	 * Classic-theme placement. On 'auto' this is also registered alongside the tab,
+	 * and stands down when the tab already rendered — tabs are emitted at priority 10
+	 * of this same action, so by the time we run at 15 the flag is set.
+	 */
+	public function render_visible_faq() {
+		$this->render_faq_list( $this->faq_heading(), true );
+	}
+
+	/**
+	 * Shared body for all three placements.
+	 *
+	 * @param string $heading      Section heading.
+	 * @param bool   $with_wrapper Emit the <section> + <h2> chrome. False inside a
+	 *                             product tab, which supplies its own heading and layout.
+	 */
+	private function render_faq_list( $heading, $with_wrapper ) {
+		$faq = $this->faq_for_current_product();
+		if ( null === $faq ) {
 			return;
 		}
+		$this->faq_rendered = true;
 
-		echo '<section class="xpay-faq" aria-label="Frequently asked questions" style="max-width:820px;margin:32px auto;padding:0 12px">';
-		echo '<h2 style="font-size:20px;margin:0 0 12px">' . esc_html__( 'Frequently asked questions', 'agentic-commerce-for-woocommerce' ) . '</h2>';
-		foreach ( $entry['faq'] as $qa ) {
+		if ( $with_wrapper ) {
+			echo '<section class="xpay-faq" aria-label="' . esc_attr( $heading ) . '" style="max-width:820px;margin:32px auto;padding:0 12px">';
+			echo '<h2 style="font-size:20px;margin:0 0 12px">' . esc_html( $heading ) . '</h2>';
+		} else {
+			echo '<div class="xpay-faq">';
+		}
+
+		foreach ( $faq as $qa ) {
 			$q = isset( $qa['q'] ) ? (string) $qa['q'] : '';
 			$a = isset( $qa['a'] ) ? (string) $qa['a'] : '';
 			if ( '' === $q || '' === $a ) {
@@ -333,7 +518,8 @@ class Xpay_Schema {
 			echo '<div style="margin:8px 0 4px;color:#444;line-height:1.6">' . esc_html( $a ) . '</div>';
 			echo '</details>';
 		}
-		echo '</section>';
+
+		echo $with_wrapper ? '</section>' : '</div>';
 	}
 
 	private function render_item_list( $context ) {
@@ -426,6 +612,45 @@ class Xpay_Schema {
 			return false;
 		}
 		return (bool) preg_match( '#<script[^>]*application/ld\+json[^>]*>[^<]*"@type"\s*:\s*"Product"#i', $buffer );
+	}
+
+	/**
+	 * Has something else already emitted a FAQPage on this page? Same buffered-head
+	 * heuristic as already_emitted_product_schema(), but "FAQPage" can sit anywhere in
+	 * a graph node (@graph, nested arrays), so we match the type token rather than a
+	 * leading position. We run at wp_head:99, after Yoast / Rank Math / most FAQ
+	 * plugins have printed theirs.
+	 *
+	 * BEST-EFFORT, and deliberately fails OPEN. Reading prior output requires an active
+	 * output buffer, and neither WordPress nor this plugin buffers wp_head — so on a host
+	 * without `output_buffering` enabled there is nothing to inspect and we emit our node.
+	 * A duplicate FAQPage is a structured-data warning; a MISSING FAQPage costs the
+	 * merchant the agent visibility they're paying us for. Given we can't always tell,
+	 * emitting is the safer failure. Don't promise more than this in the readme.
+	 */
+	private function already_emitted_faq_schema() {
+		if ( ! ob_get_level() ) {
+			return false;
+		}
+		$buffer = ob_get_contents();
+		if ( ! $buffer ) {
+			return false;
+		}
+		if ( ! preg_match_all( '#<script[^>]*application/ld\+json[^>]*>(.*?)</script>#is', $buffer, $m ) ) {
+			return false;
+		}
+		foreach ( $m[0] as $i => $tag ) {
+			// Ignore our own blocks so a second xpay node never self-suppresses.
+			if ( false !== strpos( $tag, 'data-emitter="xpay"' ) ) {
+				continue;
+			}
+			// Matches both the bare `"@type":"FAQPage"` and the array form
+			// `"@type":["WebPage","FAQPage"]` that graph-style emitters produce.
+			if ( preg_match( '#"@type"\s*:\s*(\[[^\]]*)?"FAQPage"#i', $m[1][ $i ] ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private function print_jsonld( array $node ) {

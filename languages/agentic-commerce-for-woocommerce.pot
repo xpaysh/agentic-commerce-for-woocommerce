@@ -2,44 +2,48 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: xpay for WooCommerce 0.1.2\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/xpay-for-woocommerce\n"
+"Project-Id-Version: Agentic Commerce for WooCommerce 0.6.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/xpay-woocommerce\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-05-14T09:31:53+00:00\n"
+"POT-Creation-Date: 2026-07-12T07:32:58+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
-"X-Domain: xpay-for-woocommerce\n"
+"X-Domain: agentic-commerce-for-woocommerce\n"
 
 #. Plugin Name of the plugin
-#: xpay-for-woocommerce.php
-#: includes/class-xpay-settings.php:175
-msgid "xpay for WooCommerce"
+#: agentic-commerce-for-woocommerce.php
+#: includes/class-xpay-settings.php:572
+msgid "Agentic Commerce for WooCommerce"
 msgstr ""
 
 #. Plugin URI of the plugin
-#: xpay-for-woocommerce.php
-msgid "https://xpay.sh/sellers/woocommerce"
+#: agentic-commerce-for-woocommerce.php
+msgid "https://www.xpay.sh/merchants/woocommerce/"
 msgstr ""
 
 #. Description of the plugin
-#: xpay-for-woocommerce.php
-msgid "Puts your WooCommerce catalog inside ChatGPT, Claude, Gemini, and Perplexity. Live prices, live stock, agent checkout that deep-links into your existing cart. No theme changes, no replatforming, no new payment processor."
+#: agentic-commerce-for-woocommerce.php
+msgid "Make your WooCommerce store visible to ChatGPT, Claude, Gemini and Perplexity — buyers complete checkout on your existing WooCommerce gateway. No theme changes, no replatforming, no new payment processor. By xpay."
 msgstr ""
 
 #. Author of the plugin
-#: xpay-for-woocommerce.php
-#: includes/class-xpay-settings.php:54
-#: includes/class-xpay-settings.php:55
+#: agentic-commerce-for-woocommerce.php
+#: includes/class-xpay-settings.php:100
+#: includes/class-xpay-settings.php:101
 msgid "xpay"
 msgstr ""
 
 #. Author URI of the plugin
-#: xpay-for-woocommerce.php
-msgid "https://xpay.sh"
+#: agentic-commerce-for-woocommerce.php
+msgid "https://www.xpay.sh"
+msgstr ""
+
+#: includes/class-xpay-agent-analytics.php:127
+msgid "Every 15 minutes (xpay agent analytics)"
 msgstr ""
 
 #: includes/class-xpay-cart.php:47
@@ -58,28 +62,28 @@ msgstr ""
 msgid "xpay — invalid cart link"
 msgstr ""
 
-#: includes/class-xpay-cart.php:87
+#: includes/class-xpay-cart.php:143
 msgid "None of the items in this shopping link are available right now."
 msgstr ""
 
-#: includes/class-xpay-cart.php:88
+#: includes/class-xpay-cart.php:144
 msgid "xpay — items unavailable"
 msgstr ""
 
 #: includes/class-xpay-consent.php:44
-msgid "xpay for WooCommerce — help us improve onboarding"
+msgid "Help us keep your store discoverable to AI shoppers"
 msgstr ""
 
 #: includes/class-xpay-consent.php:45
-msgid "May we send anonymous lifecycle events (plugin activated, store connected, audit re-run, sync errors) to help us catch broken onboarding flows? No PII or customer data is ever sent. You can change this any time under Settings → xpay."
+msgid "Switch this on and we get a heads-up when something quietly breaks your store's AI connection — a failed catalog sync, a blocked endpoint, a connection that drops — so we can flag it or fix it before your products fall out of ChatGPT, Claude and Perplexity. It also unlocks your AI-bot crawl insights: see which AI crawlers visit your store and whether they reach your discovery files. We only ever see plugin events (activated, connected, audit re-run, sync errors) tied to your site URL, plus anonymous counts of known AI bots and an aggregate tally of human pageviews (a number only, so you can see the AI-vs-human split) — never customer data, order data, or any personal information. Change it any time under Settings → xpay."
 msgstr ""
 
 #: includes/class-xpay-consent.php:46
-msgid "What gets sent"
+msgid "See exactly what's sent"
 msgstr ""
 
 #: includes/class-xpay-consent.php:48
-msgid "Enable anonymous telemetry"
+msgid "Share anonymous diagnostics"
 msgstr ""
 
 #: includes/class-xpay-consent.php:49
@@ -87,124 +91,596 @@ msgid "No thanks"
 msgstr ""
 
 #: includes/class-xpay-consent.php:56
-#: includes/class-xpay-settings.php:111
-#: includes/class-xpay-settings.php:125
+#: includes/class-xpay-content-pages.php:100
 #: includes/class-xpay-settings.php:261
+#: includes/class-xpay-settings.php:307
+#: includes/class-xpay-settings.php:374
+#: includes/class-xpay-settings.php:386
+#: includes/class-xpay-settings.php:402
+#: includes/class-xpay-settings.php:425
+#: includes/class-xpay-settings.php:450
+#: includes/class-xpay-settings.php:461
+#: includes/class-xpay-settings.php:476
+#: includes/class-xpay-settings.php:502
+#: includes/class-xpay-settings.php:726
+#: includes/class-xpay-settings.php:1155
+#: includes/class-xpay-shop-assist-page.php:90
+#: includes/class-xpay-shop-assist-page.php:104
 msgid "Not allowed."
 msgstr ""
 
-#: includes/class-xpay-plugin.php:60
-msgid "xpay for WooCommerce requires WooCommerce to be installed and active."
+#: includes/class-xpay-content-pages.php:214
+msgid "Published with"
 msgstr ""
 
-#: includes/class-xpay-settings.php:63
+#: includes/class-xpay-content-pages.php:341
+msgid "Content pages synced. Clear your page cache if you use one."
+msgstr ""
+
+#: includes/class-xpay-content-pages.php:354
+msgid "Content Engine"
+msgstr ""
+
+#. translators: %d: number of live content pages.
+#: includes/class-xpay-content-pages.php:358
+#, php-format
+msgid "%d published content page on your store."
+msgid_plural "%d published content pages on your store."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-xpay-content-pages.php:362
+msgid "Sync now"
+msgstr ""
+
+#: includes/class-xpay-plugin.php:155
+msgid "Agentic Commerce for WooCommerce requires WooCommerce to be installed and active."
+msgstr ""
+
+#: includes/class-xpay-schema.php:97
+msgid "Additional questions"
+msgstr ""
+
+#: includes/class-xpay-settings.php:109
 msgid "Settings"
 msgstr ""
 
-#: includes/class-xpay-settings.php:179
+#: includes/class-xpay-settings.php:576
 msgid "Store disconnected from xpay."
 msgstr ""
 
-#: includes/class-xpay-settings.php:182
+#: includes/class-xpay-settings.php:579
 msgid "Audit re-run queued. Refresh in ~30 seconds."
 msgstr ""
 
-#: includes/class-xpay-settings.php:197
+#: includes/class-xpay-settings.php:582
+msgid "Settings saved."
+msgstr ""
+
+#: includes/class-xpay-settings.php:586
+msgid "Catalog refresh queued — feed updates in ~30s."
+msgstr ""
+
+#: includes/class-xpay-settings.php:587
+msgid "Catalog refresh failed. Try again or check Tools → Test connection."
+msgstr ""
+
+#: includes/class-xpay-settings.php:588
+msgid "Connect the store before refreshing the catalog."
+msgstr ""
+
+#: includes/class-xpay-settings.php:594
+msgid "Connection OK — xpay backend reachable."
+msgstr ""
+
+#: includes/class-xpay-settings.php:595
+msgid "Backend unreachable. Check network or contact support@xpay.sh."
+msgstr ""
+
+#: includes/class-xpay-settings.php:596
+msgid "Connect the store first."
+msgstr ""
+
+#: includes/class-xpay-settings.php:638
 msgid "<strong>Heads up:</strong> a physical <code>robots.txt</code> file is overriding WordPress's dynamic robots.txt. xpay's shopping-agent allowlist will not apply. Delete the physical file or edit it to allow GPTBot, ClaudeBot, PerplexityBot, and OAI-SearchBot."
 msgstr ""
 
-#: includes/class-xpay-settings.php:231
+#: includes/class-xpay-settings.php:655
+msgid "General"
+msgstr ""
+
+#: includes/class-xpay-settings.php:656
+msgid "Capabilities"
+msgstr ""
+
+#: includes/class-xpay-settings.php:657
+msgid "Payments"
+msgstr ""
+
+#: includes/class-xpay-settings.php:658
+msgid "Links"
+msgstr ""
+
+#: includes/class-xpay-settings.php:659
+#: includes/class-xpay-settings.php:1054
+msgid "Tools"
+msgstr ""
+
+#: includes/class-xpay-settings.php:679
 msgid "Connect your store"
 msgstr ""
 
-#: includes/class-xpay-settings.php:232
-msgid "Connect this WooCommerce store to xpay. We'll provision a public agent-readable catalog feed, publish your /llms.txt and /.well-known/agentic-commerce.json, and enable cart deeplinks from ChatGPT, Claude, Gemini, and Perplexity."
+#: includes/class-xpay-settings.php:680
+msgid "Make your products discoverable to AI shoppers. Connecting lets ChatGPT, Claude, Gemini and Perplexity find your catalog and send buyers to your existing checkout — no code, and no change to how you get paid."
 msgstr ""
 
-#: includes/class-xpay-settings.php:233
+#: includes/class-xpay-settings.php:681
+msgid "Safe to try: the plugin never writes files to your site and doesn't touch your theme or payments. If you already have an /llms.txt, we add to it rather than replace it. Deactivate anytime and your site is exactly as it was."
+msgstr ""
+
+#: includes/class-xpay-settings.php:682
+msgid "Step-by-step guide with screenshots →"
+msgstr ""
+
+#: includes/class-xpay-settings.php:683
 msgid "Connect store →"
 msgstr ""
 
-#: includes/class-xpay-settings.php:234
+#: includes/class-xpay-settings.php:684
 msgid "No payment processor change. Payouts continue through your existing WooCommerce gateway."
 msgstr ""
 
-#: includes/class-xpay-settings.php:242
+#: includes/class-xpay-settings.php:685
+msgid "Technical details: publishes /llms.txt, schema.org JSON-LD and an AI-bot robots.txt allowlist, and exposes ACP / UCP / AP2 / MCP endpoints on xpay infrastructure."
+msgstr ""
+
+#: includes/class-xpay-settings.php:701
+msgid "Agency / referral code"
+msgstr ""
+
+#: includes/class-xpay-settings.php:702
+msgid "Were you set up by an agency or partner? Enter their referral code so your store is credited to them. Leave blank if you came on your own."
+msgstr ""
+
+#: includes/class-xpay-settings.php:705
+msgid "(set by your installer in wp-config.php)"
+msgstr ""
+
+#: includes/class-xpay-settings.php:713
+msgid "e.g. 3f9a2c7b"
+msgstr ""
+
+#: includes/class-xpay-settings.php:714
+msgid "Save code"
+msgstr ""
+
+#: includes/class-xpay-settings.php:786
 msgid "Connected"
 msgstr ""
 
-#: includes/class-xpay-settings.php:244
+#: includes/class-xpay-settings.php:788
 msgid "Merchant slug"
 msgstr ""
 
-#: includes/class-xpay-settings.php:245
+#: includes/class-xpay-settings.php:789
 msgid "Catalog feed"
 msgstr ""
 
-#: includes/class-xpay-settings.php:246
+#: includes/class-xpay-settings.php:790
 msgid "Last sync"
 msgstr ""
 
-#: includes/class-xpay-settings.php:246
+#: includes/class-xpay-settings.php:790
 msgid "ago"
 msgstr ""
 
-#: includes/class-xpay-settings.php:246
+#: includes/class-xpay-settings.php:790
 msgid "pending"
 msgstr ""
 
-#: includes/class-xpay-settings.php:248
+#: includes/class-xpay-settings.php:792
 msgid "Last audit score"
 msgstr ""
 
-#: includes/class-xpay-settings.php:253
-msgid "Re-run my audit"
-msgstr ""
-
-#: includes/class-xpay-settings.php:254
+#: includes/class-xpay-settings.php:797
 msgid "Disconnect"
 msgstr ""
 
-#: includes/class-xpay-settings.php:273
+#: includes/class-xpay-settings.php:813
+msgid "External services this plugin contacts"
+msgstr ""
+
+#: includes/class-xpay-settings.php:815
+msgid "public CDN that hosts your agent-readable catalog feed (product titles, prices, links, images). No customer or order data."
+msgstr ""
+
+#: includes/class-xpay-settings.php:816
+msgid "hosts the ACP / UCP / AP2 / MCP commerce endpoints agents use to build carts and hand off to your checkout."
+msgstr ""
+
+#: includes/class-xpay-settings.php:817
+msgid "your xpay dashboard and the connect flow, opened in a new tab. Not embedded in wp-admin."
+msgstr ""
+
+#: includes/class-xpay-settings.php:818
+msgid "Partner attribution (optional): if a referral code is set, it is sent with the connect handoff and on backend calls so the partner who set up your store can be credited. Alongside it we send three store-level totals only — your published product count, completed-order count, and the IDs of your enabled live payment gateways. No product, customer or order details."
+msgstr ""
+
+#: includes/class-xpay-settings.php:819
+msgid "optional, opt-in only: anonymous AI-bot crawl counts (which AI crawler fetched which kind of page, the HTTP status, and whether we routed it to your catalog), plus an aggregate daily count of human pageviews (a number only — no UA, no URL, no per-visit data) so you can see the AI-vs-human split. No customer or order data, no IPs. Batched in the background; shares the Privacy opt-in below."
+msgstr ""
+
+#. translators: 1: terms-of-use link, 2: privacy-policy link
+#: includes/class-xpay-settings.php:823
+#, php-format
+msgid "Terms of use: %1$s · Privacy policy: %2$s"
+msgstr ""
+
+#: includes/class-xpay-settings.php:833
+msgid "UCP capabilities"
+msgstr ""
+
+#: includes/class-xpay-settings.php:834
+msgid "Toggle which shopping capabilities are advertised in /.well-known/ucp. All on by default. Switching one off removes it from the manifest agents fetch."
+msgstr ""
+
+#: includes/class-xpay-settings.php:840
+msgid "Checkout — required for cart-based purchasing."
+msgstr ""
+
+#: includes/class-xpay-settings.php:841
+msgid "Fulfillment — shipping methods, rates, delivery dates."
+msgstr ""
+
+#: includes/class-xpay-settings.php:842
+msgid "Discount — coupons and promotional codes."
+msgstr ""
+
+#: includes/class-xpay-settings.php:843
+msgid "Order — post-purchase order status lookups."
+msgstr ""
+
+#: includes/class-xpay-settings.php:854
+msgid "Save capabilities"
+msgstr ""
+
+#: includes/class-xpay-settings.php:892
+msgid "Payment handlers"
+msgstr ""
+
+#: includes/class-xpay-settings.php:893
+msgid "Map your enabled WooCommerce payment gateways to UCP payment_handlers[]. Agents use this list to decide which payment methods they can complete on the buyer's behalf."
+msgstr ""
+
+#: includes/class-xpay-settings.php:897
+msgid "No payment gateways enabled in WooCommerce yet. Add a gateway under WooCommerce → Settings → Payments first."
+msgstr ""
+
+#: includes/class-xpay-settings.php:911
+msgid "Expose to agents"
+msgstr ""
+
+#: includes/class-xpay-settings.php:912
+msgid "Gateway"
+msgstr ""
+
+#: includes/class-xpay-settings.php:913
+msgid "UCP handler label (optional)"
+msgstr ""
+
+#: includes/class-xpay-settings.php:926
+msgid "Save payment handlers"
+msgstr ""
+
+#: includes/class-xpay-settings.php:958
+msgid "Policy & info links"
+msgstr ""
+
+#: includes/class-xpay-settings.php:959
+msgid "These appear in the ucp.links array so agents can surface your privacy policy, TOS, contact, etc. to the buyer. Auto-detected where possible; override any field below."
+msgstr ""
+
+#: includes/class-xpay-settings.php:965
+msgid "Privacy policy"
+msgstr ""
+
+#: includes/class-xpay-settings.php:966
+msgid "Terms of service"
+msgstr ""
+
+#: includes/class-xpay-settings.php:967
+msgid "About"
+msgstr ""
+
+#: includes/class-xpay-settings.php:968
+msgid "Contact"
+msgstr ""
+
+#: includes/class-xpay-settings.php:969
+msgid "Shipping policy"
+msgstr ""
+
+#. translators: %s: detected URL
+#: includes/class-xpay-settings.php:983
+#, php-format
+msgid "Auto-detected: %s"
+msgstr ""
+
+#: includes/class-xpay-settings.php:988
+msgid "Save links"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1060
+msgid "View UCP profile"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1062
+msgid "View full agent-readiness audit →"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1067
+msgid "Live actions"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1071
+msgid "Test connection"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1077
+msgid "Refresh catalog now"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1083
+msgid "Run site diagnostics"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1089
+msgid "Debug"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1091
+msgid "Turn off telemetry debug logging"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1091
+msgid "Turn on telemetry debug logging"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1092
+msgid "enabled"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1092
+msgid "disabled"
+msgstr ""
+
+#. translators: %s: enabled|disabled
+#: includes/class-xpay-settings.php:1095
+#, php-format
+msgid "Outbound HTTP request logging is %s. When enabled, every xpay backend call is logged to PHP error_log for troubleshooting. Separate from the anonymous-telemetry opt-in on the General tab."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1114
+msgid "Run site diagnostics to confirm AI agents and the xpay backend can reach your store: WordPress Permalinks, the REST API, our plugin routes, and the /.well-known/ discovery files."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1124
+msgid "WordPress REST API (Permalinks)"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1125
+msgid "xpay plugin REST routes"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1126
+msgid "/.well-known/ discovery files"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1130
+msgid "Your WordPress REST API is not reachable. Go to Settings → Permalinks, choose \"Post name\", and click Save Changes. This is required before connecting to xpay and for AI agents to read your catalog."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1132
+msgid "The plugin's REST routes are not responding even though the REST API is up. Try deactivating and reactivating the plugin. If it persists, a security plugin (Wordfence, iThemes Security) or a server firewall may be blocking /wp-json/xpay/."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1136
+msgid "Your store is connectable, but /.well-known/ files return an error at the web-server layer. Some hosts (Apache/ACME) reserve /.well-known/ and answer before WordPress runs. AI agents can still reach your discovery profile via this fallback URL:"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1138
+msgid "For clean /.well-known/ URLs, ask your host to let WordPress handle /.well-known/ requests."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1141
+msgid "All checks passed — agents and xpay can reach your store."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1149
+msgid "no response"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1169
+msgid "Apologies for the trouble — your previous connection attempt didn't complete."
+msgstr ""
+
+#. translators: %s: human-readable elapsed time
+#: includes/class-xpay-settings.php:1173
+#, php-format
+msgid "About %s ago you tried to connect this store to xpay, but the handshake didn't finish. Our team has already been notified; in the meantime please click Connect store again — the link is single-use and short-lived for security, so a fresh click is the fastest path to finishing the setup."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1183
 msgid "Turn off anonymous telemetry"
 msgstr ""
 
-#: includes/class-xpay-settings.php:273
+#: includes/class-xpay-settings.php:1183
 msgid "Turn on anonymous telemetry"
 msgstr ""
 
-#: includes/class-xpay-settings.php:274
+#: includes/class-xpay-settings.php:1184
 msgid "on"
 msgstr ""
 
-#: includes/class-xpay-settings.php:274
+#: includes/class-xpay-settings.php:1184
 msgid "off"
 msgstr ""
 
-#: includes/class-xpay-settings.php:276
+#: includes/class-xpay-settings.php:1186
 msgid "Privacy"
 msgstr ""
 
 #. translators: %s: on|off
-#: includes/class-xpay-settings.php:279
+#: includes/class-xpay-settings.php:1189
 #, php-format
 msgid "Anonymous lifecycle telemetry is %s. No customer data, no order data, no PII is ever sent. We only see plugin lifecycle events (activate, connect, sync errors) tied to your site URL."
 msgstr ""
 
-#: includes/class-xpay-settings.php:306
+#: includes/class-xpay-settings.php:1192
+msgid "This same switch also controls anonymous AI-bot crawl analytics: when on, the plugin counts how AI crawlers (GPTBot, ClaudeBot, PerplexityBot and similar) discover your store — which pages they fetch and whether they reach your discovery files — so you can see this on your xpay dashboard. It records known AI bots plus an aggregate daily count of human pageviews (a number only — no per-visit data) as the AI-vs-human denominator, and never customer, order, or personal data. To disable just this while keeping lifecycle telemetry, add"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1192
+msgid "to wp-config.php."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1209
+msgid "AI can read your full catalogue"
+msgstr ""
+
+#. translators: %s: merchant slug
+#: includes/class-xpay-settings.php:1213
+#, php-format
+msgid "Hosted feed live at agent-feed.xpay.sh/catalog/%s.json"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1214
+#: includes/class-xpay-settings.php:1250
+#: includes/class-xpay-settings.php:1257
+msgid "Connect store to enable."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1217
+msgid "Live prices visible to AI"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1219
+msgid "JSON-LD Product / Offer schema injected on product pages."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1222
+msgid "Plain-text guide for AI assistants"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1224
+msgid "Served at /llms.txt."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1227
+msgid "AI assistants know where to send a buyer"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1230
+msgid "Per-protocol endpoints (ACP / UCP / AP2 / MCP) advertised in /llms.txt and hosted on xpay infra."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1231
+msgid "Connect store to populate endpoints."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1234
+msgid "AI shoppers are allowed in"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1237
+msgid "Physical robots.txt detected — needs manual fix."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1238
+msgid "GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot allowed in robots.txt."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1241
+msgid "Direct buy link signals"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1243
+msgid "BuyAction emitted on every product page."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1246
+msgid "AI shoppers can buy without leaving the chat"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1249
+msgid "Cart deeplink handler active."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1253
+msgid "Stock & price kept current"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1256
+msgid "Webhook resync on product/stock change."
+msgstr ""
+
+#: includes/class-xpay-settings.php:1261
 msgid "Audit readiness"
 msgstr ""
 
-#: includes/class-xpay-settings.php:308
+#: includes/class-xpay-settings.php:1263
 msgid "Check"
 msgstr ""
 
-#: includes/class-xpay-settings.php:309
+#: includes/class-xpay-settings.php:1264
 msgid "Status"
 msgstr ""
 
-#: includes/class-xpay-settings.php:310
+#: includes/class-xpay-settings.php:1265
 msgid "Detail"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1267
+msgid "✓ Ready"
+msgstr ""
+
+#: includes/class-xpay-settings.php:1268
+msgid "⚠ Pending"
+msgstr ""
+
+#: includes/class-xpay-shop-assist-page.php:143
+#: includes/class-xpay-shop-assist-page.php:263
+msgid "AI Shopping Assistant"
+msgstr ""
+
+#: includes/class-xpay-shop-assist-page.php:255
+msgid "AI Assistant updated. Clear your page cache and reload the storefront."
+msgstr ""
+
+#. translators: %s: page URL.
+#: includes/class-xpay-shop-assist-page.php:270
+#, php-format
+msgid "storefront widget + full-page shopper live at <a href=\"%1$s\" target=\"_blank\" rel=\"noopener\">%1$s</a>. Add it to your menu."
+msgstr ""
+
+#: includes/class-xpay-shop-assist-page.php:274
+msgid "Re-sync"
+msgstr ""
+
+#: includes/class-xpay-shop-assist-page.php:277
+msgid "turn on the on-store chat widget and the full-page shopper in one click."
+msgstr ""
+
+#: includes/class-xpay-shop-assist-page.php:279
+msgid "Enable AI Assistant"
+msgstr ""
+
+#: includes/class-xpay-storefront-widget.php:174
+msgid "AI Storefront Assistant is active."
+msgstr ""
+
+#: includes/class-xpay-storefront-widget.php:177
+msgid "If you use a caching/optimization plugin (WP Rocket, LiteSpeed, W3 Total Cache, Autoptimize), <strong>exclude <code>widget.xpay.sh/v1/storefront.js</code></strong> from JavaScript minify/concatenate and delay/defer so the chat loads reliably. In WP Rocket: <em>File Optimization → Excluded JavaScript Files</em> and <em>Delay JavaScript Execution → Excluded</em>."
 msgstr ""
 
 #: includes/class-xpay-widget.php:82
