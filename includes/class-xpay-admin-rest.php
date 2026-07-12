@@ -387,6 +387,12 @@ class Xpay_Admin_REST {
 			if ( class_exists( 'LiteSpeed_Cache_API' ) && method_exists( 'LiteSpeed_Cache_API', 'purge_post' ) ) {
 				LiteSpeed_Cache_API::purge_post( $id );
 			}
+			// `litespeed_purge_post` is LiteSpeed Cache's OWN hook — we are the caller,
+			// not the owner. Prefixing it (xpay_litespeed_purge_post) would fire a hook
+			// nothing listens to and silently break the purge, which is the entire point
+			// of this method. PrefixAllGlobals can't tell "inventing a global hook" from
+			// "calling a third-party plugin's documented API"; this is the latter.
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- third-party (LiteSpeed Cache) hook, intentionally invoked.
 			do_action( 'litespeed_purge_post', $id );
 
 			// WP Rocket — same plugin that was swallowing our order attribution.
