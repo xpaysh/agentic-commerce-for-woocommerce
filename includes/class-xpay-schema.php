@@ -40,21 +40,28 @@ class Xpay_Schema {
 		//               builder themes work at all.
 		//   hook      — woocommerce_after_single_product_summary @15 (0.4.0 behaviour).
 		//               Classic themes only; Elementor templates never fire it.
-		//   auto      — register BOTH. Not a theme sniff: tabs output at priority 10 of
+		//   auto      — BOTH are live. Not a theme sniff: tabs output at priority 10 of
 		//               after_single_product_summary, so on a classic theme the tab has
 		//               already claimed the render by the time our @15 hook runs and it
 		//               stands down. On Elementor only the tab fires. Exactly one wins.
 		//   shortcode — neither; the merchant places [xpay-faq] themselves.
-		$placement = $this->faq_placement();
-		if ( $this->faq_visible() ) {
-			if ( 'tab' === $placement || 'auto' === $placement ) {
-				add_filter( 'woocommerce_product_tabs', array( $this, 'register_faq_tab' ) );
-			}
-			if ( 'hook' === $placement || 'auto' === $placement ) {
-				add_action( 'woocommerce_after_single_product_summary', array( $this, 'render_visible_faq' ), 15 );
-			}
-		}
-
+		//
+		// Both are registered UNCONDITIONALLY and every callback re-checks faq_visible()
+		// and faq_placement() at RENDER time. Deciding here, at plugins_loaded, would be
+		// wrong twice over:
+		//   1. The `xpay_wc_faq_visible` filter is our promise that a site owner can stop
+		//      us painting on their storefront. A theme registers filters at
+		//      after_setup_theme — AFTER this constructor — so a decision made here could
+		//      never see it, and the escape hatch would silently do nothing from the one
+		//      place merchants actually put filters.
+		//   2. On the request that upgrades the plugin, the 0.6.0 seed writes faq_visible
+		//      later in this same bootstrap. Reading the option here would see the stale
+		//      pre-seed value, drop the block for that request — and if it's a cacheable
+		//      PDP hit, the page cache would store the FAQ-less HTML and keep serving it.
+		//      That is precisely the failure the seed exists to prevent.
+		// Registering is cheap; rendering is where the decision belongs.
+		add_filter( 'woocommerce_product_tabs', array( $this, 'register_faq_tab' ) );
+		add_action( 'woocommerce_after_single_product_summary', array( $this, 'render_visible_faq' ), 15 );
 		add_shortcode( 'xpay-faq', array( $this, 'shortcode' ) );
 	}
 
@@ -408,6 +415,11 @@ class Xpay_Schema {
 	 * @return array|null
 	 */
 	private function faq_for_current_product() {
+		// Evaluated per-request at render time, never cached at bootstrap — see the
+		// constructor. This is the single choke point every placement goes through.
+		if ( ! $this->faq_visible() ) {
+			return null;
+		}
 		if ( $this->faq_rendered || ! is_product() ) {
 			return null;
 		}
@@ -435,6 +447,10 @@ class Xpay_Schema {
 	 * @return array
 	 */
 	public function register_faq_tab( $tabs ) {
+		$placement = $this->faq_placement();
+		if ( 'tab' !== $placement && 'auto' !== $placement ) {
+			return $tabs;
+		}
 		if ( null === $this->faq_for_current_product() ) {
 			return $tabs;
 		}
@@ -483,6 +499,10 @@ class Xpay_Schema {
 	 * of this same action, so by the time we run at 15 the flag is set.
 	 */
 	public function render_visible_faq() {
+		$placement = $this->faq_placement();
+		if ( 'hook' !== $placement && 'auto' !== $placement ) {
+			return;
+		}
 		$this->render_faq_list( $this->faq_heading(), true );
 	}
 

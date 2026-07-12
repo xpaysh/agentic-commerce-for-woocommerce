@@ -44,6 +44,12 @@ class Xpay_Plugin {
 			return;
 		}
 
+		// BEFORE any subsystem is wired up: the version bump runs one-time upgrade
+		// migrations that write options those subsystems then read. Wiring first and
+		// migrating second would hand every subsystem the pre-migration state for the
+		// duration of the upgrade request.
+		$this->maybe_handle_version_bump();
+
 		Xpay_REST::instance();
 		Xpay_Robots::instance();
 		Xpay_Schema::instance();
@@ -67,7 +73,6 @@ class Xpay_Plugin {
 		}
 
 		add_action( 'admin_init', array( $this, 'maybe_redirect_after_activation' ) );
-		$this->maybe_handle_version_bump();
 	}
 
 	private function maybe_handle_version_bump() {
