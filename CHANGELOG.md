@@ -11,6 +11,14 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
+### Planned — 0.6.1 (patch)
+
+- **Open the merchant's side cart from the xpay blog.** a live merchant store runs the Caddy side-cart plugin and has
+  abandoned the `/cart/` page, so the cart icon on the xpay-rendered blog was a dead end. Caddy already listens
+  for a same-origin `postMessage("open_caddy_cart")`; the plugin will turn an `#open-cart` hash on a WordPress
+  page into that message so the drawer opens. Gate on a side cart actually being present. Reported by a merchant
+  (a live merchant store) 2026-07-10; tracked as TODO #101. The cart *count* was fixed blog-side on 2026-07-13.
+
 ## [0.6.0] — 2026-07-12
 
 ### Added — merchant control over the visible product-FAQ block
