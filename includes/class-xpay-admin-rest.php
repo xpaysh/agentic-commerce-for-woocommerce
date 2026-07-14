@@ -99,6 +99,30 @@ class Xpay_Admin_REST {
 						$executed[] = $action;
 						break;
 
+					case 'reconcile_shop_assist_page':
+						// Publish (or unpublish) the full-page shopper to match the
+						// dashboard's shopAssistEnabled/Slug.
+						//
+						// The page is otherwise only reconciled on wp-admin loads and an
+						// HOURLY cron, and reconcile() refuses to publish while the store
+						// isn't entitled. So a store that enables the full page BEFORE
+						// entitlement resolves gets a 404 on its own link, and no way for
+						// us to retry. This makes the fix pushable.
+						//
+						// Bust the config transient first, or reconcile would read the
+						// stale (pre-flip) shopAssistEnabled and no-op.
+						if ( class_exists( 'Xpay_Shop_Assist_Page' ) ) {
+							delete_transient( 'xpay_wc_storefront_entitlement' );
+							delete_transient( 'xpay_wc_widget_config' );
+							Xpay_Shop_Assist_Page::instance()->reconcile();
+							// The page is new, so the cached 404 for its URL has to go.
+							self::purge_site_page_cache();
+							$executed[] = $action;
+						} else {
+							$skipped[] = $action;
+						}
+						break;
+
 					case 'clear_discovery_cache':
 						if ( class_exists( 'Xpay_Emitter_Probe' ) ) {
 							foreach ( Xpay_Emitter_Probe::known_paths() as $path ) {
@@ -118,6 +142,12 @@ class Xpay_Admin_REST {
 						// re-fetches both from the backend with the latest values.
 						delete_transient( 'xpay_wc_storefront_entitlement' );
 						delete_transient( 'xpay_wc_widget_config' );
+						// …and drop the full-page cache. Clearing the transients alone
+						// only fixes pages PHP actually renders — on WP Rocket /
+						// LiteSpeed the cached HTML is served before PHP runs, so the
+						// loader would stay missing until each page expired on its own.
+						// The loader sits on every public page, so the purge is site-wide.
+						self::purge_site_page_cache();
 						$executed[] = $action;
 						break;
 
@@ -409,6 +439,64 @@ class Xpay_Admin_REST {
 			if ( function_exists( 'w3tc_flush_post' ) ) {
 				w3tc_flush_post( $id );
 			}
+		}
+	}
+
+	/**
+	 * Purge the FULL-PAGE cache site-wide.
+	 *
+	 * {@see purge_product_caches()} is per-post, which is right for a FAQ push —
+	 * it touches known products. The storefront widget is different: its loader is
+	 * injected into EVERY public page, so flipping it on or off invalidates the
+	 * whole site, not a product list.
+	 *
+	 * Without this, a store on WP Rocket / LiteSpeed turns the assistant on, sees
+	 * nothing, and concludes it's broken — the cached HTML is served BEFORE PHP
+	 * runs, so our loader is never injected until each page's cache happens to
+	 * expire. Pages that regenerate after the toggle work; the rest keep serving
+	 * a copy cached before it, with no loader in it.
+	 *
+	 * Best-effort by design, same as the per-post purge: a cache we don't know
+	 * about is a stale page, not a failed request. Nothing here may throw.
+	 */
+	private static function purge_site_page_cache() {
+		// WP Rocket.
+		if ( function_exists( 'rocket_clean_domain' ) ) {
+			rocket_clean_domain();
+		}
+
+		// LiteSpeed. API class on current builds, the plugin's own hook on older
+		// ones (see the note in purge_product_caches() on why it isn't prefixed).
+		if ( class_exists( 'LiteSpeed_Cache_API' ) && method_exists( 'LiteSpeed_Cache_API', 'purge_all' ) ) {
+			LiteSpeed_Cache_API::purge_all();
+		}
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- third-party (LiteSpeed Cache) hook, intentionally invoked.
+		do_action( 'litespeed_purge_all' );
+
+		// WP Super Cache.
+		if ( function_exists( 'wp_cache_clear_cache' ) ) {
+			wp_cache_clear_cache();
+		}
+
+		// W3 Total Cache.
+		if ( function_exists( 'w3tc_flush_all' ) ) {
+			w3tc_flush_all();
+		}
+
+		// WP Fastest Cache.
+		if ( function_exists( 'wpfc_clear_all_cache' ) ) {
+			wpfc_clear_all_cache( true );
+		}
+
+		// Cache Enabler.
+		if ( has_action( 'cache_enabler_clear_complete_cache' ) ) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- third-party (Cache Enabler) hook, intentionally invoked.
+			do_action( 'cache_enabler_clear_complete_cache' );
+		}
+
+		// SiteGround Optimizer.
+		if ( function_exists( 'sg_cachepress_purge_cache' ) ) {
+			sg_cachepress_purge_cache();
 		}
 	}
 
