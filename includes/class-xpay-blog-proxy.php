@@ -221,7 +221,7 @@ class Xpay_Blog_Proxy {
 		// The blog sitemap ({prefix}/sitemap.xml) is served by the renderer but is
 		// NOT a member of its own <loc> list, so it can never pass the owned-paths
 		// gate below. Let it through explicitly so search engines can fetch the
-		// article sitemap under the apex (a-merchant-store.example/blog/sitemap.xml). Paired
+		// article sitemap under the apex (example.com/blog/sitemap.xml). Paired
 		// with the robots.txt Sitemap directive (append_sitemap_directive).
 		$is_blog_sitemap = ( $lpath === $lpref . '/sitemap.xml' );
 

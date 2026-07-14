@@ -184,8 +184,8 @@ class Xpay_Order_Events {
 		//
 		// EXCEPT when the sentinel is stale: `wp_schedule_single_event` only runs
 		// when a LATER page load triggers WP-Cron, and on a low-traffic store the
-		// next hit can be hours away — or never. a live merchant store has zero order-event
-		// rows ever for exactly this reason. A stale sentinel therefore means
+		// next hit can be hours away — or never. A low-traffic store can end up
+		// with no order-event rows at all for this reason. A stale sentinel means
 		// "cron never ran", not "in flight", and must not block a retry.
 		if ( $this->is_sent_or_in_flight( $order ) ) {
 			return;
@@ -280,8 +280,8 @@ class Xpay_Order_Events {
 	 * The old guard was a hard `completed || processing` whitelist, which
 	 * silently dropped every order that (a) pays by an offline gateway
 	 * (cheque/BACS/COD — no payment_complete event) and (b) is fulfilled through
-	 * a CUSTOM status. La Poste routes pending → lpc_transit → lpc_delivered and
-	 * never touches `completed`: on a live merchant store that was ~21% of all orders.
+	 * a CUSTOM status. A carrier plugin can route pending → transit → delivered and
+	 * never touch `completed` — on one live store that was ~a fifth of all orders.
 	 *
 	 * Now: fire on any status WooCommerce considers paid (`wc_get_is_paid_statuses()`
 	 * is filterable, so plugins that register their own paid statuses are covered),
@@ -503,8 +503,8 @@ class Xpay_Order_Events {
 		// Layer 4 — WooCommerce core Order Attribution (8.5+). A client-side JS
 		// stamp, so it SURVIVES the full-page caches that starve our PHP
 		// classifier. On a WP Rocket store this is currently the only layer that
-		// fires at all: a live merchant store has 78 order rows and exactly ONE carries a
-		// `ref` map. Everything above this line has been dead there for months.
+		// fires at all — virtually no order carries a `ref` map, because
+		// everything above this line never executes on a cached page.
 		$wc_native = $this->resolve_wc_native( $order );
 		if ( $wc_native ) {
 			return $wc_native;

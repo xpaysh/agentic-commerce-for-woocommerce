@@ -6,7 +6,7 @@
  * Cloudflare APO...) the cached HTML is served *before any PHP runs*, so for a
  * fresh visitor — which is every visitor arriving from an AI assistant — the
  * classifier never executes. It is not that it classifies wrongly; it never
- * runs at all. a live merchant store has 78 orders and exactly ONE carries a ref record.
+ * runs at all — on a cached store, virtually no order carries a ref record.
  *
  * The fix is the same architecture WooCommerce core chose for its own Order
  * Attribution tracker: collect the signals in the BROWSER (where the cache can't

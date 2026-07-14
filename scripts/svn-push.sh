@@ -28,7 +28,10 @@ VERSION=${1:-}
 PLUGIN_DIR=$(cd "$(dirname "$0")/.." && pwd)
 SVN_DIR=${SVN_DIR:-$HOME/wporg/acfw}
 SVN_USER=${SVN_USER:-xpaysh}
-COMMIT_MSG=${COMMIT_MSG:-"Release ${VERSION} — AI Storefront Assistant (on-store chat widget + full-page shopper) + product FAQ schema"}
+# Neutral by default and derived from $VERSION. It used to default to a hardcoded
+# 0.6.0 feature list, which every later release would have carried — and an SVN
+# commit message is permanent. Pass COMMIT_MSG= to say something more specific.
+COMMIT_MSG=${COMMIT_MSG:-"Release ${VERSION}"}
 
 green() { printf "\033[32m%s\033[0m\n" "$*"; }
 red()   { printf "\033[31m%s\033[0m\n" "$*" >&2; }
@@ -37,6 +40,11 @@ fail()  { red "✗ $*"; exit 1; }
 command -v svn >/dev/null || fail "svn not installed"
 command -v rsync >/dev/null || fail "rsync not installed"
 [[ -d "$SVN_DIR/.svn" ]] || fail "no SVN checkout at $SVN_DIR (set SVN_DIR=/path/to/checkout)"
+
+# 0) Customer-name gate. A WP.org SVN commit is PERMANENT — the revision stays
+#    browsable on plugins.trac.wordpress.org forever, even if we overwrite the
+#    file later. There is no taking this one back, so it runs before anything.
+"$PLUGIN_DIR/scripts/check-no-customer-names.sh" || fail "customer-name gate failed"
 
 # 1) Version consistency (php header + readme Stable tag)
 PHP_FILE="$PLUGIN_DIR/agentic-commerce-for-woocommerce.php"

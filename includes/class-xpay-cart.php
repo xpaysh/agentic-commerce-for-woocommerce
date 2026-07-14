@@ -71,8 +71,8 @@ class Xpay_Cart {
 			// forwarded by the agent-commerce mint when the SKU/variation_id
 			// resolves to a specific variation. WC's add_to_cart() needs this
 			// map as the 4th arg to find the correct variation row; without it
-			// variable products are silently dropped from the cart, which is
-			// what the a live merchant store merchant hit on 2026-06-25.
+			// variable products are silently dropped from the cart — a bug a live
+			// merchant hit before this arg was passed.
 			$variation_attrs = isset( $line['attributes'] ) && is_array( $line['attributes'] )
 				? array_map( 'sanitize_text_field', $line['attributes'] )
 				: array();

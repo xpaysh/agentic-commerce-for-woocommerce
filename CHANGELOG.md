@@ -13,11 +13,10 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ### Planned — 0.6.1 (patch)
 
-- **Open the merchant's side cart from the xpay blog.** a live merchant store runs the Caddy side-cart plugin and has
-  abandoned the `/cart/` page, so the cart icon on the xpay-rendered blog was a dead end. Caddy already listens
-  for a same-origin `postMessage("open_caddy_cart")`; the plugin will turn an `#open-cart` hash on a WordPress
-  page into that message so the drawer opens. Gate on a side cart actually being present. Reported by a merchant
-  (a live merchant store) 2026-07-10; tracked as TODO #101. The cart *count* was fixed blog-side on 2026-07-13.
+- **Open a side-cart drawer from an off-site link.** Stores running a side-cart plugin (e.g. Caddy) often
+  abandon the `/cart/` page entirely, so a cart link pointing there is a dead end. Caddy listens for a
+  same-origin `postMessage("open_caddy_cart")`; the plugin turns an `#open-cart` hash on a WordPress page
+  into that message, so the drawer opens instead.
 
 ## [0.6.0] — 2026-07-12
 
@@ -58,7 +57,7 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 - The heading rides the pushed payload (`faq_heading`), sanitized and capped at 120 chars.
   The backend knows each merchant's locale; the plugin doesn't. Carrying the string means a
   French store is not waiting on a WP.org release *plus* a merchant plugin update to stop
-  seeing an English `<h2>` over French answers — which a-merchant-store.example did for weeks.
+  seeing an English `<h2>` over French answers.
 - Renamed "Frequently asked questions" → **"Additional questions"**. Merchants often have
   their own FAQ in the product description; ours answers the *commerce* facts (delivery,
   returns, price framing, variants) that theirs typically doesn't.
@@ -70,8 +69,8 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
   WP Rocket (`rocket_clean_post`), WP Super Cache (`wp_cache_post_change`), W3 Total Cache
   (`w3tc_flush_post`), and `clean_post_cache` (which is also what Cloudflare APO and several
   caching plugins hang their purge off). Each guarded by `function_exists`/`class_exists`.
-- Proven on a live merchant store 2026-07-12: the push returned `{ok:true, executed:["set_product_faqs"]}`
-  and PHP rendered the new French FAQ, while LiteSpeed kept serving the stale English HTML on
+- Observed on a live LiteSpeed store: the push returned `{ok:true, executed:["set_product_faqs"]}`
+  and PHP rendered the new localized FAQ, while LiteSpeed kept serving the stale HTML on
   the plain URL — only a cache-busting query string revealed the update. "The plugin returned
   200" never meant "the page changed". Same root cause as the WP Rocket attribution bug.
 

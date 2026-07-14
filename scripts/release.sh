@@ -34,6 +34,11 @@ green() { printf "\033[32m%s\033[0m\n" "$*"; }
 red()   { printf "\033[31m%s\033[0m\n" "$*" >&2; }
 fail()  { red "✗ $*"; exit 1; }
 
+# 0) Customer-name gate. This publishes CHANGELOG.md to a public CDN and embeds
+#    it into manifest.json, which renders inside merchants' wp-admin. Runs FIRST:
+#    a leak is not something to discover after the zip is on the CDN.
+"$PLUGIN_DIR/scripts/check-no-customer-names.sh" || fail "customer-name gate failed"
+
 # 1) Version consistency check
 PHP_FILE="$PLUGIN_DIR/agentic-commerce-for-woocommerce.php"
 [[ -f "$PHP_FILE" ]] || PHP_FILE="$PLUGIN_DIR/xpay-for-woocommerce.php" # fallback for v0.1.2-0.1.11

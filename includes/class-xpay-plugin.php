@@ -253,9 +253,9 @@ class Xpay_Plugin {
 	/**
 	 * Should the AI Storefront Assistant render on this storefront?
 	 *
-	 * Two layers, both required (a merchant/a live merchant store 2026-06-25 incident: a
-	 * backend pre-grant alone surfaced the chat bubble on a live store with no
-	 * merchant notification — never again).
+	 * Two layers, both required. A backend pre-grant ALONE once surfaced the chat
+	 * bubble on a live storefront with no merchant notification — never again.
+	 * Entitlement is permission to use; consent is permission to render.
 	 *
 	 *   ENTITLEMENT  — is this merchant on a plan / pre-grant that includes the
 	 *                  add-on? Cached backend lookup with a local-toggle fallback

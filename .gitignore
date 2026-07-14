@@ -3,3 +3,6 @@ node_modules/
 *.zip
 assets/screenshots-src/node_modules/
 assets/screenshots-src/package-lock.json
+
+# Customer deny-list for the release gate — must never be published.
+scripts/.release-denylist

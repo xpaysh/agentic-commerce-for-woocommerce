@@ -369,9 +369,9 @@ class Xpay_Admin_REST {
 	 * Without this, a successful push is INVISIBLE. Full-page caches (LiteSpeed, WP
 	 * Rocket, WP Super Cache, W3TC, Cloudflare APO) serve stored HTML *before* PHP
 	 * runs, so our option write lands, the emitter renders the new FAQ, and the
-	 * shopper still gets the old page. Proven on a live merchant store 2026-07-12: the push
-	 * returned ok/executed, PHP rendered the new French FAQ, and LiteSpeed kept
-	 * serving the stale English HTML on the plain URL — only a cache-busting query
+	 * shopper still gets the old page. Observed on a LiteSpeed store: the push
+	 * returned ok/executed, PHP rendered the new localized FAQ, and LiteSpeed kept
+	 * serving the stale HTML on the plain URL — only a cache-busting query
 	 * string revealed the update. "The plugin returned 200" never meant "the page
 	 * changed", and that was true of every push we make, not just FAQs.
 	 *
@@ -412,8 +412,8 @@ class Xpay_Admin_REST {
 			// plugins hang their own purge off — so this does double duty.
 			clean_post_cache( $id );
 
-			// LiteSpeed. Both surfaces: the API class on current builds, the action
-			// hook on older ones. a live merchant store is the store this whole fix exists for.
+			// LiteSpeed. Both surfaces: the documented `litespeed_purge_post` action
+			// on current builds, the legacy API class on pre-3.0 ones.
 			if ( class_exists( 'LiteSpeed_Cache_API' ) && method_exists( 'LiteSpeed_Cache_API', 'purge_post' ) ) {
 				LiteSpeed_Cache_API::purge_post( $id );
 			}

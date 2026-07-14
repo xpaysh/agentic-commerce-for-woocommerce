@@ -429,8 +429,8 @@ class Xpay_Attribution {
 		// what we can know. ChatGPT Atlas presents as stock Chrome and its iOS
 		// app strips the referrer, so NO user-agent rule can ever catch them.
 		// What's left is the shape: no referrer at all, landing cold on a deep
-		// product page. 22 a live merchant store orders arrived exactly like this, straight
-		// onto locale-prefixed novel-cannabinoid URLs nobody types from memory.
+		// product page. On a live store we saw a substantial share of orders arrive
+		// exactly like this, straight onto deep URLs nobody types from memory.
 		//
 		// ⛔ This is a SIGNAL, NOT A CLAIM. It is emitted at LOW confidence with
 		// its own method so the dashboard can show it as a separate
@@ -479,9 +479,9 @@ class Xpay_Attribution {
 	 * Does this landing path look like a deep product page?
 	 *
 	 * Locale-aware: a WooCommerce store on a French permalink base serves
-	 * products under /produit/ (and a live merchant store's are additionally locale-prefixed
-	 * as /it/produit/…), so an English-only `/product/` test would score ~0 on
-	 * exactly the merchant this heuristic exists for.
+	 * products under /produit/, and a multilingual store additionally prefixes the
+	 * locale (/it/produit/…), so an English-only `/product/` test would score ~0 on
+	 * exactly the stores this heuristic exists for.
 	 */
 	private function is_deep_product_landing( $landing_path ) {
 		$path = (string) $landing_path;
