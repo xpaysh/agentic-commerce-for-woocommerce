@@ -278,7 +278,14 @@ class Xpay_Plugin {
 			return false;
 		}
 
-		if ( ! self::resolve_storefront_entitlement( $slug ) ) {
+		// RENDERING decision: an unknown collapses to the local toggle. Guessing
+		// wrong here costs a missing chat bubble, and it self-heals on the next
+		// successful fetch. (Compare storefront_entitlement_state(), where an
+		// unknown must NOT collapse — see the note there.)
+		$state    = self::storefront_entitlement_lookup( $slug );
+		$entitled = ( 'yes' === $state )
+			|| ( 'unknown' === $state && (bool) get_option( 'xpay_wc_storefront_widget_enabled', 0 ) );
+		if ( ! $entitled ) {
 			return false;
 		}
 
@@ -294,29 +301,68 @@ class Xpay_Plugin {
 	}
 
 	/**
-	 * Read-only entitlement lookup with the existing 6h transient + local-toggle
-	 * fallback. Split out so {@see is_storefront_widget_entitled()} can layer
-	 * consent on top without duplicating the cache logic.
+	 * Entitlement as a THREE-state value: 'yes' | 'no' | 'unknown'.
+	 *
+	 * ⛔ `unknown` is the whole point of this method, and it must never be
+	 * flattened into `no` by a caller that can RETRACT something.
+	 *
+	 * A merchant who enabled the assistant from the dashboard never touches the
+	 * local wp-admin toggle, so that option reads 0 for them. If a single 4-second
+	 * timeout is allowed to mean "not entitled", it becomes indistinguishable from
+	 * the backend genuinely saying no — and Xpay_Shop_Assist_Page::reconcile()
+	 * would draft their live, indexed shopper page because we briefly couldn't
+	 * reach our own API.
+	 *
+	 * Retraction must be driven by the backend SAYING no, never by our failing to
+	 * hear it.
 	 */
-	private static function resolve_storefront_entitlement( $slug ) {
-		$cached = get_transient( 'xpay_wc_storefront_entitlement' );
-		if ( false !== $cached ) {
-			return (bool) $cached;
+	public static function storefront_entitlement_state() {
+		if ( defined( 'XPAY_WC_STOREFRONT_WIDGET' ) ) {
+			return XPAY_WC_STOREFRONT_WIDGET ? 'yes' : 'no';
 		}
-		$entitled = self::fetch_storefront_entitlement( $slug );
-		set_transient( 'xpay_wc_storefront_entitlement', $entitled ? 1 : 0, 6 * HOUR_IN_SECONDS );
-		return $entitled;
+		$slug = self::merchant_slug();
+		if ( '' === $slug ) {
+			return 'no';
+		}
+		return self::storefront_entitlement_lookup( $slug );
 	}
 
+	/**
+	 * Cached entitlement lookup. Returns 'yes' | 'no' | 'unknown'.
+	 *
+	 * A real answer is cached for 6h. An unreachable backend caches 'unknown' for
+	 * 60s — long enough that a down API doesn't put a 4s fetch on every pageview,
+	 * nowhere near long enough to pin a GUESS for six hours.
+	 */
+	private static function storefront_entitlement_lookup( $slug ) {
+		$cached = get_transient( 'xpay_wc_storefront_entitlement' );
+		if ( false !== $cached ) {
+			return 'unknown' === $cached ? 'unknown' : ( $cached ? 'yes' : 'no' );
+		}
+		$entitled = self::fetch_storefront_entitlement( $slug );
+		if ( null === $entitled ) {
+			set_transient( 'xpay_wc_storefront_entitlement', 'unknown', MINUTE_IN_SECONDS );
+			return 'unknown';
+		}
+		set_transient( 'xpay_wc_storefront_entitlement', $entitled ? 1 : 0, 6 * HOUR_IN_SECONDS );
+		return $entitled ? 'yes' : 'no';
+	}
+
+	/**
+	 * Entitlement from the API: true | false | NULL.
+	 *
+	 * NULL means "we could not ask" — it never means "no".
+	 */
 	private static function fetch_storefront_entitlement( $slug ) {
 		$url = trailingslashit( XPAY_WC_AGENT_COMMERCE_BASE ) . 'widget/entitlement?slug=' . rawurlencode( $slug );
 		$res = wp_remote_get( $url, array( 'timeout' => 4 ) );
 		if ( is_wp_error( $res ) || 200 !== (int) wp_remote_retrieve_response_code( $res ) ) {
-			// Endpoint not reachable yet → fall back to the local admin toggle so
-			// the widget stays controllable.
-			return (bool) get_option( 'xpay_wc_storefront_widget_enabled', 0 );
+			return null;
 		}
 		$body = json_decode( (string) wp_remote_retrieve_body( $res ), true );
+		if ( ! is_array( $body ) ) {
+			return null;
+		}
 		return ! empty( $body['storefront_widget'] ) || ! empty( $body['entitled'] );
 	}
 

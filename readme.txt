@@ -6,7 +6,7 @@ Tested up to: 7.0
 Requires PHP: 7.4
 WC requires at least: 7.0
 WC tested up to: 10.8.1
-Stable tag: 0.6.0
+Stable tag: 0.6.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -200,6 +200,9 @@ Full data-handling disclosure: [install.xpay.sh/woocommerce/privacy.html](https:
 
 == Upgrade Notice ==
 
+= 0.6.1 =
+Turning the AI Storefront Assistant on now takes effect immediately on cached stores, instead of waiting for the cache to expire. Fixes the full-page shopper returning 404 after you enable it. Adds support for opening a side-cart drawer from an off-site link.
+
 = 0.6.0 =
 Control over the on-page product-FAQ block, which previously had no off switch. It now also renders on page-builder themes, as a product tab or an [xpay-faq] shortcode, with headings in your own language. Page caches are cleared when FAQs change.
 
@@ -275,6 +278,12 @@ Adds the `/?xpay_route=acp` query-arg fallback for the discovery file on hosts t
 == Changelog ==
 
 The full machine-readable changelog lives at [install.xpay.sh/woocommerce/CHANGELOG.md](https://install.xpay.sh/woocommerce/CHANGELOG.md) (Keep-a-Changelog format). The summary below is the WP.org-required mirror.
+
+= 0.6.1 =
+* **Enabling the AI Storefront Assistant now works immediately on a cached store.** If you run WP Rocket, LiteSpeed, WP Super Cache, W3 Total Cache, WP Fastest Cache, Cache Enabler or SiteGround, your pages were served from the cache *before* our code ran — so you could switch the assistant on and see nothing change, sometimes for hours, until each page's cache happened to expire. The page cache is now cleared when you turn the assistant on or off. (Cloudflare APO caches at the edge and can only be purged with your own Cloudflare credentials; those stores still wait for the edge TTL. Developers can hook `xpay_wc_purge_site_cache` to wire up any other stack.)
+* **Fixed: the full-page shopper could stay a 404 after you enabled it.** The page is only reconciled when someone loads wp-admin or an hourly job runs, and it refuses to publish until your account is confirmed as entitled — so if you enabled it before that confirmation landed, your own link was dead and nothing retried it. It can now be published on demand.
+* **Your shopper page is no longer renamed behind your back.** If you retitled it or changed its slug, we were silently restoring our own value every time the page was reconciled — breaking your menu link. Your edits are now left alone.
+* **New: open a side-cart drawer from an off-site link.** Stores using a side-cart plugin (such as Caddy) often retire the `/cart/` page entirely, leaving any link to it a dead end. A link ending in `#open-cart` now opens the drawer instead. Does nothing on stores without a side cart. Developers can switch it off with `add_filter( 'xpay_wc_side_cart_bridge', '__return_false' );`.
 
 = 0.6.0 =
 * **The on-page FAQ block now has an off switch.** For products you approve, xpay publishes FAQ schema that AI shoppers and search engines read. Until now it *also* injected a visible FAQ section into your product pages, with no way to say no — **that switch now exists**, managed from your xpay account. New installs start with the block off. Stores already displaying it keep displaying it (this release doesn't strip it off your live pages) and can now have it turned off. Either way the schema is unaffected: approving a FAQ publishes the answers to AI shoppers; showing them to your own shoppers is a separate decision. Developers can force it off from their own code with `add_filter( 'xpay_wc_faq_visible', '__return_false' );`.

@@ -49,10 +49,22 @@ cd "$PLUGIN_DIR"
 # CHANGELOG.md IS checked: release.sh uploads it to the public CDN and embeds
 # the version's section into manifest.json, which renders inside merchants'
 # wp-admin update screen.
-HITS=$(git grep -niE "$PATTERN" -- . \
+#
+# ⛔ FAIL CLOSED. `git grep` exits 1 for "no match" but 128 for an ERROR (bad
+# regex in the deny-list — which is gitignored, so nobody reviews it — or no .git
+# present). A bare `|| true` swallows both, leaving HITS empty and printing a
+# cheerful "✓ clean" on its way to a PERMANENT SVN commit. Distinguish them.
+#
+# `--untracked` because release.sh and svn-push.sh rsync the WORKING TREE, not the
+# index: a shippable file that was never `git add`ed would otherwise ship unscanned.
+set +e
+HITS=$(git grep -niE --untracked "$PATTERN" -- . \
         ':(exclude)scripts/' \
         ':(exclude)assets/screenshots-src/' \
-        ':(exclude).gitignore' || true)
+        ':(exclude).gitignore')
+rc=$?
+set -e
+[[ $rc -le 1 ]] || fail "git grep failed (exit $rc) — cannot verify. Refusing to publish."
 
 if [[ -n "$HITS" ]]; then
   red "✗ customer-identifying content in shippable files — REFUSING TO PUBLISH:"

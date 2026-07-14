@@ -31,6 +31,106 @@ class Xpay_Cart {
 		// wp_loaded fires after WC has bootstrapped session/cart objects.
 		add_action( 'wp_loaded', array( $this, 'maybe_handle' ), 20 );
 		add_action( 'woocommerce_checkout_create_order', array( $this, 'tag_order' ), 10, 1 );
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_side_cart_bridge' ) );
+	}
+
+	/**
+	 * Side-cart bridge: turn an `#open-cart` URL hash into the same-origin
+	 * postMessage that side-cart plugins listen for, so an off-site link can open
+	 * the merchant's drawer.
+	 *
+	 * WHY: stores running a side cart (Caddy and friends) routinely abandon the
+	 * /cart/ page entirely, so a cart link pointing there is a dead end — and the
+	 * drawer CANNOT be opened from off-site, because its markup is rendered
+	 * server-side by WordPress and driven by the Interactivity API. Caddy does
+	 * listen for a same-origin `postMessage("open_caddy_cart")`, so a link to
+	 * `/shop/#open-cart` can hand off to it once the page is on their origin.
+	 *
+	 * Deliberately NOT gated on detecting a side-cart plugin:
+	 *   - `is_plugin_active()` is a wp-admin function and is UNDEFINED on the front
+	 *     end — calling it here would fatal every storefront page view.
+	 *   - Sniffing `active_plugins` instead silently misses network-activated and
+	 *     must-use plugins, and any renamed folder.
+	 *   - And it buys nothing: a postMessage nobody listens for is a no-op, on
+	 *     every site in the world. The bridge is inert by construction.
+	 * So it ships to everyone, costs ~1.3 KB inline (no extra HTTP request), and
+	 * does nothing at all unless the shopper actually arrives on `#open-cart`.
+	 */
+	public function enqueue_side_cart_bridge() {
+		if ( is_admin() ) {
+			return;
+		}
+		/**
+		 * Opt out of the side-cart bridge entirely.
+		 *
+		 * @param bool $enabled Default true.
+		 */
+		if ( ! apply_filters( 'xpay_wc_side_cart_bridge', true ) ) {
+			return;
+		}
+
+		// An inline script needs a REGISTERED, ENQUEUED handle to hang off, or it
+		// silently never prints. A `false` src registers a handle with no file.
+		wp_register_script( 'xpay-side-cart', false, array(), XPAY_WC_VERSION, true );
+		wp_enqueue_script( 'xpay-side-cart' );
+		wp_add_inline_script( 'xpay-side-cart', $this->side_cart_bridge_js() );
+	}
+
+	/**
+	 * The bridge itself.
+	 *
+	 * Two shots, no polling loop. Caddy registers its listener from an
+	 * Interactivity API module (`type="module"`), and modules execute BEFORE
+	 * DOMContentLoaded, so the first shot lands. `load` is a backstop for a slow
+	 * module fetch.
+	 *
+	 * ⛔ The backstop must never fight the shopper. Watching for the drawer's open
+	 * class alone is not enough: the class is a POSITIVE signal only, so "opened
+	 * then the user closed it" is indistinguishable from "never opened" — and a
+	 * naive retry would re-open the drawer on top of someone who just dismissed it.
+	 * Hence `touched`: any pointer/key input means the page is theirs now, and we
+	 * stop. The hash is stripped after the first shot so a refresh or a Back
+	 * doesn't re-open the drawer either.
+	 */
+	private function side_cart_bridge_js() {
+		return <<<'JS'
+(function () {
+  if (window.location.hash !== '#open-cart') { return; }
+  var touched = false;
+  var post = function () {
+    try { window.postMessage('open_caddy_cart', window.location.origin); } catch (e) {}
+  };
+  var isOpen = function () {
+    return !!(document.body && document.body.classList.contains('cc-window-open'));
+  };
+  var mark = function () { touched = true; };
+  window.addEventListener('pointerdown', mark, { once: true, passive: true });
+  window.addEventListener('keydown', mark, { once: true });
+
+  var fire = function () {
+    post();
+    // Drop the hash so a refresh / Back doesn't re-open the drawer, and so
+    // #open-cart doesn't leak into analytics page paths.
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fire, { once: true });
+  } else {
+    fire();
+  }
+
+  // Backstop, once: only if the drawer never opened AND the shopper hasn't
+  // touched anything. If they interacted, the page is theirs — leave it alone.
+  window.addEventListener('load', function () {
+    window.setTimeout(function () {
+      if (!isOpen() && !touched) { post(); }
+    }, 400);
+  }, { once: true });
+})();
+JS;
 	}
 
 	public function maybe_handle() {

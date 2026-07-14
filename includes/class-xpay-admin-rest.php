@@ -31,6 +31,8 @@ class Xpay_Admin_REST {
 	const ROUTE_PATH          = '/admin/refresh';
 	const SITE_TOKEN_HEADER   = 'x-xpay-site-token'; // get_header() lowercases
 	const SITE_TOKEN_OPTION   = 'xpay_wc_site_token';
+	const PURGE_LOCK          = 'xpay_wc_site_purge_lock';
+	const DEFERRED_PURGE_HOOK = 'xpay_wc_deferred_site_purge';
 
 	private static $instance = null;
 
@@ -43,6 +45,18 @@ class Xpay_Admin_REST {
 
 	private function __construct() {
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
+		add_action( self::DEFERRED_PURGE_HOOK, array( __CLASS__, 'run_deferred_purge' ) );
+	}
+
+	/**
+	 * The coalesced purge, fired once after the rate-limit window closes.
+	 *
+	 * Clears the lock first so this call is the one that actually purges, rather
+	 * than being swallowed by the very lock it is meant to drain.
+	 */
+	public static function run_deferred_purge() {
+		delete_transient( self::PURGE_LOCK );
+		self::purge_site_page_cache();
 	}
 
 	public function register_routes() {
@@ -100,7 +114,7 @@ class Xpay_Admin_REST {
 						break;
 
 					case 'reconcile_shop_assist_page':
-						// Publish (or unpublish) the full-page shopper to match the
+						// PUBLISH (never unpublish) the full-page shopper, to match the
 						// dashboard's shopAssistEnabled/Slug.
 						//
 						// The page is otherwise only reconciled on wp-admin loads and an
@@ -109,14 +123,24 @@ class Xpay_Admin_REST {
 						// entitlement resolves gets a 404 on its own link, and no way for
 						// us to retry. This makes the fix pushable.
 						//
-						// Bust the config transient first, or reconcile would read the
-						// stale (pre-flip) shopAssistEnabled and no-op.
+						// ⛔ `$allow_unpublish = false` is load-bearing, not defensive.
+						// We bust the transients first (or reconcile reads the stale,
+						// pre-flip config and no-ops) — but that FORCES a cold re-fetch of
+						// both the entitlement and the config. If either call times out,
+						// a reconcile permitted to retract would read the failure as
+						// "not entitled" and DRAFT the merchant's live page — and we would
+						// then purge the cache so the resulting 404 propagated instantly.
+						// This action exists to fix a 404; it must not be able to cause one.
 						if ( class_exists( 'Xpay_Shop_Assist_Page' ) ) {
 							delete_transient( 'xpay_wc_storefront_entitlement' );
 							delete_transient( 'xpay_wc_widget_config' );
-							Xpay_Shop_Assist_Page::instance()->reconcile();
-							// The page is new, so the cached 404 for its URL has to go.
-							self::purge_site_page_cache();
+							$changed = Xpay_Shop_Assist_Page::instance()->reconcile( false );
+							// Only if the page actually changed: the cached 404 for a newly
+							// published URL has to go. A no-op reconcile must not flush a
+							// merchant's entire page cache.
+							if ( $changed ) {
+								self::purge_site_page_cache();
+							}
 							$executed[] = $action;
 						} else {
 							$skipped[] = $action;
@@ -458,15 +482,43 @@ class Xpay_Admin_REST {
 	 *
 	 * Best-effort by design, same as the per-post purge: a cache we don't know
 	 * about is a stale page, not a failed request. Nothing here may throw.
+	 *
+	 * ⛔ RATE-LIMITED, and it has to be. A site-wide flush is the heaviest thing
+	 * this plugin can ask a store to do — on WP Rocket with preload enabled,
+	 * rocket_clean_domain() doesn't just delete files, it kicks off a full-site
+	 * preload crawl. And the callers are more numerous than "a merchant toggled
+	 * the widget": clear_storefront_widget_cache also fires on an entitlement
+	 * change and on APPEARANCE edits, so dragging an accent-colour slider in the
+	 * dashboard would otherwise re-crawl the merchant's entire store. Worse, a
+	 * slow purge looks like a failed push to the backend, which retries — and each
+	 * retry flushes again. One purge per 5 minutes is plenty for a cache that
+	 * exists to be warm.
 	 */
 	private static function purge_site_page_cache() {
+		if ( get_transient( self::PURGE_LOCK ) ) {
+			// ⛔ COALESCE, never DROP. A rate limiter that simply discards the call
+			// would lose the LAST one — and the last one is the one that matters.
+			// Merchant enables the widget (purge, lock set) → tweaks a colour a minute
+			// later (skipped) → turns the widget OFF two minutes later → skipped too,
+			// so the cached HTML keeps serving the assistant on a storefront whose
+			// owner just switched it off, until the cache expires on its own. Instead,
+			// schedule exactly one purge for when the window closes.
+			if ( ! wp_next_scheduled( self::DEFERRED_PURGE_HOOK ) ) {
+				wp_schedule_single_event( time() + 5 * MINUTE_IN_SECONDS, self::DEFERRED_PURGE_HOOK );
+			}
+			return false;
+		}
+		set_transient( self::PURGE_LOCK, 1, 5 * MINUTE_IN_SECONDS );
+
 		// WP Rocket.
 		if ( function_exists( 'rocket_clean_domain' ) ) {
 			rocket_clean_domain();
 		}
 
-		// LiteSpeed. API class on current builds, the plugin's own hook on older
-		// ones (see the note in purge_product_caches() on why it isn't prefixed).
+		// LiteSpeed. `litespeed_purge_all` is the DOCUMENTED third-party hook on
+		// current builds and is what actually fires on a modern install; the
+		// LiteSpeed_Cache_API class is the pre-3.0 surface, kept for legacy stores.
+		// (Don't "clean up" the do_action — it is the live path, not the fallback.)
 		if ( class_exists( 'LiteSpeed_Cache_API' ) && method_exists( 'LiteSpeed_Cache_API', 'purge_all' ) ) {
 			LiteSpeed_Cache_API::purge_all();
 		}
@@ -498,6 +550,33 @@ class Xpay_Admin_REST {
 		if ( function_exists( 'sg_cachepress_purge_cache' ) ) {
 			sg_cachepress_purge_cache();
 		}
+
+		// Managed hosts. Each of these is a no-op when the host isn't present:
+		// do_action() on a hook nobody registered simply does nothing.
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- third-party (Nginx Helper) hook, intentionally invoked.
+		do_action( 'rt_nginx_helper_purge_all' );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- third-party (Breeze / Cloudways) hook, intentionally invoked.
+		do_action( 'breeze_clear_all_cache' );
+		if ( class_exists( 'WpeCommon' ) && method_exists( 'WpeCommon', 'purge_varnish_cache' ) ) {
+			WpeCommon::purge_varnish_cache();
+		}
+
+		/**
+		 * Escape hatch for every stack we cannot reach from here.
+		 *
+		 * ⚠️ Cloudflare APO is the honest gap: it caches HTML at the EDGE, and
+		 * purging it needs an authenticated Cloudflare API call with the site
+		 * owner's own token — there is no local hook we can fire. A store on APO
+		 * will still serve the pre-toggle page until its edge TTL expires. We
+		 * cannot fix that for them; we can give them somewhere to hook.
+		 *
+		 * Deliberately NOT wp_cache_flush(): that empties the OBJECT cache
+		 * (Redis/Memcached), which is not a page cache and would be a gratuitous
+		 * performance hit on exactly the largest stores.
+		 */
+		do_action( 'xpay_wc_purge_site_cache' );
+
+		return true;
 	}
 
 	/**

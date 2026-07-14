@@ -25,6 +25,7 @@ class Xpay_Shop_Assist_Page {
 	const POWERED_BY_URL  = 'https://www.xpay.sh/agentic-commerce/';
 	const PAGE_ID_OPTION  = 'xpay_wc_shop_assist_page_id';
 	const TEMPLATE_META   = '_xpay_shop_assist'; // post meta flag marking our page
+	const WRITTEN_META    = '_xpay_shop_assist_written'; // the slug/title WE last wrote
 	const RECONCILE_HOOK  = 'xpay_shop_assist_reconcile';
 	const DEFAULT_SLUG    = 'ai-shopper';
 
@@ -54,7 +55,20 @@ class Xpay_Shop_Assist_Page {
 		add_action( 'admin_post_xpay_ai_enable', array( $this, 'handle_enable' ) );
 		add_action( 'admin_notices', array( $this, 'admin_notice' ) );
 		// Re-evaluate immediately when the local entitlement toggle flips.
-		add_action( 'update_option_xpay_wc_storefront_widget_enabled', array( $this, 'reconcile' ) );
+		//
+		// ⛔ NOT `array( $this, 'reconcile' )` directly. WP fires this hook as
+		// do_action( "update_option_{$option}", $old_value, $value, $option ), and a
+		// callback registered with the default accepted_args=1 receives $old_value —
+		// which would silently bind reconcile()'s $allow_unpublish to an option's
+		// PREVIOUS value. That was harmless while reconcile() took no arguments; now
+		// that its first parameter decides whether a merchant's live page may be
+		// retracted, the intent has to be stated, not inherited from a hook signature.
+		add_action(
+			'update_option_xpay_wc_storefront_widget_enabled',
+			function () {
+				$this->reconcile( true );
+			}
+		);
 	}
 
 	public function ensure_cron() {
@@ -115,24 +129,47 @@ class Xpay_Shop_Assist_Page {
 	 *  - Not connected / not entitled / disabled → draft any existing page.
 	 *  - Enabled → ensure a published Page exists at the configured slug, with
 	 *    our template flag set.
+	 *
+	 * ⛔ NEVER RETRACT ON AMBIGUITY. Every "should this page exist?" input here can
+	 * fail CLOSED — the entitlement fetch can time out, and widget_config() returns
+	 * an empty array on a network error that is indistinguishable from a genuinely
+	 * empty config. If we let either read as "disabled", a momentary backend blip
+	 * drafts a merchant's live, indexed shopper page and breaks their own link.
+	 * So: unpublish only when the backend AFFIRMATIVELY says no.
+	 *
+	 * @param bool $allow_unpublish Whether this caller may retract the page. FALSE
+	 *        from the backend push, which exists to REPAIR a missing page — a push
+	 *        must never be able to take one down. Retraction is left to the cron /
+	 *        admin path, which re-derives state from a warm cache.
+	 * @return bool Whether anything actually changed. Callers use this to decide
+	 *        whether a cache purge is warranted — a no-op reconcile must not flush
+	 *        a merchant's entire page cache.
 	 */
-	public function reconcile() {
+	public function reconcile( $allow_unpublish = true ) {
 		$slug = Xpay_Plugin::merchant_slug();
 		$page = $this->existing_page();
 
-		if ( '' === $slug || ! Xpay_Plugin::is_connected() || ! Xpay_Plugin::is_storefront_widget_entitled() ) {
-			$this->unpublish( $page );
-			return;
+		if ( '' === $slug || ! Xpay_Plugin::is_connected() ) {
+			return $allow_unpublish ? $this->unpublish( $page ) : false;
 		}
 
-		$cfg     = Xpay_Storefront_Widget::widget_config( $slug );
-		// Enable via the dashboard config OR a local fallback (constant/option) —
-		// mirrors the entitlement resolution so the page is controllable even when
-		// the dashboard config is unreachable or not yet saved.
-		$enabled = ! empty( $cfg['shopAssistEnabled'] ) || self::local_enabled();
+		$state = Xpay_Plugin::storefront_entitlement_state();
+		if ( 'unknown' === $state ) {
+			// We could not reach the entitlement API. That is not a "no".
+			return false;
+		}
+		if ( 'no' === $state ) {
+			return $allow_unpublish ? $this->unpublish( $page ) : false;
+		}
+
+		$cfg = Xpay_Storefront_Widget::widget_config( $slug );
+		// An empty $cfg means the config fetch FAILED (widget_config() returns
+		// array() on timeout/5xx/garbage). It does not mean "disabled" — so it is
+		// never grounds to retract, only grounds to do nothing.
+		$config_known = ! empty( $cfg );
+		$enabled      = ( $config_known && ! empty( $cfg['shopAssistEnabled'] ) ) || self::local_enabled();
 		if ( ! $enabled ) {
-			$this->unpublish( $page );
-			return;
+			return ( $allow_unpublish && $config_known ) ? $this->unpublish( $page ) : false;
 		}
 
 		$cfg_slug      = isset( $cfg['shopAssistSlug'] ) ? $cfg['shopAssistSlug'] : '';
@@ -144,24 +181,60 @@ class Xpay_Shop_Assist_Page {
 
 		if ( $page ) {
 			// Reconcile status + slug + title drift only (cheap no-op when matched).
+			//
+			// ⛔ But the page is the MERCHANT'S, not ours. If they retitled it
+			// ("Shop with AI") or moved its slug, blindly restoring the dashboard
+			// value would silently revert their edit on every reconcile — breaking
+			// their menu item, their inbound links and any indexed URL, with no
+			// redirect left behind. So we compare against what WE last wrote: if
+			// the current value differs from that, a human changed it, and it is
+			// not ours to change back.
+			$ours       = get_post_meta( $page->ID, self::WRITTEN_META, true );
+			$ours       = is_array( $ours ) ? $ours : array();
+			$our_slug   = isset( $ours['slug'] ) ? (string) $ours['slug'] : '';
+			$our_title  = isset( $ours['title'] ) ? (string) $ours['title'] : '';
+			$they_moved = '' !== $our_slug && $page->post_name !== $our_slug;
+			$they_named = '' !== $our_title && $page->post_title !== $our_title;
+
 			$patch = array( 'ID' => $page->ID );
 			$dirty = false;
 			if ( 'publish' !== $page->post_status ) {
 				$patch['post_status'] = 'publish';
 				$dirty                = true;
 			}
-			if ( $page->post_name !== $desired_slug ) {
+			if ( ! $they_moved && $page->post_name !== $desired_slug ) {
 				$patch['post_name'] = $desired_slug;
 				$dirty              = true;
 			}
-			if ( $page->post_title !== $desired_title ) {
+			if ( ! $they_named && $page->post_title !== $desired_title ) {
 				$patch['post_title'] = $desired_title;
 				$dirty               = true;
 			}
-			if ( $dirty ) {
-				wp_update_post( $patch );
+			if ( ! $dirty ) {
+				// ⛔ Seed the baseline even when there is nothing to patch.
+				//
+				// Otherwise the "don't revert the merchant's rename" guard never arms
+				// on an existing install: 0.6.0 reverted drift hourly, so EVERY store
+				// upgrading to 0.6.1 already matches the dashboard values and lands
+				// here with $dirty === false. WRITTEN_META would never be written, so
+				// the merchant's FIRST rename after upgrading would still be reverted
+				// (only the second would stick). Record what's on the page now — it is,
+				// by definition, what we last wrote.
+				if ( ! $ours ) {
+					update_post_meta(
+						$page->ID,
+						self::WRITTEN_META,
+						array(
+							'slug'  => $page->post_name,
+							'title' => $page->post_title,
+						)
+					);
+				}
+				return false;
 			}
-			return;
+			wp_update_post( $patch );
+			$this->remember_written( $page->ID, $patch, $page );
+			return true;
 		}
 
 		// Create fresh.
@@ -178,15 +251,43 @@ class Xpay_Shop_Assist_Page {
 			),
 			true
 		);
-		if ( ! is_wp_error( $id ) && $id ) {
-			update_option( self::PAGE_ID_OPTION, (int) $id, false );
+		if ( is_wp_error( $id ) || ! $id ) {
+			return false;
 		}
+		update_option( self::PAGE_ID_OPTION, (int) $id, false );
+		update_post_meta(
+			(int) $id,
+			self::WRITTEN_META,
+			array(
+				'slug'  => $desired_slug,
+				'title' => $desired_title,
+			)
+		);
+		return true;
 	}
 
+	/** @return bool Whether the page actually changed. */
 	private function unpublish( $page ) {
 		if ( $page && 'draft' !== $page->post_status ) {
 			wp_update_post( array( 'ID' => $page->ID, 'post_status' => 'draft' ) );
+			return true;
 		}
+		return false;
+	}
+
+	/**
+	 * Record the slug/title we just wrote, so a later reconcile can tell OUR value
+	 * from one the merchant has since edited by hand. Only the keys we actually
+	 * patched are updated — a title-only patch must not claim we wrote the slug.
+	 */
+	private function remember_written( $page_id, array $patch, $page ) {
+		$prev = get_post_meta( $page_id, self::WRITTEN_META, true );
+		$prev = is_array( $prev ) ? $prev : array();
+		$next = array(
+			'slug'  => isset( $patch['post_name'] ) ? $patch['post_name'] : ( isset( $prev['slug'] ) ? $prev['slug'] : $page->post_name ),
+			'title' => isset( $patch['post_title'] ) ? $patch['post_title'] : ( isset( $prev['title'] ) ? $prev['title'] : $page->post_title ),
+		);
+		update_post_meta( $page_id, self::WRITTEN_META, $next );
 	}
 
 	/** The tracked page object (any status), or null. */

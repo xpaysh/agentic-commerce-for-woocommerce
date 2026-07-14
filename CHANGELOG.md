@@ -11,12 +11,95 @@ release metadata at <https://install.xpay.sh/woocommerce/manifest.json>.
 
 ## [Unreleased]
 
-### Planned — 0.6.1 (patch)
+_Nothing queued._
 
-- **Open a side-cart drawer from an off-site link.** Stores running a side-cart plugin (e.g. Caddy) often
-  abandon the `/cart/` page entirely, so a cart link pointing there is a dead end. Caddy listens for a
-  same-origin `postMessage("open_caddy_cart")`; the plugin turns an `#open-cart` hash on a WordPress page
-  into that message, so the drawer opens instead.
+## [0.6.1] — 2026-07-14
+
+A cache-and-consent patch. Three of the four items are the same bug wearing different hats: **something we
+wrote never reached the shopper, because a full-page cache answered before PHP ever ran.**
+
+### Fixed — the storefront widget was invisible on cached stores
+
+- `clear_storefront_widget_cache` flushed the two gating transients but **never touched the full-page
+  cache**. On WP Rocket / LiteSpeed / etc. the cached HTML is served *before PHP runs*, so a merchant who
+  enabled the assistant kept being served the pre-enable copy of every page until its cache expired. We had
+  been telling merchants "flip the switch and it appears"; on a cached store that was never true.
+- New site-wide `purge_site_page_cache()` — site-wide and not per-post (cf. `purge_product_caches()`)
+  because the loader goes on EVERY public page, not a known product list. Covers WP Rocket, LiteSpeed,
+  WP Super Cache, W3TC, WP Fastest Cache, Cache Enabler, SiteGround, Nginx Helper, Breeze and WP Engine.
+- **Rate-limited to one purge per 5 minutes — and it COALESCES rather than drops.** A site-wide flush is the
+  heaviest thing this plugin can ask of a store (on WP Rocket with preload on it kicks off a full-site
+  re-crawl), and the callers include *appearance* edits, so an accent-colour slider would otherwise re-crawl
+  the merchant's whole store; a slow purge also reads as a failed push to the backend, which retries, which
+  purges again. But a limiter that simply *discards* the extra call would lose the **last** one — enable the
+  widget, tweak a colour, then switch the widget off, and the store would keep serving the assistant from
+  cache after its owner turned it off. So a rate-limited call schedules exactly one purge for when the
+  window closes.
+- ⚠️ **Cloudflare APO is an honest gap**: it caches HTML at the edge and purging needs the site owner's own
+  Cloudflare token. New `xpay_wc_purge_site_cache` action so any unreachable stack can be wired in.
+  Deliberately NOT `wp_cache_flush()` — that empties the *object* cache, which is not a page cache.
+
+### Fixed — the full-page shopper could 404 after being enabled, with no way to retry
+
+- `Xpay_Shop_Assist_Page::reconcile()` refuses to publish while the store isn't entitled (correct), but only
+  re-runs on `admin_init` (throttled 1h) or an hourly cron. Enable the page before entitlement resolves and
+  the merchant's own link is dead, with nothing to retry it. New `reconcile_shop_assist_page` admin action
+  makes it pushable.
+- ⛔ **A push can no longer RETRACT the page** (`reconcile( $allow_unpublish = false )`). The action busts
+  the entitlement + config transients — it must, or reconcile reads stale pre-flip state and no-ops — but
+  that forces a cold re-fetch of both. Entitlement is now **tri-state**: a timed-out fetch returns
+  `unknown`, not `false`. Previously a 4-second blip fell back to a local wp-admin toggle that a
+  dashboard-enabled merchant never set (so: `0`), which read as "not entitled" — and the action would have
+  **drafted the merchant's live, indexed page and then purged the cache so the 404 propagated instantly**.
+  An action that exists to fix a 404 must not be able to cause one. Same rule for the config: an empty
+  `widget_config()` means the fetch failed, not "disabled", and is never grounds to retract.
+- The purge now only runs if `reconcile()` actually **changed** something. A no-op must not flush a store.
+
+### Fixed — we were silently reverting a merchant's renamed shopper page
+
+- `reconcile()` restored the dashboard's slug and title on every run, so a merchant who retitled the page or
+  moved its slug had their edit reverted, with no redirect left behind — breaking their menu item and any
+  indexed URL. We now record what *we* last wrote (`_xpay_shop_assist_written`); if the current value
+  differs, a human changed it and it is not ours to change back. The page is the merchant's, not ours.
+- The baseline is recorded **even when reconcile has nothing to patch**. Otherwise the guard would never arm
+  on an existing install: 0.6.0 reverted drift hourly, so every upgrading store already matches the
+  dashboard values — and the merchant's *first* rename after upgrading would still have been reverted.
+- `$allow_unpublish` is now bound **explicitly** at the `update_option_…` hook. WordPress fires that hook as
+  `( $old_value, $value, $option )`, so a callback registered the usual way receives `$old_value` as its
+  first argument — which would have silently bound "may this retract the merchant's live page?" to an
+  option's previous value. Harmless while `reconcile()` took no arguments; not something to leave to luck now
+  that its first parameter is safety-critical.
+
+### Added — open a side-cart drawer from an off-site link
+
+- Stores running a side cart (Caddy et al.) routinely retire `/cart/` entirely, so any link to it is a dead
+  end — and the drawer **cannot** be opened from off-site, since its markup is rendered server-side and
+  driven by the Interactivity API. Caddy listens for a same-origin `postMessage("open_caddy_cart")`, so a
+  link to `/shop/#open-cart` can now hand off to it.
+- **Not gated on detecting a side-cart plugin**, deliberately: `is_plugin_active()` is a wp-admin function
+  and is **undefined on the front end** (calling it there would fatal every storefront page view), while
+  sniffing `active_plugins` silently misses network-activated and must-use plugins. And a gate buys nothing
+  — a `postMessage` nobody listens for is a no-op everywhere. Inert by construction; ~1.3 KB inline; does
+  nothing unless the shopper actually lands on `#open-cart`. Opt out with `xpay_wc_side_cart_bridge`.
+- Two shots (`DOMContentLoaded`, then a `load` backstop), **never a retry loop**. The drawer's open-class is
+  a *positive* signal only, so "opened, then the shopper closed it" is indistinguishable from "never
+  opened" — a naive retry would re-open the drawer on top of someone who just dismissed it. Any pointer or
+  key input cancels the backstop, and the hash is stripped after firing so a refresh doesn't re-open it.
+
+### Security / privacy
+
+- **Removed customer-identifying content from shippable files.** Code comments across 8 files named real
+  merchants, two contacts, their order volumes and incident dates. These files are published: the PHP goes
+  to the WordPress.org SVN, this changelog is uploaded to a public CDN and rendered inside merchants'
+  wp-admin, and `js/xpay-attribution.js` is served to every shopper's browser on every merchant storefront —
+  so one store's order volume was being disclosed on other stores' pages. The engineering rationale is kept
+  verbatim; only the identity is gone, and it was never load-bearing.
+- New `scripts/check-no-customer-names.sh`, wired as step 0 of both `release.sh` and `svn-push.sh`, so this
+  cannot be published again. Its deny-list is gitignored (a list of customer names in a public repo would
+  leak the thing it guards) and the script **hard-fails when the list is absent**, so a missing deny-list can
+  never read as "nothing to check".
+- `svn-push.sh` no longer defaults every release to 0.6.0's commit message. An SVN commit message is
+  permanent.
 
 ## [0.6.0] — 2026-07-12
 
